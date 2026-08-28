@@ -1,6 +1,6 @@
-const CACHE = 'geoboard-v1';
+const CACHE = 'geoboard-v2';
 const ASSETS = [
-  './geometrichna-daska.html',
+  './index.html',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
