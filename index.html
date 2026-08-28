@@ -33,8 +33,10 @@
     --ink-orange:#E0954F;         --ink-orange-rgb:224,149,79;
     --ink-danger:#E15B4D;         --ink-danger-rgb:225,91,77;
     --ink-hot:#F4CE73;            --ink-hot-rgb:244,206,115;
-    --poly-fill:rgba(241,238,230,0.07);
-    --poly-fill-hot:rgba(244,206,115,0.16);
+    /* Solid-ish white fill (not theme-tinted) so a polygon still reads as a clean,
+       opaque white shape when the PNG export is pasted into a white document (e.g. Word). */
+    --poly-fill:rgba(255,255,255,0.95);
+    --poly-fill-hot:rgba(255,241,189,0.95);
     --point-glow:rgba(244,206,115,0.22);
     --accent:var(--ink-hot);      --accent-rgb:var(--ink-hot-rgb);
 
@@ -76,8 +78,8 @@
     --ink-orange:#C1631F;         --ink-orange-rgb:193,99,31;
     --ink-danger:#C0392B;         --ink-danger-rgb:192,57,43;
     --ink-hot:#D9740A;            --ink-hot-rgb:217,116,10;
-    --poly-fill:rgba(34,50,44,0.055);
-    --poly-fill-hot:rgba(217,116,10,0.14);
+    --poly-fill:rgba(255,255,255,0.95);
+    --poly-fill-hot:rgba(255,238,196,0.95);
     --point-glow:rgba(217,116,10,0.20);
     --accent:var(--ink-hot);      --accent-rgb:var(--ink-hot-rgb);
 
@@ -1055,6 +1057,17 @@
     return 'A'+n;
   }
 
+  const GREEK_ANGLE_LETTERS = ['α','β','γ','δ','ε','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','π','ρ','σ','τ','υ','φ','χ','ψ','ω'];
+  function nextGreekLabel(){
+    const used = new Set(objects.filter(o=>o.type==='angle').map(o=>o.label));
+    for(const ch of GREEK_ANGLE_LETTERS){
+      if(!used.has(ch)) return ch;
+    }
+    let n=1;
+    while(used.has('α'+n)) n++;
+    return 'α'+n;
+  }
+
   function getObj(id){ return objects.find(o=>o.id===id); }
 
   function getPointXY(id){
@@ -1741,12 +1754,33 @@
   }
 
   function pickAngleMarker(sx,sy){
+    // Hit-tests the drawn arc itself (not just a small zone around the vertex point),
+    // so the marker can be reliably clicked to recolor/restyle/rename it — see drawAngleMarker.
     let best=null, bestD=14;
     for(const o of objects){
       if(o.type!=='angle') continue;
+      const p1 = getPointXY(o.parents[0]);
       const vertex = getPointXY(o.parents[1]);
-      const s = worldToScreen(vertex.x, vertex.y);
-      const d = Math.hypot(s.x-sx, s.y-sy);
+      const p2 = getPointXY(o.parents[2]);
+      const d1 = sub(p1,vertex), d2 = sub(p2,vertex);
+      if(len(d1)<1e-9 || len(d2)<1e-9) continue;
+      const vs = worldToScreen(vertex.x, vertex.y);
+      const toScreenDir = d => normalize({x:d.x, y:-d.y});
+      const d1s = toScreenDir(d1), d2s = toScreenDir(d2);
+      const a1 = Math.atan2(d1s.y, d1s.x), a2 = Math.atan2(d2s.y, d2s.x);
+      let diff = a2 - a1;
+      while(diff <= -Math.PI) diff += Math.PI*2;
+      while(diff > Math.PI) diff -= Math.PI*2;
+      const R = 22;
+      const dx = sx-vs.x, dy = sy-vs.y;
+      const distFromVertex = Math.hypot(dx,dy);
+      const clickAngle = Math.atan2(dy,dx);
+      let rel = clickAngle - a1;
+      while(rel <= -Math.PI) rel += Math.PI*2;
+      while(rel > Math.PI) rel -= Math.PI*2;
+      const withinSweep = diff>=0 ? (rel>=0 && rel<=diff) : (rel<=0 && rel>=diff);
+      if(!withinSweep) continue;
+      const d = Math.abs(distFromVertex - R);
       if(d<bestD){ bestD=d; best=o.id; }
     }
     return best;
@@ -2016,7 +2050,7 @@
     const created = objects.length !== before;
     pending.push(pid);
     if(pending.length===3){
-      objects.push({ id:uid(), type:'angle', parents:pending.slice() });
+      objects.push({ id:uid(), type:'angle', parents:pending.slice(), label:nextGreekLabel() });
       commitArmedHistory();
       resetPending();
     } else if(created){
@@ -2459,12 +2493,25 @@
     while(diff <= -Math.PI) diff += Math.PI*2;
     while(diff > Math.PI) diff -= Math.PI*2;
     const R = 22;
+    const arcColor = isHot ? pal.hot : (o.tint ? tintColor(pal,o.tint) : pal.primary);
+    const baseWidthAng = o.strokeWidth || 1.6;
     ctx.beginPath();
     ctx.arc(vs.x, vs.y, R, a1, a2, diff < 0);
-    ctx.lineWidth = isHot ? 2.2 : 1.6;
-    ctx.strokeStyle = isHot ? pal.hot : (o.tint ? tintColor(pal,o.tint) : pal.primary);
-    ctx.setLineDash([]);
+    ctx.lineWidth = isHot ? baseWidthAng+0.6 : baseWidthAng;
+    ctx.strokeStyle = arcColor;
+    ctx.setLineDash(o.dash ? (DASH_PATTERNS[o.dash]||[]) : []);
     ctx.stroke();
+    ctx.setLineDash([]);
+
+    // The angle's own name (e.g. "α") is always shown next to the arc, independent of
+    // the "Стойности" (measurements) toggle. When that toggle is on, drawMeasurements()
+    // draws a combined "α = 60°" further out along the same bisector instead — so the
+    // plain name here is skipped then, to avoid showing "α" twice.
+    if(o.label && !measurementsEnabled){
+      const bis = angleBisectorDir(normalize(d1s), normalize(d2s));
+      const labelWorldPos = screenToWorld(vs.x + bis.x*(R+13), vs.y + bis.y*(R+13));
+      drawMeasurementLabel(labelWorldPos, o.label, pal, arcColor, 0);
+    }
   }
 
   function computePolyArea(pts){
@@ -2527,9 +2574,10 @@
           const bis = angleBisectorDir(u1,u2);
           const vs = worldToScreen(vertex.x, vertex.y);
           const bisScreen = normalize({x:bis.x, y:-bis.y});
-          const labelScreenPos = { x: vs.x + bisScreen.x*34, y: vs.y + bisScreen.y*34 };
+          const labelScreenPos = { x: vs.x + bisScreen.x*40, y: vs.y + bisScreen.y*40 };
           const labelWorldPos = screenToWorld(labelScreenPos.x, labelScreenPos.y);
-          drawMeasurementLabel(labelWorldPos, formatNum(ang)+'°', pal, o.tint?tintColor(pal,o.tint):pal.yellow, 0);
+          const valueText = (o.label ? o.label+' = ' : '') + formatNum(ang)+'°';
+          drawMeasurementLabel(labelWorldPos, valueText, pal, o.tint?tintColor(pal,o.tint):pal.yellow, 0);
         }
       }
     }
@@ -2750,14 +2798,20 @@
       });
     }
 
-    const showName = target.type === 'point';
+    const isAngle = target.type === 'angle';
+    const showName = target.type === 'point' || isAngle;
     nameGroup.style.display = showName ? '' : 'none';
-    labelSizeGroup.style.display = showName ? '' : 'none';
+    labelSizeGroup.style.display = (showName && !isAngle) ? '' : 'none';
     nameDivider.style.display = showName ? '' : 'none';
     if(showName && document.activeElement !== pointNameInput){
       pointNameInput.value = target.label || '';
     }
     if(showName){
+      const nameLabel = isAngle ? 'Име на ъгъла (напр. α, β, γ)' : 'Име на точката';
+      pointNameInput.title = nameLabel;
+      pointNameInput.setAttribute('aria-label', nameLabel);
+    }
+    if(showName && !isAngle){
       const curSize = target.labelSize || 13;
       document.querySelectorAll('#colorPanel .labelsize-btn').forEach(b=>{
         setPressed(b, parseFloat(b.dataset.labelsize)===curSize);
@@ -3180,7 +3234,7 @@
   });
   function commitPointRename(){
     const target = getSelectedTintable();
-    if(!target || target.type!=='point') return;
+    if(!target || (target.type!=='point' && target.type!=='angle')) return;
     const val = pointNameInput.value.trim().slice(0,12);
     if(!val){ pointNameInput.value = target.label; return; }
     if(val !== target.label){
