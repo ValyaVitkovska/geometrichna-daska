@@ -1,4 +1,4 @@
-const CACHE = 'geoboard-v5';
+const CACHE = 'geoboard-v6';
 const ASSETS = [
   './index.html',
   './manifest.json',
