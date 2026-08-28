@@ -1,0 +1,2952 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="description" content="Интерактивна геометрична дъска — построения, измервания и записки, по идея и методическа разработка на Валя Витковска.">
+<meta name="theme-color" content="#17ACAE">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Геом. дъска">
+<link rel="icon" href="./icons/favicon-48.png" type="image/png">
+<title>Геометрична дъска</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    /* board surface (dark, default) */
+    --board:#16261F;
+    --grid-line:rgba(143,182,198,0.16);
+    --axis-line:rgba(143,182,198,0.55);
+    --axis-text:rgba(143,182,198,0.85);
+    --vignette:rgba(0,0,0,0.32);
+
+    /* ink palette used for every drawn object */
+    --ink-primary:#F1EEE6;        --ink-primary-rgb:241,238,230;
+    --ink-primary-dim:rgba(241,238,230,0.55);
+    --ink-blue:#8FB6C6;           --ink-blue-rgb:143,182,198;
+    --ink-rose:#DE8F86;           --ink-rose-rgb:222,143,134;
+    --ink-green:#9FC98A;          --ink-green-rgb:159,201,138;
+    --ink-yellow:#E8C468;         --ink-yellow-rgb:232,196,104;
+    --ink-orange:#E0954F;         --ink-orange-rgb:224,149,79;
+    --ink-danger:#E15B4D;         --ink-danger-rgb:225,91,77;
+    --ink-hot:#F4CE73;            --ink-hot-rgb:244,206,115;
+    --poly-fill:rgba(241,238,230,0.07);
+    --poly-fill-hot:rgba(244,206,115,0.16);
+    --point-glow:rgba(244,206,115,0.22);
+    --accent:var(--ink-hot);      --accent-rgb:var(--ink-hot-rgb);
+
+    /* chrome around the board */
+    --topbar-bg-1:#0F1D17;
+    --topbar-bg-2:#16261F;
+    --topbar-border:rgba(143,182,198,0.18);
+    --hud-bg:rgba(10,18,14,0.72);
+    --hud-border:rgba(143,182,198,0.25);
+
+    /* toolbar: fresh teal/turquoise, independent of board theme */
+    --tb-1:#17ACAE;
+    --tb-2:#0E7A80;
+    --tb-3:#0B535A;
+    --tb-edge:#063338;
+    --tb-text:#EAFBFA;
+    --tb-text-dim:rgba(234,251,250,0.62);
+
+    --font-display:'Caveat','Segoe Script',cursive;
+    --font-ui:'Manrope',-apple-system,'Segoe UI',sans-serif;
+    --font-mono:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+  }
+
+  :root[data-theme="light"]{
+    --board:#EFF4F2;
+    --grid-line:rgba(42,90,99,0.14);
+    --axis-line:rgba(42,90,99,0.45);
+    --axis-text:rgba(38,74,82,0.82);
+    --vignette:rgba(20,40,36,0.10);
+
+    --ink-primary:#22322C;        --ink-primary-rgb:34,50,44;
+    --ink-primary-dim:rgba(34,50,44,0.55);
+    --ink-blue:#1D6E8C;           --ink-blue-rgb:29,110,140;
+    --ink-rose:#B8534A;           --ink-rose-rgb:184,83,74;
+    --ink-green:#3F8A46;          --ink-green-rgb:63,138,70;
+    --ink-yellow:#B8860B;         --ink-yellow-rgb:184,134,11;
+    --ink-orange:#C1631F;         --ink-orange-rgb:193,99,31;
+    --ink-danger:#C0392B;         --ink-danger-rgb:192,57,43;
+    --ink-hot:#D9740A;            --ink-hot-rgb:217,116,10;
+    --poly-fill:rgba(34,50,44,0.055);
+    --poly-fill-hot:rgba(217,116,10,0.14);
+    --point-glow:rgba(217,116,10,0.20);
+    --accent:var(--ink-hot);      --accent-rgb:var(--ink-hot-rgb);
+
+    --topbar-bg-1:#FFFFFF;
+    --topbar-bg-2:#EFF4F2;
+    --topbar-border:rgba(42,90,99,0.16);
+    --hud-bg:rgba(255,255,255,0.85);
+    --hud-border:rgba(42,90,99,0.22);
+
+    --tb-1:#2DE0D1;
+    --tb-2:#17BFB0;
+    --tb-3:#0EA79A;
+    --tb-edge:#0B7A70;
+    --tb-text:#FFFFFF;
+    --tb-text-dim:rgba(255,255,255,0.72);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{ background:var(--board); color:var(--ink-primary); font-family:var(--font-ui); overflow:hidden; }
+  button{ font-family:inherit; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; animation:none !important; }
+  }
+
+  :focus-visible{ outline:2px solid var(--ink-hot); outline-offset:2px; }
+
+  .page{
+    height:100vh;
+    width:100vw;
+    display:flex;
+    flex-direction:column;
+    background:var(--board);
+  }
+  .app-shell{
+    flex:1 1 auto;
+    min-height:0;
+    width:100%;
+    display:flex;
+    background:var(--board);
+  }
+  .site-footer{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:5px 12px;
+    background:var(--topbar-bg-1);
+    border-top:1px solid var(--topbar-border);
+  }
+  .footer-logo{ width:15px; height:auto; display:block; opacity:0.85; flex:0 0 auto; }
+  .footer-text{
+    font-family:var(--font-ui);
+    font-size:10.5px;
+    font-weight:600;
+    color:var(--ink-primary-dim);
+    text-align:center;
+    letter-spacing:0.01em;
+  }
+
+  /* ---------- toolbar ---------- */
+  .toolbar{
+    width:108px;
+    flex:0 0 auto;
+    background:
+      radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.16), transparent 60%),
+      linear-gradient(180deg, var(--tb-1), var(--tb-2) 45%, var(--tb-3) 100%);
+    border-right:3px solid var(--tb-edge);
+    display:flex;
+    flex-direction:column;
+    padding:10px 8px 12px;
+    gap:14px;
+    overflow-y:auto;
+    box-shadow: inset -6px 0 14px -10px rgba(0,0,0,0.45);
+  }
+
+  .tool-group{ display:flex; flex-direction:column; gap:6px; }
+
+  .tool-group-label{
+    font-family:var(--font-ui);
+    font-size:9.5px;
+    font-weight:800;
+    letter-spacing:0.09em;
+    text-transform:uppercase;
+    color:var(--tb-text-dim);
+    padding:0 2px 2px;
+  }
+
+  /* ---- 3D glossy tool keys ---- */
+  .tool-btn{
+    --tint-rgb:var(--ink-primary-rgb);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    padding:8px 3px 7px;
+    border-radius:10px;
+    border:1px solid rgba(0,0,0,0.18);
+    background:
+      linear-gradient(160deg, rgba(var(--tint-rgb),0.42) 0%, rgba(var(--tint-rgb),0.14) 55%, rgba(var(--tint-rgb),0.26) 100%),
+      linear-gradient(160deg, rgba(255,255,255,0.16), rgba(255,255,255,0.03));
+    color:var(--tb-text);
+    cursor:pointer;
+    box-shadow:
+      0 3px 0 rgba(0,0,0,0.28),
+      0 5px 8px rgba(0,0,0,0.22),
+      inset 0 1px 0 rgba(255,255,255,0.4),
+      inset 0 -3px 5px rgba(0,0,0,0.16);
+    transform:translateY(0);
+    transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
+  }
+  .tool-btn svg{
+    width:20px; height:20px; display:block;
+    color:rgb(var(--tint-rgb));
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,0.28));
+  }
+  .tool-btn .tool-label{
+    font-size:9.5px;
+    font-weight:700;
+    color:var(--tb-text);
+    text-align:center;
+    line-height:1.15;
+  }
+  .tool-btn:hover{
+    filter:brightness(1.1);
+    transform:translateY(-1px);
+    box-shadow:
+      0 4px 0 rgba(0,0,0,0.28),
+      0 8px 11px rgba(0,0,0,0.24),
+      inset 0 1px 0 rgba(255,255,255,0.45),
+      inset 0 -3px 5px rgba(0,0,0,0.16);
+  }
+  .tool-btn.active{
+    transform:translateY(2px);
+    background:
+      linear-gradient(160deg, rgba(var(--tint-rgb),0.66) 0%, rgba(var(--tint-rgb),0.32) 100%),
+      linear-gradient(160deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02));
+    box-shadow:
+      0 1px 0 rgba(0,0,0,0.24),
+      inset 0 3px 6px rgba(0,0,0,0.30),
+      inset 0 -1px 0 rgba(255,255,255,0.22),
+      0 0 0 2px rgba(var(--tint-rgb),0.9),
+      0 0 14px rgba(var(--tint-rgb),0.5);
+  }
+  .tool-btn.active .tool-label{ color:#fff; text-shadow:0 0 6px rgba(var(--tint-rgb),0.85); }
+  .tool-btn:active{
+    transform:translateY(3px);
+    box-shadow: inset 0 3px 6px rgba(0,0,0,0.35);
+  }
+
+  .tool-btn[data-tint="white"]{ --tint-rgb:var(--ink-primary-rgb); }
+  .tool-btn[data-tint="blue"]{ --tint-rgb:var(--ink-blue-rgb); }
+  .tool-btn[data-tint="rose"]{ --tint-rgb:var(--ink-rose-rgb); }
+  .tool-btn[data-tint="green"]{ --tint-rgb:var(--ink-green-rgb); }
+  .tool-btn[data-tint="yellow"]{ --tint-rgb:var(--ink-yellow-rgb); }
+  .tool-btn[data-tint="orange"]{ --tint-rgb:var(--ink-orange-rgb); }
+  .tool-btn[data-tint="danger"]{ --tint-rgb:var(--ink-danger-rgb); }
+
+  .toolbar-spacer{ flex:1 1 auto; }
+
+  /* ---- neutral glass chips (toggles / undo / clear) ---- */
+  .toggle-row{ display:flex; flex-direction:column; gap:6px; }
+  .toggle-chip, .util-btn{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:7px 8px;
+    border-radius:8px;
+    border:1px solid rgba(0,0,0,0.18);
+    background:linear-gradient(160deg, rgba(255,255,255,0.24), rgba(255,255,255,0.05));
+    color:var(--tb-text);
+    cursor:pointer;
+    box-shadow:
+      0 2px 0 rgba(0,0,0,0.24),
+      0 3px 5px rgba(0,0,0,0.18),
+      inset 0 1px 0 rgba(255,255,255,0.35),
+      inset 0 -2px 4px rgba(0,0,0,0.14);
+    transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+  }
+  .toggle-chip:hover, .util-btn:hover{ filter:brightness(1.1); }
+  .toggle-chip:active, .util-btn:active{ transform:translateY(2px); box-shadow:inset 0 2px 5px rgba(0,0,0,0.3); }
+  .toggle-chip svg{ width:15px; height:15px; color:var(--tb-text); flex:0 0 auto; }
+  .toggle-chip .chip-label{ font-size:10px; font-weight:700; color:var(--tb-text); }
+  .toggle-chip.on{
+    border-color:rgba(var(--accent-rgb),0.75);
+    background:linear-gradient(160deg, rgba(var(--accent-rgb),0.38), rgba(var(--accent-rgb),0.14));
+    box-shadow:
+      0 1px 0 rgba(0,0,0,0.2),
+      inset 0 2px 4px rgba(0,0,0,0.2),
+      0 0 10px rgba(var(--accent-rgb),0.4);
+  }
+  .toggle-chip.on svg, .toggle-chip.on .chip-label{ color:#fff; }
+
+  .util-btn{ font-size:10px; font-weight:700; }
+  .util-btn svg{ width:15px; height:15px; flex:0 0 auto; }
+  .util-btn.warn.confirming{
+    border-color:rgba(var(--ink-danger-rgb),0.85);
+    background:linear-gradient(160deg, rgba(var(--ink-danger-rgb),0.45), rgba(var(--ink-danger-rgb),0.18));
+    color:#fff;
+  }
+
+  /* ---------- pen options (topbar) ---------- */
+  .pen-options{
+    display:none;
+    align-items:center;
+    gap:10px;
+    flex:0 0 auto;
+    padding:4px 10px;
+    border-radius:8px;
+    background:var(--hud-bg);
+    border:1px solid var(--hud-border);
+  }
+  .pen-options.show{ display:flex; }
+  .pen-options .divider{ width:1px; height:16px; background:var(--hud-border); }
+  .swatch{
+    width:17px; height:17px; border-radius:50%;
+    border:2px solid transparent; padding:0; cursor:pointer;
+    box-shadow:0 0 0 1px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.4);
+  }
+  .swatch.active{ border-color:var(--accent); box-shadow:0 0 0 1px rgba(0,0,0,0.3), 0 0 0 3px rgba(var(--accent-rgb),0.35); }
+  .swatch[data-tint="yellow"]{ background:var(--ink-yellow); }
+  .swatch[data-tint="white"]{ background:var(--ink-primary); }
+  .swatch[data-tint="rose"]{ background:var(--ink-rose); }
+  .swatch[data-tint="green"]{ background:var(--ink-green); }
+  .swatch[data-tint="blue"]{ background:var(--ink-blue); }
+  .swatch[data-tint="orange"]{ background:var(--ink-orange); }
+  .swatch[data-tint="danger"]{ background:var(--ink-danger); }
+  .reset-swatch{
+    color:var(--ink-primary);
+    background:rgba(128,128,128,0.16);
+  }
+  .reset-swatch svg{ width:14px; height:14px; display:block; }
+  .width-btn{
+    width:23px; height:23px; border-radius:6px;
+    background:rgba(128,128,128,0.16); border:1px solid transparent;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .width-btn.active{ border-color:var(--accent); background:rgba(var(--accent-rgb),0.22); }
+  .width-btn .dot{ border-radius:50%; background:var(--ink-primary); display:block; }
+  .subgroup{ display:flex; gap:4px; align-items:center; }
+  #pointNameInput{
+    width:56px; padding:4px 6px; box-sizing:border-box;
+    font-family:var(--font-ui); font-size:12.5px; font-weight:700;
+    color:var(--ink-primary); background:var(--hud-bg);
+    border:1px solid var(--hud-border); border-radius:6px;
+    text-align:center;
+  }
+  #pointNameInput:focus{ outline:2px solid var(--ink-hot); outline-offset:1px; }
+  .dash-btn svg{ color:var(--ink-primary); display:block; }
+  .toggle-chip, .util-btn{ appearance:none; -webkit-appearance:none; font:inherit; text-align:left; }
+
+  /* ---------- stage ---------- */
+  .stage{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
+
+  .topbar{
+    flex:0 0 auto;
+    display:flex;
+    align-items:baseline;
+    gap:16px;
+    padding:8px 18px;
+    background:linear-gradient(180deg, var(--topbar-bg-1), var(--topbar-bg-2));
+    border-bottom:1px solid var(--topbar-border);
+  }
+  .wordmark{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:26px;
+    color:var(--ink-primary);
+    letter-spacing:0.01em;
+    flex:0 0 auto;
+    white-space:nowrap;
+  }
+  .hint-wrap{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    flex:1 1 auto;
+    min-width:0;
+  }
+  .hint-avatar{
+    width:26px; height:auto; display:block; flex:0 0 auto;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+  }
+  .hint{
+    font-family:var(--font-ui);
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--ink-primary-dim);
+    flex:1 1 auto;
+    min-width:0;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .counts{
+    font-family:var(--font-mono);
+    font-size:11px;
+    font-weight:500;
+    color:var(--ink-blue);
+    font-variant-numeric:tabular-nums;
+    flex:0 0 auto;
+  }
+
+  .theme-toggle{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    flex:0 0 auto;
+    padding:5px 10px;
+    border-radius:7px;
+    background:var(--hud-bg);
+    border:1px solid var(--hud-border);
+    cursor:pointer;
+    font-family:var(--font-ui);
+    font-size:11px;
+    font-weight:700;
+    color:var(--ink-blue);
+    transition:filter 0.15s ease;
+  }
+  .theme-toggle:hover{ filter:brightness(1.15); }
+  .theme-swatch{
+    width:13px; height:13px; border-radius:50%; flex:0 0 auto;
+    box-shadow:0 0 0 1px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.25);
+  }
+
+  .board-wrap{ position:relative; flex:1 1 auto; min-height:0; }
+  #board{ position:absolute; inset:0; width:100%; height:100%; display:block; cursor:crosshair; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+
+  .board-wrap::after{
+    content:"";
+    position:absolute; inset:0;
+    pointer-events:none;
+    background:radial-gradient(ellipse at center, transparent 55%, var(--vignette) 100%);
+  }
+
+  .readout{
+    position:absolute; left:14px; bottom:14px;
+    font-family:var(--font-mono);
+    font-size:11.5px;
+    font-weight:500;
+    color:var(--ink-blue);
+    background:var(--hud-bg);
+    border:1px solid var(--hud-border);
+    border-radius:6px;
+    padding:5px 9px;
+    font-variant-numeric:tabular-nums;
+    pointer-events:none;
+    z-index:2;
+  }
+
+  .zoomctl{
+    position:absolute; right:14px; bottom:14px;
+    display:flex; align-items:center; gap:1px;
+    background:var(--hud-bg);
+    border:1px solid var(--hud-border);
+    border-radius:6px;
+    overflow:hidden;
+    z-index:2;
+  }
+  .zoomctl button{
+    font-family:var(--font-mono);
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink-primary);
+    background:transparent;
+    border:none;
+    padding:6px 11px;
+    cursor:pointer;
+    transition:background 0.15s ease;
+  }
+  .zoomctl button:hover{ background:rgba(var(--ink-blue-rgb),0.18); }
+  .zoomctl button + button{ border-left:1px solid var(--hud-border); }
+  #zoomPct{ min-width:48px; text-align:center; font-size:11px; color:var(--ink-blue); }
+
+  /* ---------- watermark (Гео in the corner) ---------- */
+  .watermark{
+    position:absolute; top:10px; right:14px;
+    opacity:0.62;
+    pointer-events:none;
+    z-index:1;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+  }
+  .wm-geo{ width:32px; height:auto; display:block; }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 820px){
+    .toolbar{ width:86px; gap:8px; padding:8px 5px 10px; }
+    .tool-group-label{ font-size:8px; }
+    .tool-btn .tool-label{ font-size:8px; }
+    .wordmark{ font-size:20px; }
+    .hint{ font-size:11px; }
+    .hint-avatar{ width:22px; }
+    .topbar{ gap:8px; padding:6px 10px; row-gap:6px; flex-wrap:wrap; }
+    .footer-text{ font-size:9.5px; }
+  }
+  @media (max-width: 560px){
+    .toolbar{ width:62px; }
+    .tool-group-label{ display:none; }
+    .tool-btn .tool-label{ display:none; }
+    .tool-btn{ padding:8px 2px; }
+    .toggle-chip .chip-label{ display:none; }
+    .util-btn{ font-size:0; gap:0; padding:7px; justify-content:center; }
+    .util-btn svg{ width:16px; height:16px; }
+    .hint{ display:none; }
+    .hint-avatar{ width:20px; }
+    .wordmark{ font-size:16px; }
+    .pen-options{ padding:3px 6px; gap:6px; flex-wrap:wrap; }
+    .swatch{ width:15px; height:15px; }
+    .width-btn{ width:20px; height:20px; }
+    .wm-geo{ width:22px; }
+    .watermark{ top:6px; right:6px; }
+    .footer-text{ font-size:8.5px; }
+    .footer-logo{ width:12px; }
+    .site-footer{ padding:4px 8px; gap:6px; }
+  }
+</style>
+
+</head>
+<body>
+<div class="page">
+<div class="app-shell">
+  <aside class="toolbar" id="toolbar">
+    <div class="tool-group">
+      <div class="tool-group-label">Чертане</div>
+
+      <button class="tool-btn" data-tool="move" data-tint="white" title="Избери / Премести">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3v18M3 12h18"/>
+          <path d="M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l3 3"/>
+        </svg>
+        <span class="tool-label">Избери</span>
+      </button>
+
+      <button class="tool-btn" data-tool="point" data-tint="white" title="Точка">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>
+          <circle cx="12" cy="12" r="8" opacity="0.35"/>
+        </svg>
+        <span class="tool-label">Точка</span>
+      </button>
+
+      <button class="tool-btn" data-tool="pointon" data-tint="white" title="Точка върху обект — остава закачена за отсечка, права или окръжност">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="19" x2="21" y2="5"/>
+          <circle cx="12" cy="12" r="3" fill="none" stroke-dasharray="2,2"/>
+          <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/>
+        </svg>
+        <span class="tool-label">Точка върху обект</span>
+      </button>
+
+      <button class="tool-btn" data-tool="segment" data-tint="white" title="Отсечка">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="19" x2="19" y2="5"/>
+          <circle cx="5" cy="19" r="2" fill="currentColor" stroke="none"/>
+          <circle cx="19" cy="5" r="2" fill="currentColor" stroke="none"/>
+        </svg>
+        <span class="tool-label">Отсечка</span>
+      </button>
+
+      <button class="tool-btn" data-tool="line" data-tint="white" title="Права">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="20" x2="20" y2="4"/>
+          <polyline points="14,4 20,4 20,10"/>
+          <polyline points="10,20 4,20 4,14"/>
+        </svg>
+        <span class="tool-label">Права</span>
+      </button>
+
+      <button class="tool-btn" data-tool="circle" data-tint="blue" title="Окръжност">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="8"/>
+          <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+          <line x1="12" y1="12" x2="18.5" y2="12" stroke-dasharray="2,2.4"/>
+        </svg>
+        <span class="tool-label">Окръжност</span>
+      </button>
+
+      <button class="tool-btn" data-tool="polygon" data-tint="white" title="Многоъгълник">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12,3 21,9 18,20 6,20 3,9"/>
+        </svg>
+        <span class="tool-label">Многоъгълник</span>
+      </button>
+
+      <button class="tool-btn" data-tool="vector" data-tint="orange" title="Вектор">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="20" x2="17" y2="7"/>
+          <path d="M11 7h6v6"/>
+        </svg>
+        <span class="tool-label">Вектор</span>
+      </button>
+    </div>
+
+    <div class="tool-group">
+      <div class="tool-group-label">Построения</div>
+
+      <button class="tool-btn" data-tool="perpendicular" data-tint="rose" title="Перпендикуляр">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="2" y1="16" x2="22" y2="16"/>
+          <line x1="8" y1="2" x2="8" y2="22"/>
+          <path d="M8 16 h4 v-4"/>
+        </svg>
+        <span class="tool-label">Перпендикуляр</span>
+      </button>
+
+      <button class="tool-btn" data-tool="bisector" data-tint="yellow" title="Ъглополовяща">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="20" x2="20" y2="20"/>
+          <line x1="4" y1="20" x2="17" y2="6"/>
+          <line x1="4" y1="20" x2="19" y2="13" stroke-dasharray="2,2.2"/>
+        </svg>
+        <span class="tool-label">Ъглополовяща</span>
+      </button>
+
+      <button class="tool-btn" data-tool="midpoint" data-tint="white" title="Среда на отсечка">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="19" x2="21" y2="5"/>
+          <circle cx="3" cy="19" r="1.6" fill="currentColor" stroke="none"/>
+          <circle cx="21" cy="5" r="1.6" fill="currentColor" stroke="none"/>
+          <circle cx="12" cy="12" r="2.6" fill="none"/>
+        </svg>
+        <span class="tool-label">Среда</span>
+      </button>
+
+      <button class="tool-btn" data-tool="parallel" data-tint="green" title="Успоредна права">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="16" x2="15" y2="4"/>
+          <line x1="9" y1="21" x2="21" y2="9"/>
+        </svg>
+        <span class="tool-label">Успоредна</span>
+      </button>
+
+      <button class="tool-btn" data-tool="intersect" data-tint="white" title="Пресечна точка">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="19" x2="20" y2="5"/>
+          <line x1="4" y1="5" x2="20" y2="19"/>
+          <circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/>
+        </svg>
+        <span class="tool-label">Пресечна т.</span>
+      </button>
+
+      <button class="tool-btn" data-tool="vectorEqual" data-tint="orange" title="Равен вектор">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="11" x2="12" y2="2"/>
+          <path d="M7 2h5v5"/>
+          <line x1="12" y1="22" x2="21" y2="13" stroke-dasharray="2,2"/>
+          <path d="M16 13h5v5" stroke-dasharray="2,2"/>
+        </svg>
+        <span class="tool-label">Равен вектор</span>
+      </button>
+
+      <button class="tool-btn" data-tool="tangent" data-tint="blue" title="Допирателна към окръжност">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10" cy="14" r="6.4"/>
+          <line x1="3" y1="4" x2="20" y2="9.6"/>
+          <circle cx="14.9" cy="9.2" r="1.4" fill="currentColor" stroke="none"/>
+        </svg>
+        <span class="tool-label">Допирателна</span>
+      </button>
+
+      <button class="tool-btn" data-tool="rightangle" data-tint="white" title="Обозначение на прав ъгъл">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="20" x2="4" y2="6"/>
+          <line x1="4" y1="20" x2="20" y2="20"/>
+          <path d="M4 13h7v7"/>
+        </svg>
+        <span class="tool-label">Прав ъгъл</span>
+      </button>
+
+      <button class="tool-btn" data-tool="angle" data-tint="yellow" title="Избери ъгъл — стойността му се показва при включен бутон Стойности">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="20" x2="20" y2="20"/>
+          <line x1="4" y1="20" x2="16" y2="5"/>
+          <path d="M13 20a9 9 0 0 1 2.2-9.4"/>
+        </svg>
+        <span class="tool-label">Ъгъл</span>
+      </button>
+
+      <button class="tool-btn" data-tool="incircle" data-tint="green" title="Вписана окръжност в триъгълник">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12,3 21,20 3,20"/>
+          <circle cx="12" cy="15" r="4.6"/>
+        </svg>
+        <span class="tool-label">Вписана окр.</span>
+      </button>
+
+      <button class="tool-btn" data-tool="circumcircle" data-tint="blue" title="Описана окръжност около триъгълник">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12,7 18,17 6,17"/>
+          <circle cx="12" cy="14" r="9.2"/>
+        </svg>
+        <span class="tool-label">Описана окр.</span>
+      </button>
+    </div>
+
+    <div class="tool-group">
+      <div class="tool-group-label">Бележки</div>
+      <button class="tool-btn" data-tool="pen" data-tint="yellow" title="Писане на ръка">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 20l1.4-5.6L15.8 4 20 8.2 9.6 18.6 4 20Z"/>
+          <path d="M13.2 5.8l5 5"/>
+        </svg>
+        <span class="tool-label">Писане</span>
+      </button>
+      <button class="tool-btn" data-tool="smartpen" data-tint="green" title="Умна писалка — начертай фигура на ръка и тя става точна">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 20l1.4-5.6L15.8 4 20 8.2 9.6 18.6 4 20Z"/>
+          <path d="M13.2 5.8l5 5"/>
+          <path d="M19 1.5l0.8 1.7 1.7 0.8-1.7 0.8-0.8 1.7-0.8-1.7-1.7-0.8 1.7-0.8Z" fill="currentColor" stroke="none"/>
+        </svg>
+        <span class="tool-label">Умна писалка</span>
+      </button>
+    </div>
+
+    <div class="toolbar-spacer"></div>
+
+    <div class="tool-group">
+      <button class="tool-btn" data-tool="delete" data-tint="danger" title="Изтрий обект">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="6" y1="6" x2="18" y2="18"/>
+          <line x1="18" y1="6" x2="6" y2="18"/>
+        </svg>
+        <span class="tool-label">Изтрий</span>
+      </button>
+    </div>
+
+    <div class="toggle-row">
+      <button type="button" class="toggle-chip on" id="gridToggle" title="Покажи/скрий мрежата">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+        <span class="chip-label">Мрежа</span>
+      </button>
+      <button type="button" class="toggle-chip on" id="axesToggle" title="Покажи/скрий координатните оси">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="4" y1="20" x2="4" y2="4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
+        <span class="chip-label">Оси</span>
+      </button>
+      <button type="button" class="toggle-chip on" id="snapToggle" title="Прилепване към мрежата">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/><line x1="12" y1="2" x2="12" y2="7"/><line x1="12" y1="17" x2="12" y2="22"/><line x1="2" y1="12" x2="7" y2="12"/><line x1="17" y1="12" x2="22" y2="12"/></svg>
+        <span class="chip-label">Прилепване</span>
+      </button>
+      <button type="button" class="toggle-chip on" id="axisNameToggle" title="Покажи/скрий имената на осите (x, y)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="4"/><line x1="4" y1="20" x2="20" y2="20"/><path d="M4 4l-2.2 3M4 4l2.2 3"/><path d="M20 20l-3-2.2M20 20l-3 2.2"/></svg>
+        <span class="chip-label">Имена на осите</span>
+      </button>
+      <button type="button" class="toggle-chip" id="measureToggle" title="Покажи/скрий дължини, радиуси, лица и ъгли">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 17 4"/><path d="M4 17l2-2M7 14l2-2M10 11l2-2M13 8l2-2"/></svg>
+        <span class="chip-label">Стойности</span>
+      </button>
+    </div>
+
+    <div class="tool-group">
+      <button class="util-btn" id="undoBtn" title="Отмени последното действие">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7 3 11l4 4"/><path d="M3 11h12a6 6 0 0 1 0 12h-2"/></svg>
+        Отмени
+      </button>
+      <button class="util-btn" id="saveBtn" title="Запази чертежа и решението във файл">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/><path d="M8 4v5h7V4"/><rect x="7.5" y="13" width="9" height="6"/></svg>
+        Запази
+      </button>
+      <button class="util-btn" id="openBtn" title="Отвори запазен чертеж и решение">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z"/></svg>
+        Отвори
+        <input type="file" id="fileInput" accept="application/json,.json" style="display:none">
+      </button>
+      <button class="util-btn" id="exportBtn" title="Изтегли изгледа на дъската като PNG">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
+        PNG
+      </button>
+      <button class="util-btn" id="installBtn" style="display:none" title="Инсталирай приложението на устройството">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="10" y1="19" x2="14" y2="19"/></svg>
+        Инсталирай
+      </button>
+      <button class="util-btn warn" id="clearBtn" title="Изчисти всичко">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="13" width="15" height="6" rx="1.6" transform="rotate(-10 12 16)"/><line x1="9" y1="12" x2="16" y2="3"/></svg>
+        Изчисти
+      </button>
+    </div>
+  </aside>
+
+  <main class="stage">
+    <header class="topbar">
+      <div class="wordmark">Геометрична дъска</div>
+      <div class="hint-wrap">
+        <img src="data:image/png;base64,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" alt="Гео" class="hint-avatar">
+        <div class="hint" id="hintText">Кликни върху дъската, за да поставиш точка.</div>
+      </div>
+      <div class="pen-options" id="penOptions">
+        <button class="swatch active" data-tint="yellow" title="Основен цвят"></button>
+        <button class="swatch" data-tint="white" title="Контрастен цвят"></button>
+        <button class="swatch" data-tint="rose" title="Розов"></button>
+        <button class="swatch" data-tint="green" title="Зелен"></button>
+        <div class="divider"></div>
+        <button class="width-btn" data-width="2" title="Тънко"><span class="dot" style="width:3px;height:3px"></span></button>
+        <button class="width-btn active" data-width="3.5" title="Средно"><span class="dot" style="width:5px;height:5px"></span></button>
+        <button class="width-btn" data-width="6" title="Дебело"><span class="dot" style="width:8px;height:8px"></span></button>
+      </div>
+      <div class="pen-options" id="colorPanel">
+        <span class="subgroup" id="nameGroup">
+          <input type="text" id="pointNameInput" maxlength="12" title="Име на точката" placeholder="Име">
+        </span>
+        <span class="subgroup" id="labelSizeGroup">
+          <button class="width-btn labelsize-btn" data-labelsize="10" title="Малък шрифт на името"><span style="font-size:10px;font-weight:700;line-height:1;">A</span></button>
+          <button class="width-btn labelsize-btn" data-labelsize="13" title="Среден шрифт на името"><span style="font-size:13px;font-weight:700;line-height:1;">A</span></button>
+          <button class="width-btn labelsize-btn" data-labelsize="17" title="Голям шрифт на името"><span style="font-size:17px;font-weight:700;line-height:1;">A</span></button>
+        </span>
+        <div class="divider" id="nameDivider"></div>
+        <button class="swatch" data-tint="white" title="Основен цвят"></button>
+        <button class="swatch" data-tint="blue" title="Синьо"></button>
+        <button class="swatch" data-tint="rose" title="Розово"></button>
+        <button class="swatch" data-tint="green" title="Зелено"></button>
+        <button class="swatch" data-tint="yellow" title="Жълто"></button>
+        <button class="swatch" data-tint="orange" title="Оранжево"></button>
+        <button class="swatch" data-tint="danger" title="Червено"></button>
+        <div class="divider"></div>
+        <button class="width-btn reset-swatch" id="colorReset" title="Стандартен вид (цвят, дебелина, стил)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+        </button>
+        <div class="divider" id="strokeDivider"></div>
+        <span class="subgroup" id="widthGroup">
+          <button class="width-btn" data-swidth="1.4" title="Тънка линия"><span class="dot" style="width:3px;height:3px"></span></button>
+          <button class="width-btn" data-swidth="2.4" title="Средна линия"><span class="dot" style="width:5px;height:5px"></span></button>
+          <button class="width-btn" data-swidth="4" title="Дебела линия"><span class="dot" style="width:8px;height:8px"></span></button>
+        </span>
+        <span class="subgroup" id="dashGroup">
+          <button class="width-btn dash-btn" data-dash="solid" title="Плътна линия"><svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="2"/></svg></button>
+          <button class="width-btn dash-btn" data-dash="dashed" title="Пунктирана линия"><svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="4,2.5"/></svg></button>
+          <button class="width-btn dash-btn" data-dash="dotted" title="Точкова линия"><svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="1.2,3"/></svg></button>
+        </span>
+      </div>
+      <button class="theme-toggle" id="themeToggle" title="Смени цветовата тема">
+        <span class="theme-swatch" id="themeSwatch"></span>
+        <span id="themeToggleLabel">Светла тема</span>
+      </button>
+      <div class="counts" id="countsText">0 обекта</div>
+    </header>
+    <div class="board-wrap" id="boardWrap">
+      <canvas id="board"></canvas>
+      <div class="watermark" id="watermark" title="Гео — Геометрична дъска">
+        <img src="data:image/png;base64,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" alt="Гео" class="wm-geo">
+      </div>
+      <div class="readout" id="readout">x: 0.00&nbsp;&nbsp;y: 0.00</div>
+      <div class="zoomctl">
+        <button id="zoomOut" title="Намали">−</button>
+        <span id="zoomPct">100%</span>
+        <button id="zoomIn" title="Увеличи">+</button>
+        <button id="zoomReset" title="Възстанови изгледа">⤾</button>
+      </div>
+    </div>
+  </main>
+</div>
+<footer class="site-footer">
+  <img src="data:image/png;base64,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" alt="Лого" class="footer-logo">
+  <span class="footer-text">По идея и методическа разработка на Валя Витковска · Техническа помощ: AI</span>
+</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= geometry helpers ================= */
+  function sub(a,b){ return {x:a.x-b.x, y:a.y-b.y}; }
+  function add(a,b){ return {x:a.x+b.x, y:a.y+b.y}; }
+  function scl(a,s){ return {x:a.x*s, y:a.y*s}; }
+  function dot(a,b){ return a.x*b.x + a.y*b.y; }
+  function len(a){ return Math.hypot(a.x,a.y); }
+  function normalize(a){ const l=len(a); if(l<1e-9) return {x:0,y:0}; return {x:a.x/l, y:a.y/l}; }
+  function rot90(a){ return {x:-a.y, y:a.x}; }
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+  function rotateVec(v, ang){ const c=Math.cos(ang), s=Math.sin(ang); return { x:v.x*c-v.y*s, y:v.x*s+v.y*c }; }
+
+  const LINE_TYPES = ['segment','line','perpendicular','bisector','parallel','tangent'];
+  const DASH_PATTERNS = { dashed:[8,5], dotted:[1.6,3.6] };
+
+  function formatNum(v){
+    let r = Math.round(v*100)/100;
+    if(Object.is(r,-0)) r = 0;
+    return r.toString();
+  }
+
+  /* ================= state ================= */
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+  const boardWrap = document.getElementById('boardWrap');
+  const hintText = document.getElementById('hintText');
+  const countsText = document.getElementById('countsText');
+  const readout = document.getElementById('readout');
+  const zoomPct = document.getElementById('zoomPct');
+  const colorPanel = document.getElementById('colorPanel');
+  const strokeDivider = document.getElementById('strokeDivider');
+  const widthGroup = document.getElementById('widthGroup');
+  const dashGroup = document.getElementById('dashGroup');
+  const nameGroup = document.getElementById('nameGroup');
+  const nameDivider = document.getElementById('nameDivider');
+  const pointNameInput = document.getElementById('pointNameInput');
+  const labelSizeGroup = document.getElementById('labelSizeGroup');
+
+  let objects = [];
+  let idCounter = 1;
+  let history = [];
+
+  let currentTool = 'point';
+  let pending = [];        // array of point ids, used by point-collecting tools
+  let pendingBase = null;  // line-like object id, used by perpendicular tool
+  let selectedId = null;
+  let hoverId = null;
+  let draggingPointId = null;
+  let draggingLabelId = null;
+  let isPanning = false;
+  let panStart = null;
+
+  let snapEnabled = true;
+  let gridEnabled = true;
+  let axesEnabled = true;
+  let axisNamesEnabled = true;
+  let measurementsEnabled = false;
+
+  let inkStrokes = [];
+  let isDrawingInk = false;
+  let currentStroke = null;
+  let currentInkTint = 'yellow';
+  let inkWidth = 3.5;
+
+  const view = { offsetX: 0, offsetY: 0, scale: 42 };
+  let dpr = Math.max(1, window.devicePixelRatio || 1);
+
+  function resetView(){
+    const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
+    view.offsetX = w/2;
+    view.offsetY = h/2;
+    view.scale = 42;
+    updateZoomLabel();
+  }
+
+  /* ================= coordinate transforms ================= */
+  function worldToScreen(x,y){ return { x: view.offsetX + x*view.scale, y: view.offsetY - y*view.scale }; }
+  function screenToWorld(x,y){ return { x: (x-view.offsetX)/view.scale, y: (view.offsetY-y)/view.scale }; }
+
+  /* ================= object model ================= */
+  function uid(){ return idCounter++; }
+
+  function nextLabel(){
+    const used = new Set(objects.filter(o=>o.type==='point').map(o=>o.label));
+    for(let i=0;i<26;i++){
+      const c = String.fromCharCode(65+i);
+      if(!used.has(c)) return c;
+    }
+    let n=1;
+    while(used.has('A'+n)) n++;
+    return 'A'+n;
+  }
+
+  function getObj(id){ return objects.find(o=>o.id===id); }
+
+  function getPointXY(id){
+    const p = getObj(id);
+    if(!p) return {x:0,y:0};
+    if(p.sub === 'mid'){
+      const a = getPointXY(p.parents[0]);
+      const b = getPointXY(p.parents[1]);
+      return { x:(a.x+b.x)/2, y:(a.y+b.y)/2 };
+    }
+    if(p.sub === 'intersect'){
+      const A = getObj(p.parents[0]), B = getObj(p.parents[1]);
+      if(A && B){
+        const pts = computeIntersections(A,B);
+        if(pts.length > p.index){
+          p._lastX = pts[p.index].x; p._lastY = pts[p.index].y;
+          return { x:pts[p.index].x, y:pts[p.index].y };
+        }
+      }
+      if(p._lastX !== undefined) return { x:p._lastX, y:p._lastY };
+      return { x:0, y:0 };
+    }
+    if(p.sub === 'onobject'){
+      const obj = getObj(p.parents[0]);
+      if(obj){
+        if(obj.type==='circle'){
+          const cr = circleCenterRadius(obj);
+          const x = cr.c.x + cr.r*Math.cos(p.t), y = cr.c.y + cr.r*Math.sin(p.t);
+          p._lastX=x; p._lastY=y;
+          return { x, y };
+        }
+        const g = getLineGeom(obj);
+        if(len(g.dir) > 1e-9){
+          const x = g.anchor.x + g.dir.x*p.t, y = g.anchor.y + g.dir.y*p.t;
+          p._lastX=x; p._lastY=y;
+          return { x, y };
+        }
+      }
+      if(p._lastX !== undefined) return { x:p._lastX, y:p._lastY };
+      return { x:0, y:0 };
+    }
+    if(p.sub === 'incenter' || p.sub === 'incircletouch'){
+      const tri = triangleVertices(getObj(p.parents[0]));
+      if(tri){
+        const [A,B,C] = tri;
+        const a = dist(B,C), b = dist(C,A), c = dist(A,B);
+        const per = a+b+c;
+        if(per > 1e-9){
+          let x,y;
+          if(p.sub === 'incenter'){
+            x = (a*A.x+b*B.x+c*C.x)/per; y = (a*A.y+b*B.y+c*C.y)/per;
+          } else {
+            const s = per/2;
+            const t = a > 1e-9 ? (s-b)/a : 0;
+            x = B.x + (C.x-B.x)*t; y = B.y + (C.y-B.y)*t;
+          }
+          p._lastX=x; p._lastY=y;
+          return { x, y };
+        }
+      }
+      if(p._lastX !== undefined) return { x:p._lastX, y:p._lastY };
+      return { x:0, y:0 };
+    }
+    if(p.sub === 'circumcenter'){
+      const tri = triangleVertices(getObj(p.parents[0]));
+      if(tri){
+        const [A,B,C] = tri;
+        const d = 2*(A.x*(B.y-C.y) + B.x*(C.y-A.y) + C.x*(A.y-B.y));
+        if(Math.abs(d) > 1e-9){
+          const a2 = A.x*A.x+A.y*A.y, b2 = B.x*B.x+B.y*B.y, c2 = C.x*C.x+C.y*C.y;
+          const x = (a2*(B.y-C.y) + b2*(C.y-A.y) + c2*(A.y-B.y)) / d;
+          const y = (a2*(C.x-B.x) + b2*(A.x-C.x) + c2*(B.x-A.x)) / d;
+          p._lastX=x; p._lastY=y;
+          return { x, y };
+        }
+      }
+      if(p._lastX !== undefined) return { x:p._lastX, y:p._lastY };
+      return { x:0, y:0 };
+    }
+    return { x:p.x, y:p.y };
+  }
+
+  function triangleVertices(poly){
+    if(!poly || poly.type!=='polygon' || !poly.parents || poly.parents.length!==3) return null;
+    return poly.parents.map(getPointXY);
+  }
+
+  function snapPoint(p){
+    if(!snapEnabled) return p;
+    return { x: Math.round(p.x*2)/2, y: Math.round(p.y*2)/2 };
+  }
+
+  function createFreePoint(x,y){
+    const p = snapPoint({x,y});
+    const obj = { id:uid(), type:'point', sub:'free', x:p.x, y:p.y, label:nextLabel() };
+    objects.push(obj);
+    return obj.id;
+  }
+
+  function createMidpoint(a,b){
+    const obj = { id:uid(), type:'point', sub:'mid', parents:[a,b], label:nextLabel() };
+    objects.push(obj);
+    return obj.id;
+  }
+
+  /* ================= smart pen: freehand shape recognition ================= */
+  function strokeBBox(points){
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for(const p of points){
+      if(p.x<minX) minX=p.x; if(p.x>maxX) maxX=p.x;
+      if(p.y<minY) minY=p.y; if(p.y>maxY) maxY=p.y;
+    }
+    return { minX,minY,maxX,maxY, diag: Math.hypot(maxX-minX, maxY-minY) };
+  }
+
+  function perpDist(pt, a, b){
+    const dx = b.x-a.x, dy = b.y-a.y;
+    const len = Math.hypot(dx,dy);
+    if(len < 1e-9) return Math.hypot(pt.x-a.x, pt.y-a.y);
+    return Math.abs((pt.x-a.x)*dy - (pt.y-a.y)*dx) / len;
+  }
+
+  function douglasPeucker(points, epsilon){
+    if(points.length < 3) return points.slice();
+    let maxDist = 0, index = 0;
+    const end = points.length-1;
+    for(let i=1;i<end;i++){
+      const d = perpDist(points[i], points[0], points[end]);
+      if(d > maxDist){ maxDist = d; index = i; }
+    }
+    if(maxDist > epsilon){
+      const left = douglasPeucker(points.slice(0,index+1), epsilon);
+      const right = douglasPeucker(points.slice(index), epsilon);
+      return left.slice(0,-1).concat(right);
+    }
+    return [points[0], points[end]];
+  }
+
+  function fitCircleKasa(points){
+    const n = points.length;
+    let sumX=0,sumY=0,sumX2=0,sumY2=0,sumXY=0,sumX3=0,sumY3=0,sumXY2=0,sumX2Y=0;
+    for(const p of points){
+      const x=p.x, y=p.y;
+      sumX+=x; sumY+=y; sumX2+=x*x; sumY2+=y*y; sumXY+=x*y;
+      sumX3+=x*x*x; sumY3+=y*y*y; sumXY2+=x*y*y; sumX2Y+=x*x*y;
+    }
+    const C = n*sumX2 - sumX*sumX;
+    const D = n*sumXY - sumX*sumY;
+    const E = n*sumX3 + n*sumXY2 - (sumX2+sumY2)*sumX;
+    const G = n*sumY2 - sumY*sumY;
+    const H = n*sumX2Y + n*sumY3 - (sumX2+sumY2)*sumY;
+    const denom = 2*(C*G - D*D);
+    if(Math.abs(denom) < 1e-9) return null;
+    const cx = (E*G - D*H)/denom;
+    const cy = (C*H - D*E)/denom;
+    let sumR = 0;
+    for(const p of points) sumR += Math.hypot(p.x-cx, p.y-cy);
+    const r = sumR/n;
+    let sqErr = 0;
+    for(const p of points){ const d = Math.hypot(p.x-cx,p.y-cy)-r; sqErr += d*d; }
+    return { cx, cy, r, rms: Math.sqrt(sqErr/n) };
+  }
+
+  function removeInkStrokeById(id){
+    const idx = inkStrokes.findIndex(s=>s.id===id);
+    if(idx>=0) inkStrokes.splice(idx,1);
+  }
+
+  // Attempts to turn a freehand ink stroke into a precise geometric object.
+  // Returns the new object's id on success, or null if nothing was confidently recognized
+  // (in which case the stroke is left untouched, as ordinary ink).
+  function recognizeStrokeAsShape(stroke){
+    const pts = stroke && stroke.points;
+    if(!pts || pts.length < 5) return null;
+    const bb = strokeBBox(pts);
+    if(bb.diag < 0.6) return null;
+    const first = pts[0], last = pts[pts.length-1];
+    const closeDist = Math.hypot(last.x-first.x, last.y-first.y);
+    const closed = closeDist < 0.22*bb.diag;
+
+    if(closed){
+      const circle = fitCircleKasa(pts);
+      if(circle && circle.r > 0.15 && (circle.rms/circle.r) < 0.13){
+        const centerId = createFreePoint(circle.cx, circle.cy);
+        const c = getPointXY(centerId);
+        const radiusId = createFreePoint(c.x + circle.r, c.y);
+        const obj = { id:uid(), type:'circle', parents:[centerId, radiusId] };
+        objects.push(obj);
+        removeInkStrokeById(stroke.id);
+        hintText.textContent = 'Разпознах окръжност.';
+        return obj.id;
+      }
+      const epsilon = bb.diag * 0.045;
+      let simplified = douglasPeucker(pts, epsilon);
+      if(simplified.length > 3){
+        const s0 = simplified[0], sN = simplified[simplified.length-1];
+        if(Math.hypot(sN.x-s0.x, sN.y-s0.y) < 0.15*bb.diag) simplified = simplified.slice(0,-1);
+      }
+      if(simplified.length >= 3 && simplified.length <= 10){
+        const ids = simplified.map(p=>createFreePoint(p.x,p.y));
+        const obj = { id:uid(), type:'polygon', parents:ids };
+        objects.push(obj);
+        removeInkStrokeById(stroke.id);
+        hintText.textContent = simplified.length===3 ? 'Разпознах триъгълник.' : ('Разпознах многоъгълник с '+simplified.length+' върха.');
+        return obj.id;
+      }
+      return null;
+    }
+
+    const chordLen = Math.hypot(last.x-first.x, last.y-first.y);
+    if(chordLen < 0.5) return null;
+    let maxDev = 0;
+    for(let i=1;i<pts.length-1;i++){
+      const d = perpDist(pts[i], first, last);
+      if(d > maxDev) maxDev = d;
+    }
+    if(maxDev < 0.09*chordLen){
+      const aId = createFreePoint(first.x, first.y);
+      const bId = createFreePoint(last.x, last.y);
+      const obj = { id:uid(), type:'segment', parents:[aId, bId] };
+      objects.push(obj);
+      removeInkStrokeById(stroke.id);
+      hintText.textContent = 'Разпознах отсечка.';
+      return obj.id;
+    }
+    return null;
+  }
+
+  /* ================= line-like geometry ================= */
+  function getLineGeom(obj){
+    if(obj.type==='segment' || obj.type==='line'){
+      const p1 = getPointXY(obj.parents[0]);
+      const p2 = getPointXY(obj.parents[1]);
+      return { anchor:p1, dir:normalize(sub(p2,p1)), p1, p2, ray:false };
+    }
+    if(obj.type==='perpendicular'){
+      const through = getPointXY(obj.parents[0]);
+      const base = getObj(obj.parents[1]);
+      if(!base) return { anchor:through, dir:{x:0,y:0}, ray:false };
+      const baseGeom = getLineGeom(base);
+      return { anchor:through, dir:rot90(baseGeom.dir), ray:false };
+    }
+    if(obj.type==='parallel'){
+      const through = getPointXY(obj.parents[0]);
+      const base = getObj(obj.parents[1]);
+      if(!base) return { anchor:through, dir:{x:0,y:0}, ray:false };
+      const baseGeom = getLineGeom(base);
+      return { anchor:through, dir:baseGeom.dir, ray:false };
+    }
+    if(obj.type==='bisector'){
+      const p1 = getPointXY(obj.parents[0]);
+      const vertex = getPointXY(obj.parents[1]);
+      const p2 = getPointXY(obj.parents[2]);
+      const u1 = normalize(sub(p1,vertex));
+      const u2 = normalize(sub(p2,vertex));
+      let d = normalize(add(u1,u2));
+      if(len(d) < 1e-6) d = rot90(u1);
+      return { anchor:vertex, dir:d, ray:true };
+    }
+    if(obj.type==='tangent'){
+      const P = getPointXY(obj.parents[0]);
+      const C = getObj(obj.parents[1]);
+      if(!C) return { anchor:P, dir:{x:0,y:0}, ray:false };
+      const cr = circleCenterRadius(C);
+      const d = dist(P, cr.c);
+      if(Math.abs(d-cr.r) < 1e-6){
+        if((obj.index||0) > 0) return { anchor:P, dir:{x:0,y:0}, ray:false };
+        const dir = rot90(normalize(sub(P,cr.c)));
+        obj._lastDir = dir;
+        return { anchor:P, dir, ray:false };
+      }
+      const tanPts = computeTangentPoints(P, cr.c, cr.r);
+      if(tanPts.length > (obj.index||0)){
+        const dir = normalize(sub(tanPts[obj.index||0], P));
+        obj._lastDir = dir;
+        return { anchor:P, dir, ray:false };
+      }
+      if(obj._lastDir) return { anchor:P, dir:obj._lastDir, ray:false };
+      return { anchor:P, dir:{x:0,y:0}, ray:false };
+    }
+    return { anchor:{x:0,y:0}, dir:{x:0,y:0}, ray:false };
+  }
+
+  /* ================= vectors ================= */
+  function getVectorGeom(obj){
+    if(obj.type==='vector'){
+      return { tail:getPointXY(obj.parents[0]), head:getPointXY(obj.parents[1]) };
+    }
+    if(obj.type==='vectorEqual'){
+      const tail = getPointXY(obj.parents[0]);
+      const src = getObj(obj.parents[1]);
+      if(!src) return { tail, head:tail };
+      const sg = getVectorGeom(src);
+      const delta = sub(sg.head, sg.tail);
+      return { tail, head: add(tail, delta) };
+    }
+    return { tail:{x:0,y:0}, head:{x:0,y:0} };
+  }
+
+  /* ================= intersections ================= */
+  function lineLineIntersect(g1,g2){
+    const d1=g1.dir, d2=g2.dir;
+    const denom = d1.x*d2.y - d1.y*d2.x;
+    if(Math.abs(denom) < 1e-9) return null;
+    const dx = g2.anchor.x-g1.anchor.x, dy = g2.anchor.y-g1.anchor.y;
+    const t = (dx*d2.y - dy*d2.x)/denom;
+    return { x: g1.anchor.x + d1.x*t, y: g1.anchor.y + d1.y*t };
+  }
+
+  function lineCircleIntersect(g, c, r){
+    const ox = g.anchor.x-c.x, oy = g.anchor.y-c.y;
+    const dx = g.dir.x, dy = g.dir.y;
+    if(len(g.dir) < 1e-9) return [];
+    const a = dx*dx+dy*dy;
+    const b = 2*(ox*dx+oy*dy);
+    const cc = ox*ox+oy*oy-r*r;
+    const disc = b*b-4*a*cc;
+    if(disc < 0) return [];
+    const sq = Math.sqrt(disc);
+    const t1 = (-b-sq)/(2*a), t2 = (-b+sq)/(2*a);
+    const p1 = { x:g.anchor.x+dx*t1, y:g.anchor.y+dy*t1 };
+    if(disc < 1e-9) return [p1];
+    const p2 = { x:g.anchor.x+dx*t2, y:g.anchor.y+dy*t2 };
+    return [p1,p2];
+  }
+
+  function circleCircleIntersect(c1,r1,c2,r2){
+    const dx=c2.x-c1.x, dy=c2.y-c1.y;
+    const d = Math.hypot(dx,dy);
+    if(d < 1e-9) return [];
+    if(d > r1+r2+1e-9) return [];
+    if(d < Math.abs(r1-r2)-1e-9) return [];
+    const a = (r1*r1 - r2*r2 + d*d)/(2*d);
+    const h2 = r1*r1 - a*a;
+    const h = h2>0 ? Math.sqrt(h2) : 0;
+    const xm = c1.x + a*dx/d, ym = c1.y + a*dy/d;
+    const rx = -dy*(h/d), ry = dx*(h/d);
+    const p1 = { x:xm+rx, y:ym+ry };
+    if(h2 <= 1e-9) return [p1];
+    const p2 = { x:xm-rx, y:ym-ry };
+    return [p1,p2];
+  }
+
+  function circleCenterRadius(obj){
+    const c = getPointXY(obj.parents[0]);
+    const r = dist(c, getPointXY(obj.parents[1]));
+    return { c, r };
+  }
+
+  function computeTangentPoints(P, C, r){
+    const dx=C.x-P.x, dy=C.y-P.y;
+    const d = Math.hypot(dx,dy);
+    if(d < r - 1e-9) return [];
+    const L = Math.sqrt(Math.max(0, d*d - r*r));
+    if(d < r + 1e-9) return [{ x:P.x, y:P.y }];
+    const u = { x:dx/d, y:dy/d };
+    const theta = Math.acos(Math.min(1, L/d));
+    const t1 = rotateVec(u, theta), t2 = rotateVec(u, -theta);
+    return [ add(P, scl(t1,L)), add(P, scl(t2,L)) ];
+  }
+
+  /* param of a point along a line's anchor+dir (dir is a unit vector) */
+  function lineParamOf(g, pt){
+    return Math.abs(g.dir.x) > Math.abs(g.dir.y)
+      ? (pt.x-g.anchor.x)/g.dir.x
+      : (pt.y-g.anchor.y)/g.dir.y;
+  }
+
+  /* whether a point that lies ON obj's line actually falls within obj's real extent
+     (bounded for segments, one-directional for rays like the bisector; unbounded otherwise) */
+  function pointWithinExtent(obj, g, pt){
+    if(obj.type==='segment'){
+      const t = lineParamOf(g, pt);
+      return t > -1e-6 && t < dist(g.p1,g.p2)+1e-6;
+    }
+    if(obj.type==='bisector'){
+      return lineParamOf(g, pt) > -1e-6;
+    }
+    return true;
+  }
+
+  /* projects an arbitrary world point onto obj's geometry, returning the signed
+     distance-along-dir parameter used by 'onobject' points (g.dir is a unit vector),
+     clamped to the object's real extent (bounded segment, one-directional bisector ray) */
+  function projectOntoLineGeom(obj, g, pt){
+    let t = dot(sub(pt, g.anchor), g.dir);
+    if(obj.type==='segment'){
+      t = Math.max(0, Math.min(dist(g.p1,g.p2), t));
+    } else if(obj.type==='bisector'){
+      t = Math.max(0, t);
+    }
+    return t;
+  }
+
+  function computeIntersections(objA, objB){
+    const isCircleA = objA.type==='circle', isCircleB = objB.type==='circle';
+    if(!isCircleA && !isCircleB){
+      const g1 = getLineGeom(objA), g2 = getLineGeom(objB);
+      const pt = lineLineIntersect(g1,g2);
+      if(!pt) return [];
+      if(!pointWithinExtent(objA,g1,pt) || !pointWithinExtent(objB,g2,pt)) return [];
+      return [pt];
+    }
+    if(isCircleA && isCircleB){
+      const A = circleCenterRadius(objA), B = circleCenterRadius(objB);
+      return circleCircleIntersect(A.c,A.r,B.c,B.r);
+    }
+    const lineObj = isCircleA ? objB : objA;
+    const circleObj = isCircleA ? objA : objB;
+    const g = getLineGeom(lineObj);
+    const cr = circleCenterRadius(circleObj);
+    return lineCircleIntersect(g, cr.c, cr.r).filter(p=>pointWithinExtent(lineObj,g,p));
+  }
+
+  /* ================= cascade delete ================= */
+  function deleteObjectCascade(id){
+    const toDelete = new Set([id]);
+    let changed = true;
+    while(changed){
+      changed = false;
+      for(const o of objects){
+        if(toDelete.has(o.id)) continue;
+        const parents = o.parents || [];
+        if(parents.some(pid=>toDelete.has(pid))){ toDelete.add(o.id); changed = true; }
+      }
+    }
+    objects = objects.filter(o=>!toDelete.has(o.id));
+    if(selectedId!==null && toDelete.has(selectedId)) selectedId = null;
+  }
+
+  function deleteAnyById(id){
+    if(getObj(id)){ deleteObjectCascade(id); return; }
+    const idx = inkStrokes.findIndex(s=>s.id===id);
+    if(idx>=0) inkStrokes.splice(idx,1);
+    if(selectedId===id) selectedId = null;
+  }
+
+  /* ================= history ================= */
+  function saveHistory(){
+    history.push(JSON.stringify({ objects, idCounter, inkStrokes }));
+    if(history.length > 60) history.shift();
+  }
+  function undo(){
+    if(!history.length) return;
+    const snap = JSON.parse(history.pop());
+    objects = snap.objects;
+    idCounter = snap.idCounter;
+    inkStrokes = snap.inkStrokes || [];
+    selectedId = null;
+    pending = [];
+    pendingBase = null;
+    render();
+  }
+
+  /* ================= hit testing ================= */
+  const PICK_PX = 11;
+
+  function pickPoint(sx,sy){
+    let best=null, bestD=PICK_PX;
+    for(const o of objects){
+      if(o.type!=='point') continue;
+      const s = worldToScreen(getPointXY(o.id).x, getPointXY(o.id).y);
+      const d = Math.hypot(s.x-sx, s.y-sy);
+      if(d < bestD){ bestD=d; best=o.id; }
+    }
+    return best;
+  }
+
+  function distPointToSegmentPx(sx,sy, a, b){
+    const sa = worldToScreen(a.x,a.y), sb = worldToScreen(b.x,b.y);
+    const vx = sb.x-sa.x, vy = sb.y-sa.y;
+    const lenSq = vx*vx+vy*vy;
+    let t = lenSq < 1e-9 ? 0 : ((sx-sa.x)*vx + (sy-sa.y)*vy)/lenSq;
+    t = Math.max(0, Math.min(1, t));
+    const px = sa.x + t*vx, py = sa.y + t*vy;
+    return Math.hypot(sx-px, sy-py);
+  }
+
+  function distPointToInfiniteLinePx(sx,sy, anchor, dir, ray){
+    if(len(dir) < 1e-9) return Infinity;
+    const aScreen = worldToScreen(anchor.x, anchor.y);
+    const farWorld = add(anchor, scl(dir, 1e5));
+    const bScreen = worldToScreen(farWorld.x, farWorld.y);
+    const vx = bScreen.x-aScreen.x, vy = bScreen.y-aScreen.y;
+    const lenSq = vx*vx+vy*vy;
+    let t = lenSq < 1e-9 ? 0 : ((sx-aScreen.x)*vx + (sy-aScreen.y)*vy)/lenSq;
+    if(ray) t = Math.max(0, t);
+    const px = aScreen.x + t*vx, py = aScreen.y + t*vy;
+    return Math.hypot(sx-px, sy-py);
+  }
+
+  function pickLineLike(sx,sy, types){
+    let best=null, bestD=9;
+    for(const o of objects){
+      if(!types.includes(o.type)) continue;
+      const g = getLineGeom(o);
+      let d;
+      if(o.type==='segment') d = distPointToSegmentPx(sx,sy, g.p1, g.p2);
+      else d = distPointToInfiniteLinePx(sx,sy, g.anchor, g.dir, g.ray);
+      if(d < bestD){ bestD=d; best=o.id; }
+    }
+    return best;
+  }
+
+  function pickCircle(sx,sy){
+    let best=null, bestD=9;
+    for(const o of objects){
+      if(o.type!=='circle') continue;
+      const c = getPointXY(o.parents[0]);
+      const rp = getPointXY(o.parents[1]);
+      const r = dist(c,rp);
+      const mouseW = screenToWorld(sx,sy);
+      const d = Math.abs(dist(mouseW,c) - r) * view.scale;
+      if(d < bestD){ bestD=d; best=o.id; }
+    }
+    return best;
+  }
+
+  function pointInPolygon(pt, pts){
+    let inside=false;
+    for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+      const xi=pts[i].x, yi=pts[i].y, xj=pts[j].x, yj=pts[j].y;
+      const intersect = ((yi>pt.y)!==(yj>pt.y)) && (pt.x < (xj-xi)*(pt.y-yi)/(yj-yi)+xi);
+      if(intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  function pickPolygon(sx,sy){
+    const mouseW = screenToWorld(sx,sy);
+    for(const o of objects){
+      if(o.type!=='polygon') continue;
+      const pts = o.parents.map(getPointXY);
+      if(pointInPolygon(mouseW, pts)) return o.id;
+      for(let i=0;i<pts.length;i++){
+        const a = pts[i], b = pts[(i+1)%pts.length];
+        if(distPointToSegmentPx(sx,sy,a,b) < 9) return o.id;
+      }
+    }
+    return null;
+  }
+
+  function pickVector(sx,sy){
+    let best=null, bestD=9;
+    for(const o of objects){
+      if(o.type!=='vector' && o.type!=='vectorEqual') continue;
+      const g = getVectorGeom(o);
+      const d = distPointToSegmentPx(sx,sy, g.tail, g.head);
+      if(d < bestD){ bestD=d; best=o.id; }
+    }
+    return best;
+  }
+
+  function pickInk(sx,sy){
+    let best=null, bestD=10;
+    for(const s of inkStrokes){
+      if(s.points.length===1){
+        const p = worldToScreen(s.points[0].x, s.points[0].y);
+        const d = Math.hypot(p.x-sx, p.y-sy);
+        if(d < bestD){ bestD=d; best=s.id; }
+        continue;
+      }
+      for(let i=1;i<s.points.length;i++){
+        const d = distPointToSegmentPx(sx,sy, s.points[i-1], s.points[i]);
+        if(d < bestD){ bestD=d; best=s.id; }
+      }
+    }
+    return best;
+  }
+
+  function pickLineOrCircle(sx,sy){
+    return pickLineLike(sx,sy, LINE_TYPES) || pickCircle(sx,sy);
+  }
+
+  function pickRightAngle(sx,sy){
+    let best=null, bestD=14;
+    for(const o of objects){
+      if(o.type!=='rightangle') continue;
+      const A=getObj(o.parents[0]), B=getObj(o.parents[1]);
+      if(!A||!B) continue;
+      const pts = computeIntersections(A,B);
+      if(!pts.length) continue;
+      const s = worldToScreen(pts[0].x, pts[0].y);
+      const d = Math.hypot(s.x-sx, s.y-sy);
+      if(d<bestD){ bestD=d; best=o.id; }
+    }
+    return best;
+  }
+
+  function pickAngleMarker(sx,sy){
+    let best=null, bestD=14;
+    for(const o of objects){
+      if(o.type!=='angle') continue;
+      const vertex = getPointXY(o.parents[1]);
+      const s = worldToScreen(vertex.x, vertex.y);
+      const d = Math.hypot(s.x-sx, s.y-sy);
+      if(d<bestD){ bestD=d; best=o.id; }
+    }
+    return best;
+  }
+
+  function pickAny(sx,sy){
+    return pickPoint(sx,sy)
+      || pickLineLike(sx,sy, LINE_TYPES)
+      || pickVector(sx,sy)
+      || pickCircle(sx,sy)
+      || pickPolygon(sx,sy)
+      || pickRightAngle(sx,sy)
+      || pickAngleMarker(sx,sy)
+      || pickInk(sx,sy)
+      || null;
+  }
+
+  function getOrCreatePointAt(sx,sy){
+    const existing = pickPoint(sx,sy);
+    if(existing) return existing;
+    const w = screenToWorld(sx,sy);
+    return createFreePoint(w.x, w.y);
+  }
+
+  /* ================= tool step hints ================= */
+  const TOOL_HINTS = {
+    move: 'Провлачи точка, за да я преместиш. Кликни обект, за да го избереш — Delete го изтрива.',
+    point: 'Кликни върху дъската, за да поставиш точка.',
+    pointon: 'Кликни върху отсечка, права, окръжност или друг обект — точката ще остане закачена за него и ще се движи само по него.',
+    segment: ['Избери или постави първа точка на отсечката.', 'Избери или постави втора точка.'],
+    line: ['Избери или постави първа точка от правата.', 'Избери или постави втора точка от правата.'],
+    circle: ['Избери центъра на окръжността.', 'Избери точка от окръжността.'],
+    polygon: 'Кликвай точки на многоъгълника; затвори върху първата точка.',
+    perpendicular: ['Избери права или отсечка.', 'Избери точката, през която минава перпендикулярът.'],
+    bisector: ['Избери точка от първото рамо на ъгъла.', 'Избери върха на ъгъла.', 'Избери точка от второто рамо.'],
+    angle: ['Избери или постави точка от първото рамо на ъгъла.', 'Избери или постави върха на ъгъла.', 'Избери или постави точка от второто рамо — включи „Стойности", за да видиш градусите.'],
+    midpoint: 'Избери отсечка или две точки.',
+    parallel: ['Избери права или отсечка.', 'Избери точката, през която минава успоредната права.'],
+    intersect: ['Избери първи обект — права, отсечка или окръжност.', 'Избери втори обект, който я пресича.'],
+    vector: ['Избери или постави началото на вектора.', 'Избери или постави края на вектора.'],
+    vectorEqual: ['Избери съществуващ вектор.', 'Избери или постави точка — новото начало на равния вектор.'],
+    tangent: ['Избери окръжност.', 'Избери или постави точка извън окръжността — допирателната(ите) ще минат през нея.'],
+    rightangle: ['Избери първата права/отсечка.', 'Избери втора права/отсечка, перпендикулярна на първата.'],
+    incircle: 'Кликни триъгълник (многоъгълник с 3 върха), за да построиш вписаната му окръжност.',
+    circumcircle: 'Кликни триъгълник (многоъгълник с 3 върха), за да построиш описаната около него окръжност.',
+    pen: 'Пиши или рисувай свободно с мишка, пръст или писалка на екрана.',
+    smartpen: 'Начертай на ръка права, окръжност или многоъгълник — при пускане ще стане точна геометрична фигура.',
+    delete: 'Кликни обект (или бележка), за да го изтриеш завинаги — заедно със зависимите от него построения.'
+  };
+
+  function updateHint(){
+    let h = TOOL_HINTS[currentTool];
+    if(Array.isArray(h)){
+      if(currentTool==='perpendicular' || currentTool==='parallel' || currentTool==='intersect' || currentTool==='vectorEqual' || currentTool==='tangent' || currentTool==='rightangle'){
+        h = h[pendingBase!==null ? 1 : 0];
+      } else {
+        const step = Math.min(pending.length, h.length-1);
+        h = h[step];
+      }
+    } else if(currentTool==='polygon' && pending.length>0){
+      h = `Точка ${pending.length+1} — затвори върху първата точка (или Enter).`;
+    } else if(currentTool==='midpoint' && pending.length>0){
+      h = 'Избери втора точка.';
+    } else if(currentTool==='move' && selectedId!==null){
+      h = 'Избери цвят горе, за да оцветиш маркирания обект. Провлачи точка или натисни Delete.';
+    }
+    hintText.textContent = h;
+  }
+
+  function resetPending(){
+    pending = [];
+    pendingBase = null;
+    updateHint();
+  }
+
+  /* ================= tool actions ================= */
+  function setTool(tool){
+    currentTool = tool;
+    selectedId = null;
+    hoverId = null;
+    resetPending();
+    document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>{
+      b.classList.toggle('active', b.dataset.tool===tool);
+    });
+    document.getElementById('penOptions').classList.toggle('show', tool==='pen' || tool==='smartpen');
+    canvas.style.cursor = tool==='move' ? 'default' : 'crosshair';
+    render();
+  }
+
+  function finalizePolygon(){
+    if(pending.length < 3) return;
+    saveHistory();
+    objects.push({ id:uid(), type:'polygon', parents:pending.slice() });
+    resetPending();
+  }
+
+  function handlePointClick(sx,sy){
+    const existing = pickPoint(sx,sy);
+    if(existing) return;
+    saveHistory();
+    const w = screenToWorld(sx,sy);
+    createFreePoint(w.x, w.y);
+    render();
+  }
+
+  function handleTwoPointTool(sx,sy, type){
+    const pid = getOrCreatePointAt(sx,sy);
+    if(pending.length===0){
+      saveHistory();
+      pending.push(pid);
+    } else {
+      if(pid === pending[0]){ updateHint(); render(); return; }
+      objects.push({ id:uid(), type, parents:[pending[0], pid] });
+      resetPending();
+    }
+    render();
+  }
+
+  function handlePolygonClick(sx,sy){
+    if(pending.length >= 3){
+      const first = getPointXY(pending[0]);
+      const firstScreen = worldToScreen(first.x, first.y);
+      if(Math.hypot(firstScreen.x-sx, firstScreen.y-sy) < PICK_PX){
+        finalizePolygon();
+        render();
+        return;
+      }
+    }
+    const pid = getOrCreatePointAt(sx,sy);
+    if(pending.length===0) saveHistory();
+    if(pending[pending.length-1] !== pid) pending.push(pid);
+    updateHint();
+    render();
+  }
+
+  function handlePerpendicularClick(sx,sy){
+    if(pendingBase===null){
+      const lineId = pickLineLike(sx,sy, LINE_TYPES);
+      if(!lineId) return;
+      saveHistory();
+      pendingBase = lineId;
+      updateHint();
+      render();
+      return;
+    }
+    const pid = getOrCreatePointAt(sx,sy);
+    objects.push({ id:uid(), type:'perpendicular', parents:[pid, pendingBase] });
+    resetPending();
+    render();
+  }
+
+  function handleParallelClick(sx,sy){
+    if(pendingBase===null){
+      const lineId = pickLineLike(sx,sy, LINE_TYPES);
+      if(!lineId) return;
+      saveHistory();
+      pendingBase = lineId;
+      updateHint();
+      render();
+      return;
+    }
+    const pid = getOrCreatePointAt(sx,sy);
+    objects.push({ id:uid(), type:'parallel', parents:[pid, pendingBase] });
+    resetPending();
+    render();
+  }
+
+  function handleIntersectClick(sx,sy){
+    if(pendingBase===null){
+      const oid = pickLineOrCircle(sx,sy);
+      if(!oid) return;
+      saveHistory();
+      pendingBase = oid;
+      updateHint();
+      render();
+      return;
+    }
+    const oid = pickLineOrCircle(sx,sy);
+    if(!oid || oid===pendingBase) return;
+    const A = getObj(pendingBase), B = getObj(oid);
+    const pts = computeIntersections(A,B);
+    if(pts.length===0){
+      hintText.textContent = 'Тези два обекта не се пресичат — избери друг втори обект.';
+      return;
+    }
+    pts.forEach((pt,i)=>{
+      objects.push({ id:uid(), type:'point', sub:'intersect', parents:[A.id,B.id], index:i, label:nextLabel() });
+    });
+    resetPending();
+    render();
+  }
+
+  function handleVectorEqualClick(sx,sy){
+    if(pendingBase===null){
+      const vId = pickVector(sx,sy);
+      if(!vId) return;
+      saveHistory();
+      pendingBase = vId;
+      updateHint();
+      render();
+      return;
+    }
+    const pid = getOrCreatePointAt(sx,sy);
+    objects.push({ id:uid(), type:'vectorEqual', parents:[pid, pendingBase] });
+    resetPending();
+    render();
+  }
+
+  function handleBisectorClick(sx,sy){
+    const pid = getOrCreatePointAt(sx,sy);
+    if(pending.length===0) saveHistory();
+    pending.push(pid);
+    if(pending.length===3){
+      objects.push({ id:uid(), type:'bisector', parents:pending.slice() });
+      resetPending();
+    } else {
+      updateHint();
+    }
+    render();
+  }
+
+  function handleAngleClick(sx,sy){
+    const pid = getOrCreatePointAt(sx,sy);
+    if(pending.length===0) saveHistory();
+    pending.push(pid);
+    if(pending.length===3){
+      objects.push({ id:uid(), type:'angle', parents:pending.slice() });
+      resetPending();
+    } else {
+      updateHint();
+    }
+    render();
+  }
+
+  function handleMidpointClick(sx,sy){
+    if(pending.length===0){
+      const lineId = pickLineLike(sx,sy, ['segment']);
+      if(lineId){
+        const obj = getObj(lineId);
+        saveHistory();
+        createMidpoint(obj.parents[0], obj.parents[1]);
+        render();
+        return;
+      }
+    }
+    const pid = getOrCreatePointAt(sx,sy);
+    if(pending.length===0){
+      saveHistory();
+      pending.push(pid);
+      updateHint();
+    } else {
+      if(pid===pending[0]){ render(); return; }
+      createMidpoint(pending[0], pid);
+      resetPending();
+    }
+    render();
+  }
+
+  function handlePointOnObjectClick(sx,sy){
+    const objId = pickLineOrCircle(sx,sy);
+    if(!objId) return;
+    saveHistory();
+    const obj = getObj(objId);
+    const mouseW = screenToWorld(sx,sy);
+    let t;
+    if(obj.type==='circle'){
+      const cr = circleCenterRadius(obj);
+      t = Math.atan2(mouseW.y-cr.c.y, mouseW.x-cr.c.x);
+    } else {
+      const g = getLineGeom(obj);
+      t = projectOntoLineGeom(obj, g, mouseW);
+    }
+    objects.push({ id:uid(), type:'point', sub:'onobject', parents:[objId], t, label:nextLabel() });
+    render();
+  }
+
+  function handleIncircleClick(sx,sy){
+    const polyId = pickPolygon(sx,sy);
+    if(!polyId) return;
+    const poly = getObj(polyId);
+    if(!poly || poly.parents.length !== 3){
+      hintText.textContent = 'Вписаната окръжност изисква триъгълник — многоъгълник с точно 3 върха.';
+      return;
+    }
+    saveHistory();
+    const centerId = uid();
+    objects.push({ id:centerId, type:'point', sub:'incenter', parents:[polyId], label:nextLabel() });
+    const touchId = uid();
+    objects.push({ id:touchId, type:'point', sub:'incircletouch', parents:[polyId], label:nextLabel() });
+    objects.push({ id:uid(), type:'circle', parents:[centerId, touchId] });
+    hintText.textContent = 'Построена вписана окръжност.';
+    render();
+  }
+
+  function handleCircumcircleClick(sx,sy){
+    const polyId = pickPolygon(sx,sy);
+    if(!polyId) return;
+    const poly = getObj(polyId);
+    if(!poly || poly.parents.length !== 3){
+      hintText.textContent = 'Описаната окръжност изисква триъгълник — многоъгълник с точно 3 върха.';
+      return;
+    }
+    saveHistory();
+    const centerId = uid();
+    objects.push({ id:centerId, type:'point', sub:'circumcenter', parents:[polyId], label:nextLabel() });
+    objects.push({ id:uid(), type:'circle', parents:[centerId, poly.parents[0]] });
+    hintText.textContent = 'Построена описана окръжност.';
+    render();
+  }
+
+  function handleTangentClick(sx,sy){
+    if(pendingBase===null){
+      const cid = pickCircle(sx,sy);
+      if(!cid) return;
+      saveHistory();
+      pendingBase = cid;
+      updateHint();
+      render();
+      return;
+    }
+    const pid = getOrCreatePointAt(sx,sy);
+    const C = getObj(pendingBase);
+    if(!C){ resetPending(); return; }
+    const cr = circleCenterRadius(C);
+    const P = getPointXY(pid);
+    const d = dist(P, cr.c);
+    if(d < cr.r - 1e-6){
+      hintText.textContent = 'Точката е вътре в окръжността — няма допирателна. Избери друга точка.';
+      return;
+    }
+    const onCircle = Math.abs(d-cr.r) < 1e-6;
+    const count = onCircle ? 1 : 2;
+    for(let i=0;i<count;i++){
+      objects.push({ id:uid(), type:'tangent', parents:[pid, C.id], index:i });
+    }
+    resetPending();
+    render();
+  }
+
+  function handleRightAngleClick(sx,sy){
+    if(pendingBase===null){
+      const oid = pickLineLike(sx,sy, LINE_TYPES);
+      if(!oid) return;
+      saveHistory();
+      pendingBase = oid;
+      updateHint();
+      render();
+      return;
+    }
+    const oid = pickLineLike(sx,sy, LINE_TYPES);
+    if(!oid || oid===pendingBase) return;
+    const A = getObj(pendingBase), B = getObj(oid);
+    const gA = getLineGeom(A), gB = getLineGeom(B);
+    if(len(gA.dir)<1e-9 || len(gB.dir)<1e-9) return;
+    const cosAngle = Math.abs(dot(gA.dir, gB.dir));
+    if(cosAngle > 0.02){
+      hintText.textContent = 'Тези два обекта не са перпендикулярни — маркерът изисква ъгъл 90°.';
+      return;
+    }
+    const pts = computeIntersections(A,B);
+    if(!pts.length){
+      hintText.textContent = 'Тези два обекта не се пресичат.';
+      return;
+    }
+    objects.push({ id:uid(), type:'rightangle', parents:[A.id,B.id] });
+    resetPending();
+    render();
+  }
+
+  function handleDeleteClick(sx,sy){
+    const oid = pickAny(sx,sy);
+    if(!oid) return;
+    saveHistory();
+    deleteAnyById(oid);
+    render();
+  }
+
+  /* ================= theme-aware palette ================= */
+  function getPalette(){
+    const cs = getComputedStyle(document.documentElement);
+    const g = name => cs.getPropertyValue(name).trim();
+    return {
+      board: g('--board'),
+      gridLine: g('--grid-line'),
+      axisLine: g('--axis-line'),
+      axisText: g('--axis-text'),
+      primary: g('--ink-primary'),
+      blue: g('--ink-blue'),
+      rose: g('--ink-rose'),
+      green: g('--ink-green'),
+      yellow: g('--ink-yellow'),
+      orange: g('--ink-orange'),
+      danger: g('--ink-danger'),
+      hot: g('--ink-hot'),
+      polyFill: g('--poly-fill'),
+      polyFillHot: g('--poly-fill-hot'),
+      pointGlow: g('--point-glow')
+    };
+  }
+
+  function tintColor(pal, tint){
+    const map = { white:pal.primary, yellow:pal.yellow, rose:pal.rose, green:pal.green, blue:pal.blue, orange:pal.orange, danger:pal.danger, hot:pal.hot };
+    return map[tint] || pal.primary;
+  }
+
+  /* ================= rendering ================= */
+  function resizeCanvas(){
+    dpr = Math.max(1, window.devicePixelRatio || 1);
+    const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
+    canvas.width = Math.max(1, Math.round(w*dpr));
+    canvas.height = Math.max(1, Math.round(h*dpr));
+    canvas.style.width = w+'px';
+    canvas.style.height = h+'px';
+  }
+
+  function drawGridLines(w,h,pal){
+    const topLeft = screenToWorld(0,0);
+    const bottomRight = screenToWorld(w,h);
+    const step = 1; // grid & axis numbers always spaced by exactly 1 world unit
+
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = pal.gridLine;
+    ctx.beginPath();
+    const startX = Math.ceil(topLeft.x/step)*step;
+    for(let x=startX; x<=bottomRight.x; x+=step){
+      const s = worldToScreen(x,0);
+      ctx.moveTo(s.x+0.5, 0);
+      ctx.lineTo(s.x+0.5, h);
+    }
+    const startY = Math.ceil(bottomRight.y/step)*step;
+    for(let y=startY; y<=topLeft.y; y+=step){
+      const s = worldToScreen(0,y);
+      ctx.moveTo(0, s.y+0.5);
+      ctx.lineTo(w, s.y+0.5);
+    }
+    ctx.stroke();
+  }
+
+  function drawAxesAndTicks(w,h,pal){
+    const topLeft = screenToWorld(0,0);
+    const bottomRight = screenToWorld(w,h);
+    const step = 1; // grid & axis numbers always spaced by exactly 1 world unit
+    const startX = Math.ceil(topLeft.x/step)*step;
+    const startY = Math.ceil(bottomRight.y/step)*step;
+
+    const origin = worldToScreen(0,0);
+    ctx.strokeStyle = pal.axisLine;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    if(origin.y>=0 && origin.y<=h){ ctx.moveTo(0, origin.y+0.5); ctx.lineTo(w, origin.y+0.5); }
+    if(origin.x>=0 && origin.x<=w){ ctx.moveTo(origin.x+0.5, 0); ctx.lineTo(origin.x+0.5, h); }
+    ctx.stroke();
+
+    if(step*view.scale >= 22){
+      ctx.font = '10px "JetBrains Mono", monospace';
+      ctx.fillStyle = pal.axisText;
+      const axisRowVisible = origin.y>=0 && origin.y<=h;
+      const axisColVisible = origin.x>=0 && origin.x<=w;
+      if(axisRowVisible){
+        ctx.textBaseline = 'top';
+        ctx.textAlign = 'center';
+        for(let x=startX; x<=bottomRight.x; x+=step){
+          if(Math.abs(x) < step*0.001) continue;
+          const s = worldToScreen(x,0);
+          ctx.fillText(formatNum(x), s.x, Math.min(h-14, origin.y+5));
+        }
+      }
+      if(axisColVisible){
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'left';
+        for(let y=startY; y<=topLeft.y; y+=step){
+          if(Math.abs(y) < step*0.001) continue;
+          const s = worldToScreen(0,y);
+          ctx.fillText(formatNum(y), Math.max(4, origin.x+5), s.y);
+        }
+      }
+    }
+  }
+
+  function drawArrowHead(tip, dx, dy, color, size){
+    size = size || 7;
+    color = color || 'rgba(143,182,198,0.9)';
+    const nx = -dy, ny = dx;
+    const back = { x: tip.x-dx*size, y: tip.y-dy*size };
+    const p1 = { x: back.x+nx*size*0.45, y: back.y+ny*size*0.45 };
+    const p2 = { x: back.x-nx*size*0.45, y: back.y-ny*size*0.45 };
+    ctx.beginPath();
+    ctx.moveTo(tip.x,tip.y);
+    ctx.lineTo(p1.x,p1.y);
+    ctx.lineTo(p2.x,p2.y);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  function drawVectorObj(o, isHot, pal){
+    const g = getVectorGeom(o);
+    const pa = worldToScreen(g.tail.x, g.tail.y);
+    const pb = worldToScreen(g.head.x, g.head.y);
+    const dx = pb.x-pa.x, dy = pb.y-pa.y;
+    const L = Math.hypot(dx,dy);
+    if(L < 1e-6) return;
+    const ux = dx/L, uy = dy/L;
+    const color = isHot ? pal.hot : (o.tint ? tintColor(pal, o.tint) : pal.orange);
+    const baseWidth = o.strokeWidth || 2.2;
+    ctx.beginPath();
+    ctx.moveTo(pa.x,pa.y);
+    ctx.lineTo(pb.x,pb.y);
+    ctx.lineWidth = isHot ? baseWidth+0.4 : baseWidth;
+    ctx.strokeStyle = color;
+    ctx.setLineDash(o.dash ? (DASH_PATTERNS[o.dash]||[]) : (o.type==='vectorEqual' ? [7,4] : []));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    drawArrowHead(pb, ux, uy, color, 8);
+  }
+
+  function drawAxisNames(w,h,pal){
+    const origin = worldToScreen(0,0);
+    ctx.font = 'italic 700 16px Manrope, sans-serif';
+    ctx.fillStyle = pal.axisText;
+    if(origin.y>=0 && origin.y<=h){
+      drawArrowHead({x:w-6, y:origin.y}, 1, 0, pal.axisText);
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('x', w-14, origin.y-6);
+    }
+    if(origin.x>=0 && origin.x<=w){
+      drawArrowHead({x:origin.x, y:8}, 0, -1, pal.axisText);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText('y', origin.x+8, 6);
+    }
+  }
+
+  function extendedLinePoints(anchor, dir, ray, w, h){
+    const diag = Math.hypot(w,h)/view.scale + 20;
+    const a = ray ? anchor : add(anchor, scl(dir, -diag));
+    const b = add(anchor, scl(dir, diag));
+    return [worldToScreen(a.x,a.y), worldToScreen(b.x,b.y)];
+  }
+
+  function drawPolygonObj(o, isHot, pal){
+    const pts = o.parents.map(getPointXY).map(p=>worldToScreen(p.x,p.y));
+    if(pts.length<2) return;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+    ctx.fillStyle = isHot ? pal.polyFillHot : pal.polyFill;
+    ctx.fill();
+    const baseWidthP = o.strokeWidth || 2;
+    ctx.lineWidth = isHot ? baseWidthP+0.4 : baseWidthP;
+    ctx.strokeStyle = isHot ? pal.hot : (o.tint ? tintColor(pal, o.tint) : pal.primary);
+    ctx.setLineDash(o.dash ? (DASH_PATTERNS[o.dash]||[]) : []);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawCircleObj(o, isHot, pal){
+    const c = getPointXY(o.parents[0]);
+    const rp = getPointXY(o.parents[1]);
+    const r = dist(c,rp);
+    if(r < 1e-6) return;
+    const s = worldToScreen(c.x,c.y);
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, r*view.scale, 0, Math.PI*2);
+    const baseWidthC = o.strokeWidth || 2;
+    ctx.lineWidth = isHot ? baseWidthC+0.6 : baseWidthC;
+    ctx.strokeStyle = isHot ? pal.hot : (o.tint ? tintColor(pal, o.tint) : pal.blue);
+    ctx.setLineDash(o.dash ? (DASH_PATTERNS[o.dash]||[]) : []);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawLineLikeObj(o, isHot, pal){
+    const g = getLineGeom(o);
+    if(len(g.dir) < 1e-9 && o.type!=='segment') return;
+    const w = canvas.width/dpr, h = canvas.height/dpr;
+    let pa, pb;
+    if(o.type==='segment'){
+      pa = worldToScreen(g.p1.x,g.p1.y);
+      pb = worldToScreen(g.p2.x,g.p2.y);
+    } else {
+      [pa,pb] = extendedLinePoints(g.anchor, g.dir, g.ray, w, h);
+    }
+    let color, dash;
+    if(o.type==='segment' || o.type==='line'){ color=pal.primary; dash=[]; }
+    else if(o.type==='perpendicular'){ color=pal.rose; dash=[7,5]; }
+    else if(o.type==='parallel'){ color=pal.green; dash=[11,4]; }
+    else if(o.type==='tangent'){ color=pal.blue; dash=[5,3]; }
+    else { color=pal.yellow; dash=[9,3,2,3]; }
+    if(o.tint) color = tintColor(pal, o.tint);
+    if(o.dash) dash = DASH_PATTERNS[o.dash] || [];
+    if(isHot) color = pal.hot;
+    const baseWidthL = o.strokeWidth || 2;
+    ctx.beginPath();
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+    ctx.lineWidth = isHot ? baseWidthL+0.6 : baseWidthL;
+    ctx.strokeStyle = color;
+    ctx.setLineDash(dash);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawRightAngleMarker(o, isHot, pal){
+    const A = getObj(o.parents[0]), B = getObj(o.parents[1]);
+    if(!A || !B) return;
+    const pts = computeIntersections(A,B);
+    if(!pts.length) return;
+    const vertex = pts[0];
+    const gA = getLineGeom(A), gB = getLineGeom(B);
+    if(len(gA.dir)<1e-9 || len(gB.dir)<1e-9) return;
+    const vs = worldToScreen(vertex.x, vertex.y);
+    const toScreenDir = d => normalize({x:d.x, y:-d.y});
+    const dAs = toScreenDir(gA.dir), dBs = toScreenDir(gB.dir);
+    const L = 13;
+    const p1 = { x:vs.x+dAs.x*L, y:vs.y+dAs.y*L };
+    const p2 = { x:p1.x+dBs.x*L, y:p1.y+dBs.y*L };
+    const p3 = { x:vs.x+dBs.x*L, y:vs.y+dBs.y*L };
+    ctx.beginPath();
+    ctx.moveTo(p1.x,p1.y);
+    ctx.lineTo(p2.x,p2.y);
+    ctx.lineTo(p3.x,p3.y);
+    ctx.lineWidth = isHot ? 2.2 : 1.6;
+    ctx.strokeStyle = isHot ? pal.hot : (o.tint ? tintColor(pal,o.tint) : pal.primary);
+    ctx.setLineDash([]);
+    ctx.stroke();
+  }
+
+  function angleBisectorDir(u1,u2){
+    let bis = add(u1,u2);
+    if(len(bis) < 1e-6) bis = rot90(u1);
+    return normalize(bis);
+  }
+
+  function drawAngleMarker(o, isHot, pal){
+    const p1 = getPointXY(o.parents[0]);
+    const vertex = getPointXY(o.parents[1]);
+    const p2 = getPointXY(o.parents[2]);
+    const d1 = sub(p1,vertex), d2 = sub(p2,vertex);
+    if(len(d1) < 1e-9 || len(d2) < 1e-9) return;
+    const vs = worldToScreen(vertex.x, vertex.y);
+    const toScreenDir = d => normalize({x:d.x, y:-d.y});
+    const d1s = toScreenDir(d1), d2s = toScreenDir(d2);
+    const a1 = Math.atan2(d1s.y, d1s.x), a2 = Math.atan2(d2s.y, d2s.x);
+    let diff = a2 - a1;
+    while(diff <= -Math.PI) diff += Math.PI*2;
+    while(diff > Math.PI) diff -= Math.PI*2;
+    const R = 22;
+    ctx.beginPath();
+    ctx.arc(vs.x, vs.y, R, a1, a2, diff < 0);
+    ctx.lineWidth = isHot ? 2.2 : 1.6;
+    ctx.strokeStyle = isHot ? pal.hot : (o.tint ? tintColor(pal,o.tint) : pal.primary);
+    ctx.setLineDash([]);
+    ctx.stroke();
+  }
+
+  function computePolyArea(pts){
+    let a=0;
+    for(let i=0;i<pts.length;i++){
+      const p1=pts[i], p2=pts[(i+1)%pts.length];
+      a += p1.x*p2.y - p2.x*p1.y;
+    }
+    return Math.abs(a)/2;
+  }
+
+  function drawMeasurementLabel(worldPos, text, pal, color, dy){
+    const s = worldToScreen(worldPos.x, worldPos.y);
+    const yy = s.y - (dy!==undefined?dy:10);
+    ctx.font = '600 11px "JetBrains Mono", monospace';
+    const tw = ctx.measureText(text).width;
+    ctx.fillStyle = pal.hudBg || pal.board;
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(s.x-tw/2-4, yy-9, tw+8, 15);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = color || pal.axisText;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, s.x, yy-1.5);
+  }
+
+  function drawMeasurements(pal){
+    for(const o of objects){
+      if(o.type==='segment'){
+        const p1=getPointXY(o.parents[0]), p2=getPointXY(o.parents[1]);
+        const mid = {x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2};
+        drawMeasurementLabel(mid, formatNum(dist(p1,p2)), pal);
+      } else if(o.type==='circle'){
+        const c=getPointXY(o.parents[0]), rp=getPointXY(o.parents[1]);
+        const r=dist(c,rp);
+        drawMeasurementLabel({x:c.x, y:c.y+r}, 'r='+formatNum(r), pal, pal.blue);
+      } else if(o.type==='polygon' && o.parents.length>=3){
+        const pts=o.parents.map(getPointXY);
+        const cx=pts.reduce((s,p)=>s+p.x,0)/pts.length, cy=pts.reduce((s,p)=>s+p.y,0)/pts.length;
+        drawMeasurementLabel({x:cx,y:cy}, 'S='+formatNum(computePolyArea(pts)), pal, pal.primary, 0);
+      } else if(o.type==='bisector'){
+        const p1=getPointXY(o.parents[0]), vertex=getPointXY(o.parents[1]), p2=getPointXY(o.parents[2]);
+        const u1=normalize(sub(p1,vertex)), u2=normalize(sub(p2,vertex));
+        if(len(u1)>1e-6 && len(u2)>1e-6){
+          const ang = Math.acos(Math.max(-1,Math.min(1,dot(u1,u2)))) * 180/Math.PI;
+          drawMeasurementLabel(vertex, formatNum(ang)+'°', pal, pal.yellow, -14);
+        }
+      } else if(o.type==='rightangle'){
+        const A=getObj(o.parents[0]), B=getObj(o.parents[1]);
+        if(A && B){
+          const pts=computeIntersections(A,B);
+          if(pts.length) drawMeasurementLabel(pts[0], '90°', pal, pal.primary, -22);
+        }
+      } else if(o.type==='angle'){
+        const p1=getPointXY(o.parents[0]), vertex=getPointXY(o.parents[1]), p2=getPointXY(o.parents[2]);
+        const u1=normalize(sub(p1,vertex)), u2=normalize(sub(p2,vertex));
+        if(len(u1)>1e-6 && len(u2)>1e-6){
+          const ang = Math.acos(Math.max(-1,Math.min(1,dot(u1,u2)))) * 180/Math.PI;
+          const bis = angleBisectorDir(u1,u2);
+          const vs = worldToScreen(vertex.x, vertex.y);
+          const bisScreen = normalize({x:bis.x, y:-bis.y});
+          const labelScreenPos = { x: vs.x + bisScreen.x*34, y: vs.y + bisScreen.y*34 };
+          const labelWorldPos = screenToWorld(labelScreenPos.x, labelScreenPos.y);
+          drawMeasurementLabel(labelWorldPos, formatNum(ang)+'°', pal, o.tint?tintColor(pal,o.tint):pal.yellow, 0);
+        }
+      }
+    }
+  }
+
+  function drawPointObj(o, isHot, isPending, pal){
+    const p = getPointXY(o.id);
+    const s = worldToScreen(p.x,p.y);
+    const isFree = o.sub==='free';
+    const baseColor = o.tint ? tintColor(pal, o.tint) : pal.primary;
+
+    if(isHot || isPending){
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,10,0,Math.PI*2);
+      ctx.fillStyle = pal.pointGlow;
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.arc(s.x,s.y, isFree?4.6:4, 0, Math.PI*2);
+    if(isFree){
+      ctx.fillStyle = isHot||isPending ? pal.hot : baseColor;
+      ctx.fill();
+    } else {
+      ctx.fillStyle = pal.board;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = isHot||isPending ? pal.hot : baseColor;
+      ctx.stroke();
+    }
+
+    const labelSize = o.labelSize || 13;
+    const labelDx = (o.labelDx!==undefined) ? o.labelDx : 8;
+    const labelDy = (o.labelDy!==undefined) ? o.labelDy : -7;
+    ctx.font = '600 '+labelSize+'px Manrope, sans-serif';
+    ctx.fillStyle = isHot||isPending ? pal.hot : baseColor;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(o.label, s.x+labelDx, s.y+labelDy);
+  }
+
+  /* screen-space bounding box of a point's label, used for click-to-drag hit testing */
+  function getLabelScreenBox(o){
+    const p = getPointXY(o.id);
+    const s = worldToScreen(p.x,p.y);
+    const labelSize = o.labelSize || 13;
+    const labelDx = (o.labelDx!==undefined) ? o.labelDx : 8;
+    const labelDy = (o.labelDy!==undefined) ? o.labelDy : -7;
+    ctx.font = '600 '+labelSize+'px Manrope, sans-serif';
+    const w = ctx.measureText(o.label || '').width;
+    const x0 = s.x+labelDx, y0 = s.y+labelDy-labelSize*0.82, x1 = x0+w+2, y1 = s.y+labelDy+labelSize*0.28;
+    return { x0, y0, x1, y1 };
+  }
+
+  function pickLabel(sx,sy){
+    for(let i=objects.length-1;i>=0;i--){
+      const o = objects[i];
+      if(o.type!=='point') continue;
+      const box = getLabelScreenBox(o);
+      if(sx>=box.x0 && sx<=box.x1 && sy>=box.y0 && sy<=box.y1) return o.id;
+    }
+    return null;
+  }
+
+  function drawInkStroke(s, isHot, pal){
+    if(!s.points.length) return;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.setLineDash([]);
+    const color = isHot ? pal.hot : tintColor(pal, s.tint);
+    if(s.points.length===1){
+      const p = worldToScreen(s.points[0].x, s.points[0].y);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(1, s.width*(s.points[0].p||0.5))/2, 0, Math.PI*2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      return;
+    }
+    for(let i=1;i<s.points.length;i++){
+      const a = s.points[i-1], b = s.points[i];
+      const pa = worldToScreen(a.x,a.y), pb = worldToScreen(b.x,b.y);
+      const pr = ((a.p||0.5)+(b.p||0.5))/2;
+      ctx.beginPath();
+      ctx.lineWidth = Math.max(1, s.width*pr);
+      ctx.strokeStyle = color;
+      ctx.moveTo(pa.x,pa.y);
+      ctx.lineTo(pb.x,pb.y);
+      ctx.stroke();
+    }
+  }
+
+  function render(){
+    resizeCanvas();
+    const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+
+    const pal = getPalette();
+    ctx.fillStyle = pal.board;
+    ctx.fillRect(0,0,w,h);
+
+    if(gridEnabled) drawGridLines(w,h,pal);
+    if(axesEnabled) drawAxesAndTicks(w,h,pal);
+    if(axesEnabled && axisNamesEnabled) drawAxisNames(w,h,pal);
+
+    for(const o of objects){ if(o.type==='polygon') drawPolygonObj(o, o.id===hoverId||o.id===selectedId, pal); }
+    for(const o of objects){ if(o.type==='circle') drawCircleObj(o, o.id===hoverId||o.id===selectedId, pal); }
+    for(const o of objects){
+      if(LINE_TYPES.includes(o.type)){
+        drawLineLikeObj(o, o.id===hoverId||o.id===selectedId, pal);
+      }
+    }
+    for(const o of objects){
+      if(o.type==='vector'||o.type==='vectorEqual'){
+        drawVectorObj(o, o.id===hoverId||o.id===selectedId, pal);
+      }
+    }
+    for(const o of objects){
+      if(o.type==='rightangle'){
+        drawRightAngleMarker(o, o.id===hoverId||o.id===selectedId, pal);
+      }
+    }
+    for(const o of objects){
+      if(o.type==='angle'){
+        drawAngleMarker(o, o.id===hoverId||o.id===selectedId, pal);
+      }
+    }
+    for(const o of objects){
+      if(o.type==='point'){
+        drawPointObj(o, o.id===hoverId||o.id===selectedId, pending.includes(o.id), pal);
+      }
+    }
+    for(const s of inkStrokes){
+      drawInkStroke(s, s.id===hoverId||s.id===selectedId, pal);
+    }
+    if(measurementsEnabled) drawMeasurements(pal);
+
+    let countMsg = objects.length===1 ? '1 обект' : objects.length+' обекта';
+    if(inkStrokes.length>0) countMsg += ' · '+inkStrokes.length+(inkStrokes.length===1?' бележка':' бележки');
+    countsText.textContent = countMsg;
+
+    updateColorPanel();
+  }
+
+  function getSelectedTintable(){
+    if(selectedId===null) return null;
+    const o = getObj(selectedId);
+    if(o) return o;
+    return inkStrokes.find(s=>s.id===selectedId) || null;
+  }
+
+  function updateColorPanel(){
+    const target = (currentTool==='move') ? getSelectedTintable() : null;
+    colorPanel.classList.toggle('show', !!target);
+    if(!target) return;
+    document.querySelectorAll('#colorPanel .swatch').forEach(b=>{
+      b.classList.toggle('active', b.dataset.tint === target.tint);
+    });
+    document.getElementById('colorReset').classList.toggle('active', !target.tint && !target.strokeWidth && !target.dash && !target.labelSize && target.labelDx===undefined && target.labelDy===undefined);
+
+    const showStroke = !!target.type && target.type!=='point';
+    strokeDivider.style.display = showStroke ? '' : 'none';
+    widthGroup.style.display = showStroke ? '' : 'none';
+    dashGroup.style.display = showStroke ? '' : 'none';
+    if(showStroke){
+      document.querySelectorAll('#colorPanel .width-btn[data-swidth]').forEach(b=>{
+        b.classList.toggle('active', parseFloat(b.dataset.swidth)===target.strokeWidth);
+      });
+      document.querySelectorAll('#colorPanel .dash-btn').forEach(b=>{
+        b.classList.toggle('active', target.dash === b.dataset.dash);
+      });
+    }
+
+    const showName = target.type === 'point';
+    nameGroup.style.display = showName ? '' : 'none';
+    labelSizeGroup.style.display = showName ? '' : 'none';
+    nameDivider.style.display = showName ? '' : 'none';
+    if(showName && document.activeElement !== pointNameInput){
+      pointNameInput.value = target.label || '';
+    }
+    if(showName){
+      const curSize = target.labelSize || 13;
+      document.querySelectorAll('#colorPanel .labelsize-btn').forEach(b=>{
+        b.classList.toggle('active', parseFloat(b.dataset.labelsize)===curSize);
+      });
+    }
+  }
+
+  function updateZoomLabel(){
+    zoomPct.textContent = Math.round(view.scale/42*100)+'%';
+  }
+
+  /* ================= pointer + wheel events ================= */
+  function canvasCoords(e){
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX-r.left, y: e.clientY-r.top };
+  }
+
+  canvas.addEventListener('pointerdown', function(e){
+    const {x:sx,y:sy} = canvasCoords(e);
+
+    if(currentTool==='move'){
+      const pid = pickPoint(sx,sy);
+      if(pid && (getObj(pid).sub==='free' || getObj(pid).sub==='onobject')){
+        selectedId = pid;
+        saveHistory();
+        draggingPointId = pid;
+        canvas.setPointerCapture(e.pointerId);
+        updateHint();
+        render();
+        return;
+      }
+      const lblId = pickLabel(sx,sy);
+      if(lblId){
+        selectedId = lblId;
+        saveHistory();
+        draggingLabelId = lblId;
+        canvas.setPointerCapture(e.pointerId);
+        updateHint();
+        render();
+        return;
+      }
+      const oid = pickAny(sx,sy);
+      selectedId = oid;
+      if(!oid){
+        isPanning = true;
+        panStart = { sx, sy, ox:view.offsetX, oy:view.offsetY };
+        canvas.setPointerCapture(e.pointerId);
+      }
+      updateHint();
+      render();
+      return;
+    }
+
+    if(currentTool==='point'){ handlePointClick(sx,sy); return; }
+    if(currentTool==='segment'){ handleTwoPointTool(sx,sy,'segment'); return; }
+    if(currentTool==='line'){ handleTwoPointTool(sx,sy,'line'); return; }
+    if(currentTool==='circle'){ handleTwoPointTool(sx,sy,'circle'); return; }
+    if(currentTool==='polygon'){ handlePolygonClick(sx,sy); return; }
+    if(currentTool==='perpendicular'){ handlePerpendicularClick(sx,sy); return; }
+    if(currentTool==='parallel'){ handleParallelClick(sx,sy); return; }
+    if(currentTool==='intersect'){ handleIntersectClick(sx,sy); return; }
+    if(currentTool==='vector'){ handleTwoPointTool(sx,sy,'vector'); return; }
+    if(currentTool==='vectorEqual'){ handleVectorEqualClick(sx,sy); return; }
+    if(currentTool==='tangent'){ handleTangentClick(sx,sy); return; }
+    if(currentTool==='rightangle'){ handleRightAngleClick(sx,sy); return; }
+    if(currentTool==='bisector'){ handleBisectorClick(sx,sy); return; }
+    if(currentTool==='midpoint'){ handleMidpointClick(sx,sy); return; }
+    if(currentTool==='angle'){ handleAngleClick(sx,sy); return; }
+    if(currentTool==='pointon'){ handlePointOnObjectClick(sx,sy); return; }
+    if(currentTool==='incircle'){ handleIncircleClick(sx,sy); return; }
+    if(currentTool==='circumcircle'){ handleCircumcircleClick(sx,sy); return; }
+    if(currentTool==='delete'){ handleDeleteClick(sx,sy); return; }
+    if(currentTool==='pen' || currentTool==='smartpen'){
+      saveHistory();
+      const w = screenToWorld(sx,sy);
+      const pressure = (e.pressure && e.pressure>0) ? e.pressure : 0.5;
+      currentStroke = { id:uid(), tint:currentInkTint, width:inkWidth, points:[{x:w.x,y:w.y,p:pressure}] };
+      inkStrokes.push(currentStroke);
+      isDrawingInk = true;
+      canvas.setPointerCapture(e.pointerId);
+      render();
+      return;
+    }
+  });
+
+  canvas.addEventListener('pointermove', function(e){
+    const {x:sx,y:sy} = canvasCoords(e);
+    const wpt = screenToWorld(sx,sy);
+    readout.innerHTML = 'x: '+wpt.x.toFixed(2)+'&nbsp;&nbsp;y: '+wpt.y.toFixed(2);
+
+    if(draggingPointId){
+      const p = getObj(draggingPointId);
+      if(p.sub==='onobject'){
+        const obj = getObj(p.parents[0]);
+        const w = screenToWorld(sx,sy);
+        if(obj){
+          if(obj.type==='circle'){
+            const cr = circleCenterRadius(obj);
+            p.t = Math.atan2(w.y-cr.c.y, w.x-cr.c.x);
+          } else {
+            const g = getLineGeom(obj);
+            p.t = projectOntoLineGeom(obj, g, w);
+          }
+        }
+        render();
+        return;
+      }
+      const w = snapPoint(screenToWorld(sx,sy));
+      p.x = w.x; p.y = w.y;
+      render();
+      return;
+    }
+    if(draggingLabelId){
+      const p = getObj(draggingLabelId);
+      if(p){
+        const ps = worldToScreen(getPointXY(p.id).x, getPointXY(p.id).y);
+        p.labelDx = sx - ps.x;
+        p.labelDy = sy - ps.y;
+        render();
+      }
+      return;
+    }
+    if(isPanning){
+      view.offsetX = panStart.ox + (sx-panStart.sx);
+      view.offsetY = panStart.oy + (sy-panStart.sy);
+      render();
+      return;
+    }
+    if(isDrawingInk && currentStroke){
+      const w = screenToWorld(sx,sy);
+      const last = currentStroke.points[currentStroke.points.length-1];
+      const lastScreen = worldToScreen(last.x,last.y);
+      if(Math.hypot(sx-lastScreen.x, sy-lastScreen.y) >= 1.5){
+        const pressure = (e.pressure && e.pressure>0) ? e.pressure : 0.5;
+        currentStroke.points.push({x:w.x,y:w.y,p:pressure});
+        render();
+      }
+      return;
+    }
+    if(currentTool==='pen' || currentTool==='smartpen'){ return; }
+    const newHover = currentTool==='point' ? pickPoint(sx,sy) : pickAny(sx,sy);
+    if(newHover!==hoverId){ hoverId=newHover; render(); }
+    canvas.style.cursor = (currentTool==='move')
+      ? (pickPoint(sx,sy) ? 'grab' : (pickLabel(sx,sy) ? 'grab' : (hoverId ? 'pointer':'default')))
+      : (hoverId && currentTool!=='point' ? 'pointer' : 'crosshair');
+  });
+
+  function endPointerInteraction(e){
+    draggingPointId = null;
+    draggingLabelId = null;
+    isPanning = false;
+    const wasDrawingInk = isDrawingInk;
+    const finishedStroke = currentStroke;
+    isDrawingInk = false;
+    currentStroke = null;
+    if(canvas.hasPointerCapture && e && canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    if(wasDrawingInk && finishedStroke && currentTool==='smartpen'){
+      const newId = recognizeStrokeAsShape(finishedStroke);
+      if(newId){
+        currentTool = 'move';
+        document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>{
+          b.classList.toggle('active', b.dataset.tool==='move');
+        });
+        document.getElementById('penOptions').classList.toggle('show', false);
+        canvas.style.cursor = 'default';
+        selectedId = newId;
+      } else {
+        hintText.textContent = 'Не разпознах точна фигура — рисунката остава като бележка с писалка.';
+      }
+      render();
+    }
+  }
+  canvas.addEventListener('pointerup', endPointerInteraction);
+  canvas.addEventListener('pointercancel', endPointerInteraction);
+  canvas.addEventListener('pointerleave', function(){ hoverId=null; render(); });
+
+  canvas.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+  canvas.addEventListener('wheel', function(e){
+    e.preventDefault();
+    const {x:sx,y:sy} = canvasCoords(e);
+    const before = screenToWorld(sx,sy);
+    const factor = e.deltaY < 0 ? 1.12 : 1/1.12;
+    view.scale = Math.max(10, Math.min(500, view.scale*factor));
+    view.offsetX = sx - before.x*view.scale;
+    view.offsetY = sy + before.y*view.scale;
+    updateZoomLabel();
+    render();
+  }, { passive:false });
+
+  /* ================= keyboard ================= */
+  window.addEventListener('keydown', function(e){
+    const targetTag = (e.target && e.target.tagName) || '';
+    if(targetTag==='INPUT' || targetTag==='TEXTAREA'){
+      if(e.key==='Escape') e.target.blur();
+      return;
+    }
+    if(e.key==='Escape'){ resetPending(); render(); }
+    else if(e.key==='Enter' && currentTool==='polygon'){ finalizePolygon(); render(); }
+    else if((e.key==='Delete' || e.key==='Backspace') && selectedId!==null){
+      e.preventDefault();
+      saveHistory();
+      deleteAnyById(selectedId);
+      render();
+    }
+  });
+
+  /* ================= toolbar wiring ================= */
+  document.querySelectorAll('.tool-btn[data-tool]').forEach(btn=>{
+    btn.addEventListener('click', ()=> setTool(btn.dataset.tool));
+  });
+
+  const gridToggle = document.getElementById('gridToggle');
+  const snapToggle = document.getElementById('snapToggle');
+  gridToggle.addEventListener('click', ()=>{
+    gridEnabled = !gridEnabled;
+    gridToggle.classList.toggle('on', gridEnabled);
+    render();
+  });
+  snapToggle.addEventListener('click', ()=>{
+    snapEnabled = !snapEnabled;
+    snapToggle.classList.toggle('on', snapEnabled);
+  });
+
+  const axesToggle = document.getElementById('axesToggle');
+  axesToggle.addEventListener('click', ()=>{
+    axesEnabled = !axesEnabled;
+    axesToggle.classList.toggle('on', axesEnabled);
+    render();
+  });
+
+  const axisNameToggle = document.getElementById('axisNameToggle');
+  axisNameToggle.addEventListener('click', ()=>{
+    axisNamesEnabled = !axisNamesEnabled;
+    axisNameToggle.classList.toggle('on', axisNamesEnabled);
+    render();
+  });
+
+  const measureToggle = document.getElementById('measureToggle');
+  measureToggle.addEventListener('click', ()=>{
+    measurementsEnabled = !measurementsEnabled;
+    measureToggle.classList.toggle('on', measurementsEnabled);
+    render();
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', ()=>{
+    canvas.toBlob(function(blob){
+      if(!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'geometrichna-daska.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    }, 'image/png');
+  });
+
+  document.querySelectorAll('#penOptions .swatch').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      currentInkTint = btn.dataset.tint;
+      document.querySelectorAll('#penOptions .swatch').forEach(b=>b.classList.toggle('active', b===btn));
+    });
+  });
+  document.querySelectorAll('#penOptions .width-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      inkWidth = parseFloat(btn.dataset.width);
+      document.querySelectorAll('#penOptions .width-btn').forEach(b=>b.classList.toggle('active', b===btn));
+    });
+  });
+
+  document.querySelectorAll('#colorPanel .swatch').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = getSelectedTintable();
+      if(!target) return;
+      saveHistory();
+      target.tint = btn.dataset.tint;
+      render();
+    });
+  });
+  document.querySelectorAll('#colorPanel .width-btn[data-swidth]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = getSelectedTintable();
+      if(!target) return;
+      saveHistory();
+      target.strokeWidth = parseFloat(btn.dataset.swidth);
+      render();
+    });
+  });
+  document.querySelectorAll('#colorPanel .dash-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = getSelectedTintable();
+      if(!target) return;
+      saveHistory();
+      if(btn.dataset.dash==='solid') delete target.dash; else target.dash = btn.dataset.dash;
+      render();
+    });
+  });
+  function commitPointRename(){
+    const target = getSelectedTintable();
+    if(!target || target.type!=='point') return;
+    const val = pointNameInput.value.trim().slice(0,12);
+    if(!val){ pointNameInput.value = target.label; return; }
+    if(val !== target.label){
+      saveHistory();
+      target.label = val;
+      render();
+    }
+  }
+  pointNameInput.addEventListener('keydown', (e)=>{
+    e.stopPropagation();
+    if(e.key==='Enter'){ e.preventDefault(); pointNameInput.blur(); }
+    else if(e.key==='Escape'){
+      e.preventDefault();
+      const target = getSelectedTintable();
+      pointNameInput.value = (target && target.label) || '';
+      pointNameInput.blur();
+    }
+  });
+  pointNameInput.addEventListener('blur', commitPointRename);
+
+  document.getElementById('colorReset').addEventListener('click', ()=>{
+    const target = getSelectedTintable();
+    if(!target) return;
+    saveHistory();
+    delete target.tint;
+    delete target.strokeWidth;
+    delete target.dash;
+    delete target.labelSize;
+    delete target.labelDx;
+    delete target.labelDy;
+    render();
+  });
+
+  document.querySelectorAll('#colorPanel .labelsize-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = getSelectedTintable();
+      if(!target || target.type!=='point') return;
+      saveHistory();
+      target.labelSize = parseFloat(btn.dataset.labelsize);
+      render();
+    });
+  });
+
+  /* ---------- theme ---------- */
+  const THEMES = [
+    { id:'dark',  label:'Тъмна тема',  swatch:'#16261F' },
+    { id:'light', label:'Светла тема', swatch:'#EFF4F2' }
+  ];
+  let themeIndex = 0;
+  const themeToggleBtn = document.getElementById('themeToggle');
+  const themeSwatchEl = document.getElementById('themeSwatch');
+  const themeLabelEl = document.getElementById('themeToggleLabel');
+
+  function applyTheme(){
+    const current = THEMES[themeIndex];
+    const next = THEMES[(themeIndex+1)%THEMES.length];
+    document.documentElement.setAttribute('data-theme', current.id);
+    themeSwatchEl.style.background = next.swatch;
+    themeLabelEl.textContent = next.label;
+    themeToggleBtn.title = 'Смени на: '+next.label;
+    try{ localStorage.setItem('geoboard-theme', current.id); }catch(err){}
+    render();
+  }
+
+  themeToggleBtn.addEventListener('click', ()=>{
+    themeIndex = (themeIndex+1) % THEMES.length;
+    applyTheme();
+  });
+
+  function initTheme(){
+    let saved = null;
+    try{ saved = localStorage.getItem('geoboard-theme'); }catch(err){}
+    const idx = THEMES.findIndex(t=>t.id===saved);
+    themeIndex = idx>=0 ? idx : 0;
+    applyTheme();
+  }
+
+  document.getElementById('undoBtn').addEventListener('click', undo);
+
+  const clearBtn = document.getElementById('clearBtn');
+  let clearConfirming = false, clearTimer = null;
+  clearBtn.addEventListener('click', function(){
+    if(!clearConfirming){
+      clearConfirming = true;
+      clearBtn.classList.add('confirming');
+      clearBtn.lastChild.textContent = ' Сигурни ли сте?';
+      clearTimer = setTimeout(()=>{
+        clearConfirming = false;
+        clearBtn.classList.remove('confirming');
+        clearBtn.lastChild.textContent = ' Изчисти';
+      }, 3000);
+      return;
+    }
+    clearTimeout(clearTimer);
+    clearConfirming = false;
+    clearBtn.classList.remove('confirming');
+    clearBtn.lastChild.textContent = ' Изчисти';
+    saveHistory();
+    objects = [];
+    inkStrokes = [];
+    resetPending();
+    selectedId = null;
+    render();
+  });
+
+  /* ---------- save / open (construction, including pen notes/sketches, together) ---------- */
+  document.getElementById('saveBtn').addEventListener('click', ()=>{
+    const data = {
+      app: 'geoboard', version: 1,
+      objects, idCounter, inkStrokes,
+      savedAt: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(data)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const stamp = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'chertezh-'+stamp+'.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  });
+
+  const fileInput = document.getElementById('fileInput');
+  document.getElementById('openBtn').addEventListener('click', (e)=>{
+    e.preventDefault();
+    fileInput.click();
+  });
+  fileInput.addEventListener('click', e=>e.stopPropagation());
+  fileInput.addEventListener('change', (e)=>{
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      try{
+        const data = JSON.parse(ev.target.result);
+        saveHistory();
+        objects = Array.isArray(data.objects) ? data.objects : [];
+        idCounter = data.idCounter || (objects.reduce((m,o)=>Math.max(m,o.id||0),0)+1);
+        inkStrokes = Array.isArray(data.inkStrokes) ? data.inkStrokes : [];
+        selectedId = null; hoverId = null;
+        resetPending();
+        render();
+      }catch(err){
+        hintText.textContent = 'Файлът не можа да бъде отворен — невалиден формат.';
+      }
+    };
+    reader.readAsText(file);
+    fileInput.value = '';
+  });
+
+  /* ---------- install as app ---------- */
+  const installBtn = document.getElementById('installBtn');
+  let deferredInstallPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e)=>{
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    installBtn.style.display = '';
+  });
+  installBtn.addEventListener('click', async ()=>{
+    if(!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    try{ await deferredInstallPrompt.userChoice; }catch(err){}
+    deferredInstallPrompt = null;
+    installBtn.style.display = 'none';
+  });
+  window.addEventListener('appinstalled', ()=>{ installBtn.style.display = 'none'; deferredInstallPrompt = null; });
+
+  document.getElementById('zoomIn').addEventListener('click', ()=>{
+    const w=boardWrap.clientWidth, h=boardWrap.clientHeight;
+    const before = screenToWorld(w/2,h/2);
+    view.scale = Math.min(500, view.scale*1.25);
+    view.offsetX = w/2 - before.x*view.scale;
+    view.offsetY = h/2 + before.y*view.scale;
+    updateZoomLabel();
+    render();
+  });
+  document.getElementById('zoomOut').addEventListener('click', ()=>{
+    const w=boardWrap.clientWidth, h=boardWrap.clientHeight;
+    const before = screenToWorld(w/2,h/2);
+    view.scale = Math.max(10, view.scale/1.25);
+    view.offsetX = w/2 - before.x*view.scale;
+    view.offsetY = h/2 + before.y*view.scale;
+    updateZoomLabel();
+    render();
+  });
+  document.getElementById('zoomReset').addEventListener('click', ()=>{
+    resetView();
+    render();
+  });
+
+  /* ================= boot ================= */
+  window.addEventListener('resize', render);
+  if(window.ResizeObserver){
+    new ResizeObserver(render).observe(boardWrap);
+  }
+
+  resetView();
+  setTool('point');
+  initTheme();
+
+  /* Test-only introspection hook: only activates when a test harness sets
+     window.__TEST__ = true via an init script BEFORE the page loads. Never
+     true for real users, so this has no effect on normal use of the app. */
+  if(window.__TEST__){
+    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj };
+  }
+})();
+</script>
+
+<script>
+  if(location.protocol.indexOf('http')===0){
+    if('serviceWorker' in navigator){
+      window.addEventListener('load', function(){
+        navigator.serviceWorker.register('./sw.js').catch(function(){});
+      });
+    }
+  }
+</script>
+</body>
+</html>
