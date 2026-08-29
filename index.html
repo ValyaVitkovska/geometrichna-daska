@@ -1943,6 +1943,40 @@
     return null;
   }
 
+  // A polygon's sides (e.g. a constructed triangle) aren't separate line-like
+  // objects — they only exist implicitly as consecutive vertex pairs. This is a
+  // pure, read-only lookup (safe to call from hover code) that finds the nearest
+  // polygon edge to a screen point and returns the two point ids that bound it,
+  // or null. Pairs with getOrCreateSegmentFor below, which is only ever called
+  // from an actual click handler, never from hover/pick paths, so no objects are
+  // ever created just from moving the mouse near a triangle's side.
+  function pickPolygonEdge(sx,sy){
+    let bestD=9, bestA=null, bestB=null;
+    for(const o of objects){
+      if(o.type!=='polygon') continue;
+      const n = o.parents.length;
+      for(let i=0;i<n;i++){
+        const a = getPointXY(o.parents[i]), b = getPointXY(o.parents[(i+1)%n]);
+        const dpx = distPointToSegmentPx(sx,sy,a,b);
+        if(dpx < bestD){ bestD=dpx; bestA=o.parents[i]; bestB=o.parents[(i+1)%n]; }
+      }
+    }
+    return bestA!==null ? [bestA,bestB] : null;
+  }
+
+  // Finds an existing standalone segment for this exact pair of points (in either
+  // order) so repeated picks of the same triangle side reuse one object instead of
+  // stacking duplicates, or creates one. The new segment tracks the same point ids
+  // as the polygon's vertices, so it stays correct if the triangle is dragged later.
+  function getOrCreateSegmentFor(idA,idB){
+    const existing = objects.find(o => o.type==='segment' &&
+      ((o.parents[0]===idA && o.parents[1]===idB) || (o.parents[0]===idB && o.parents[1]===idA)));
+    if(existing) return existing.id;
+    const segId = uid();
+    objects.push({ id:segId, type:'segment', parents:[idA,idB] });
+    return segId;
+  }
+
   function imageScreenRect(o){
     const halfW = o.width/2, halfH = o.height/2;
     const topLeft = worldToScreen(o.x-halfW, o.y+halfH);
@@ -2087,7 +2121,7 @@
     vectorEqual: ['Избери съществуващ вектор.', 'Избери или постави точка — новото начало на равния вектор.'],
     tangent: ['Избери окръжност.', 'Избери или постави точка извън окръжността — допирателната(ите) ще минат през нея.'],
     rightangle: ['Избери първата права/отсечка.', 'Избери втора права/отсечка, перпендикулярна на първата.'],
-    altitude: ['Избери страната (правата или отсечката), към която ще спуснеш височината.', 'Избери или постави върха, от който тръгва височината — стъпалото и отсечката на височината се построяват автоматично, с отбелязан прав ъгъл.'],
+    altitude: ['Избери страната (права, отсечка или страна на построен триъгълник/многоъгълник), към която ще спуснеш височината.', 'Избери или постави върха, от който тръгва височината — стъпалото и отсечката на височината се построяват автоматично, с отбелязан прав ъгъл.'],
     incircle: 'Кликни триъгълник (многоъгълник с 3 върха), за да построиш вписаната му окръжност.',
     circumcircle: 'Кликни триъгълник (многоъгълник с 3 върха), за да построиш описаната около него окръжност.',
     pen: 'Пиши или рисувай свободно с мишка, пръст или писалка на екрана.',
@@ -2465,7 +2499,19 @@
 
   function handleAltitudeClick(sx,sy){
     if(pendingBase===null){
-      const lineId = pickLineLike(sx,sy, LINE_TYPES);
+      let lineId = pickLineLike(sx,sy, LINE_TYPES);
+      if(!lineId){
+        // no standalone segment/line under the click — allow picking a side of an
+        // already-built triangle/polygon directly, materializing (or reusing) a
+        // real segment object for that edge so the rest of the tool works unchanged
+        const edge = pickPolygonEdge(sx,sy);
+        if(edge){
+          armHistory();
+          const before = objects.length;
+          lineId = getOrCreateSegmentFor(edge[0], edge[1]);
+          if(objects.length !== before) commitArmedHistory(); else discardArmedHistory();
+        }
+      }
       if(!lineId) return;
       pendingBase = lineId;
       updateHint();
@@ -2868,6 +2914,25 @@
     ctx.setLineDash([]);
   }
 
+  // The direction a right-angle marker's arm should point from the shared vertex,
+  // for one of the two line-like objects meeting there. A plain object.dir (as
+  // returned by getLineGeom) has an arbitrary sign — fine for an unbounded line/
+  // ray, but wrong for a bounded segment when the vertex happens to BE one of its
+  // own endpoints (e.g. an altitude's foot, which is one end of the altitude
+  // segment): using the raw parents[0]->parents[1] direction can point away from
+  // the segment entirely, off into empty space. For segments, always point from
+  // the vertex toward whichever endpoint is farther away, which keeps the arm on
+  // the segment's actual drawn extent in every case (endpoint or interior vertex).
+  function rightAngleRayDir(obj, vertex){
+    const g = getLineGeom(obj);
+    if(obj.type === 'segment' && g.p1 && g.p2){
+      const target = dist(vertex,g.p1) >= dist(vertex,g.p2) ? g.p1 : g.p2;
+      const d = sub(target, vertex);
+      if(len(d) > 1e-9) return normalize(d);
+    }
+    return g.dir;
+  }
+
   function drawRightAngleMarker(o, isHot, pal){
     const A = getObj(o.parents[0]), B = getObj(o.parents[1]);
     if(!A || !B) return;
@@ -2878,7 +2943,7 @@
     if(len(gA.dir)<1e-9 || len(gB.dir)<1e-9) return;
     const vs = worldToScreen(vertex.x, vertex.y);
     const toScreenDir = d => normalize({x:d.x, y:-d.y});
-    const dAs = toScreenDir(gA.dir), dBs = toScreenDir(gB.dir);
+    const dAs = toScreenDir(rightAngleRayDir(A, vertex)), dBs = toScreenDir(rightAngleRayDir(B, vertex));
     const L = 13;
     const p1 = { x:vs.x+dAs.x*L, y:vs.y+dAs.y*L };
     const p2 = { x:p1.x+dBs.x*L, y:p1.y+dBs.y*L };
@@ -4096,7 +4161,7 @@
      window.__TEST__ = true via an init script BEFORE the page loads. Never
      true for real users, so this has no effect on normal use of the app. */
   if(window.__TEST__){
-    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj, worldToScreen, screenToWorld, get view(){ return view; }, get history(){ return history; }, get redoStack(){ return redoStack; }, undo, redo, get selectedId(){ return selectedId; }, get currentTool(){ return currentTool; }, get draggingPointId(){ return draggingPointId; } };
+    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj, worldToScreen, screenToWorld, getLineGeom, rightAngleRayDir, computeIntersections, get view(){ return view; }, get history(){ return history; }, get redoStack(){ return redoStack; }, undo, redo, get selectedId(){ return selectedId; }, get currentTool(){ return currentTool; }, get draggingPointId(){ return draggingPointId; } };
   }
 })();
 </script>
