@@ -3196,15 +3196,23 @@
     }
   }
 
-  function render(){
+  function render(opts){
+    // opts.transparentBg (used only by the PNG export button, see below) skips
+    // painting the solid board-color rectangle, so the exported PNG has a real
+    // alpha channel instead of a colored box behind the figure — pasting it into
+    // Word (or anywhere with a white/other-colored page) then shows just the
+    // drawn geometry, not a mismatched background rectangle around it.
+    const transparentBg = !!(opts && opts.transparentBg);
     resizeCanvas();
     const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
     ctx.setTransform(dpr,0,0,dpr,0,0);
     ctx.clearRect(0,0,w,h);
 
     const pal = getPalette();
-    ctx.fillStyle = pal.board;
-    ctx.fillRect(0,0,w,h);
+    if(!transparentBg){
+      ctx.fillStyle = pal.board;
+      ctx.fillRect(0,0,w,h);
+    }
 
     if(gridEnabled) drawGridLines(w,h,pal);
     if(axesEnabled) drawAxesAndTicks(w,h,pal);
@@ -3729,6 +3737,11 @@
   });
 
   document.getElementById('exportBtn').addEventListener('click', ()=>{
+    // Render once with a transparent background (no board-color rectangle) just
+    // for this capture — toBlob snapshots the canvas synchronously, so it's safe
+    // to immediately render the normal (opaque) view again right after, and the
+    // on-screen board never visibly flashes.
+    render({ transparentBg:true });
     canvas.toBlob(function(blob){
       if(!blob) return;
       const url = URL.createObjectURL(blob);
@@ -3740,6 +3753,7 @@
       a.remove();
       setTimeout(()=>URL.revokeObjectURL(url), 1000);
     }, 'image/png');
+    render();
   });
 
   const imageFileInput = document.getElementById('imageFileInput');
@@ -4183,7 +4197,7 @@
      window.__TEST__ = true via an init script BEFORE the page loads. Never
      true for real users, so this has no effect on normal use of the app. */
   if(window.__TEST__){
-    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj, worldToScreen, screenToWorld, getLineGeom, rightAngleRayDir, computeIntersections, get view(){ return view; }, get history(){ return history; }, get redoStack(){ return redoStack; }, undo, redo, get selectedId(){ return selectedId; }, get currentTool(){ return currentTool; }, get draggingPointId(){ return draggingPointId; } };
+    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj, worldToScreen, screenToWorld, getLineGeom, rightAngleRayDir, computeIntersections, render, get view(){ return view; }, get history(){ return history; }, get redoStack(){ return redoStack; }, undo, redo, get selectedId(){ return selectedId; }, get currentTool(){ return currentTool; }, get draggingPointId(){ return draggingPointId; } };
   }
 })();
 </script>
