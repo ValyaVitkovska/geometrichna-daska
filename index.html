@@ -1026,6 +1026,10 @@
           <button class="width-btn labelsize-btn" data-labelsize="13" title="Среден шрифт на името"><span style="font-size:13px;font-weight:700;line-height:1;">A</span></button>
           <button class="width-btn labelsize-btn" data-labelsize="17" title="Голям шрифт на името"><span style="font-size:17px;font-weight:700;line-height:1;">A</span></button>
         </span>
+        <span class="subgroup" id="pointStyleGroup">
+          <button class="width-btn pointstyle-btn" data-pointstyle="filled" title="Плътна точка"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="currentColor"/></svg></button>
+          <button class="width-btn pointstyle-btn" data-pointstyle="hollow" title="Празна точка"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+        </span>
         <div class="divider" id="nameDivider"></div>
         <span class="subgroup" id="swatchGroup">
           <button class="swatch" data-tint="white" title="Основен цвят"></button>
@@ -1188,6 +1192,7 @@
   const nameDivider = document.getElementById('nameDivider');
   const pointNameInput = document.getElementById('pointNameInput');
   const labelSizeGroup = document.getElementById('labelSizeGroup');
+  const pointStyleGroup = document.getElementById('pointStyleGroup');
   const swatchGroup = document.getElementById('swatchGroup');
   const swatchDivider = document.getElementById('swatchDivider');
   const visibilityToggle = document.getElementById('visibilityToggle');
@@ -3086,6 +3091,10 @@
     const p = getPointXY(o.id);
     const s = worldToScreen(p.x,p.y);
     const isFree = o.sub==='free';
+    // By default a free (user-placed, draggable) point is drawn solid and a
+    // computed one (midpoint, intersection, ...) hollow, but o.pointStyle lets
+    // the user override that on any individual point regardless of its kind.
+    const filled = o.pointStyle ? o.pointStyle==='filled' : isFree;
     const baseColor = o.tint ? tintColor(pal, o.tint) : pal.primary;
 
     if(isHot || isPending){
@@ -3096,13 +3105,25 @@
     }
 
     ctx.beginPath();
-    ctx.arc(s.x,s.y, isFree?4.6:4, 0, Math.PI*2);
-    if(isFree){
+    ctx.arc(s.x,s.y, filled?4.6:4, 0, Math.PI*2);
+    if(filled){
       ctx.fillStyle = isHot||isPending ? pal.hot : baseColor;
       ctx.fill();
     } else {
-      ctx.fillStyle = pal.board;
+      // Punch a real transparent hole rather than painting over it with the
+      // opaque board color — on screen this looks identical (the page's own
+      // background sits right behind the canvas and shows through either way),
+      // but it keeps a hollow point genuinely transparent in the PNG export's
+      // transparentBg pass instead of leaving a solid board-colored dot on it.
+      // fillStyle must be fully opaque here: destination-out erases dest alpha
+      // by the SOURCE alpha, so an inherited translucent fillStyle (e.g. the
+      // hot/pending glow drawn just above, at low alpha) would only punch a
+      // partial hole instead of a clean one.
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = '#000';
       ctx.fill();
+      ctx.restore();
       ctx.lineWidth = 2;
       ctx.strokeStyle = isHot||isPending ? pal.hot : baseColor;
       ctx.stroke();
@@ -3282,7 +3303,7 @@
       document.querySelectorAll('#colorPanel .swatch').forEach(b=>{
         setPressed(b, b.dataset.tint === target.tint);
       });
-      setPressed(document.getElementById('colorReset'), !target.tint && !target.strokeWidth && !target.dash && !target.labelSize && target.labelDx===undefined && target.labelDy===undefined);
+      setPressed(document.getElementById('colorReset'), !target.tint && !target.strokeWidth && !target.dash && !target.labelSize && !target.pointStyle && target.labelDx===undefined && target.labelDy===undefined);
     }
 
     visibilityToggle.querySelector('.eye-open').style.display = target.hidden ? 'none' : '';
@@ -3322,6 +3343,15 @@
       const curSize = target.labelSize || 13;
       document.querySelectorAll('#colorPanel .labelsize-btn').forEach(b=>{
         setPressed(b, parseFloat(b.dataset.labelsize)===curSize);
+      });
+    }
+
+    const showPointStyle = target.type === 'point';
+    pointStyleGroup.style.display = showPointStyle ? '' : 'none';
+    if(showPointStyle){
+      const curFilled = target.pointStyle ? target.pointStyle==='filled' : (target.sub==='free');
+      document.querySelectorAll('#colorPanel .pointstyle-btn').forEach(b=>{
+        setPressed(b, (b.dataset.pointstyle==='filled') === curFilled);
       });
     }
   }
@@ -3874,7 +3904,18 @@
     delete target.labelSize;
     delete target.labelDx;
     delete target.labelDy;
+    delete target.pointStyle;
     render();
+  });
+
+  document.querySelectorAll('#colorPanel .pointstyle-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = getSelectedTintable();
+      if(!target || target.type!=='point') return;
+      saveHistory();
+      target.pointStyle = btn.dataset.pointstyle;
+      render();
+    });
   });
 
   visibilityToggle.addEventListener('click', ()=>{
