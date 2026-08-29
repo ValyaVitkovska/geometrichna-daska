@@ -1154,7 +1154,7 @@
   const LINE_TYPES = ['segment','line','perpendicular','bisector','parallel','tangent'];
   /* point subs that stay draggable after a shape construction finishes — each recomputes
      its own stored parameter (t / angle) from the drag position, see the pointermove handler */
-  const DRAGGABLE_SUBS = new Set(['free','onobject','onPerpBisector','onPerpThrough','onCircleRadiusFrom','onParallelThrough']);
+  const DRAGGABLE_SUBS = new Set(['free','onobject','onPerpBisector','onPerpThrough','onCircleRadiusFrom','onParallelThrough','onThalesCircle']);
   /* which category button (Триъгълник / Четириъгълник / Прави / Точки) should show as
      "active" for a given currentTool, so the flyout trigger reflects the live selection
      even while its submenu is closed */
@@ -1371,6 +1371,16 @@
       const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]);
       const r = dist(A,B);
       return { x:B.x+r*Math.cos(p.t), y:B.y+r*Math.sin(p.t) };
+    }
+    if(p.sub === 'onThalesCircle'){
+      /* Thales' theorem: any point on the circle whose diameter is AB sees AB at a
+         right angle — so a point constrained here always forms a right angle at
+         ITSELF (not at A or B), which is what lets the right-triangle tool put the
+         90° vertex at C, freely draggable along the whole circle. */
+      const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]);
+      const M = { x:(A.x+B.x)/2, y:(A.y+B.y)/2 };
+      const r = dist(A,B)/2;
+      return { x:M.x+r*Math.cos(p.t), y:M.y+r*Math.sin(p.t) };
     }
     if(p.sub === 'onParallelThrough'){
       const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]), C = getPointXY(p.parents[2]);
@@ -2129,7 +2139,7 @@
     delete: 'Кликни обект (или бележка), за да го изтриеш завинаги — заедно със зависимите от него построения.',
     tri_equilateral: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка — равностранният триъгълник се построява автоматично.'],
     tri_isosceles: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка от основата.', 'Кликни, за да зададеш височината на връхния ъгъл.'],
-    tri_right: ['Избери или постави първата точка.', 'Избери или постави точката с правия ъгъл.', 'Кликни, за да зададеш третия връх — правият ъгъл остава при втората точка.'],
+    tri_right: ['Избери или постави първата точка от хипотенузата (A).', 'Избери или постави втората точка от хипотенузата (B).', 'Кликни, за да зададеш третия връх C — правият ъгъл винаги е при него.'],
     tri_free: ['Избери или постави първата точка.', 'Избери или постави втората точка.', 'Избери или постави третата точка — триъгълникът се затваря автоматично.'],
     quad_parallelogram: ['Избери или постави първата точка.', 'Избери или постави втората точка.', 'Избери или постави третата точка — четвъртият връх се построява автоматично.'],
     quad_rhombus: ['Избери или постави първата точка.', 'Избери или постави втората точка (страна на ромба).', 'Кликни, за да зададеш посоката — всички страни ще са равни.'],
@@ -2586,7 +2596,7 @@
   const SHAPE_SPECS = {
     tri_equilateral:    { steps:['free','free'],                                  finish:'equilateral' },
     tri_isosceles:      { steps:['free','free','projPerpBisector'],               finish:'plain' },
-    tri_right:          { steps:['free','free','projPerpThrough1'],               finish:'plain' },
+    tri_right:          { steps:['free','free','projThalesCircle'],              finish:'plain' },
     tri_free:           { steps:['free','free','free'],                          finish:'plain' },
     quad_parallelogram: { steps:['free','free','free'],                          finish:'parallelogram' },
     quad_rhombus:       { steps:['free','free','projCircleFrom'],                 finish:'parallelogram' },
@@ -2633,6 +2643,10 @@
       } else if(stepKind === 'projCircleFrom'){
         const t = Math.atan2(w.y-B.y, w.x-B.x);
         pointObj = { id:pid, type:'point', sub:'onCircleRadiusFrom', parents:[pending[0],pending[1]], t, label:nextLabel() };
+      } else if(stepKind === 'projThalesCircle'){
+        const M = { x:(A.x+B.x)/2, y:(A.y+B.y)/2 };
+        const t = Math.atan2(w.y-M.y, w.x-M.x);
+        pointObj = { id:pid, type:'point', sub:'onThalesCircle', parents:[pending[0],pending[1]], t, label:nextLabel() };
       } else if(stepKind === 'projParallelThrough'){
         const lastId = pending[pending.length-1];
         const C = getPointXY(lastId);
@@ -3452,6 +3466,14 @@
         const B = getPointXY(p.parents[1]);
         const w = screenToWorld(sx,sy);
         p.t = Math.atan2(w.y-B.y, w.x-B.x);
+        render();
+        return;
+      }
+      if(p.sub==='onThalesCircle'){
+        const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]);
+        const M = { x:(A.x+B.x)/2, y:(A.y+B.y)/2 };
+        const w = screenToWorld(sx,sy);
+        p.t = Math.atan2(w.y-M.y, w.x-M.x);
         render();
         return;
       }
