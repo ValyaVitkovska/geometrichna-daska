@@ -250,6 +250,40 @@
   .tool-btn[data-tint="orange"]{ --tint-rgb:var(--ink-orange-rgb); }
   .tool-btn[data-tint="danger"]{ --tint-rgb:var(--ink-danger-rgb); }
 
+  /* ---- category buttons with a flyout submenu (Триъгълник / Четириъгълник) ---- */
+  .tool-menu{ position:relative; }
+  .tool-menu .menu-trigger{ width:100%; }
+  .tool-submenu{
+    position:fixed;
+    z-index:55;
+    min-width:180px;
+    max-width:calc(100vw - 24px);
+    background:var(--topbar-bg-1);
+    color:var(--ink-primary);
+    border:1px solid var(--hud-border);
+    border-radius:10px;
+    box-shadow:0 10px 28px rgba(0,0,0,0.35);
+    padding:6px;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .tool-submenu[hidden]{ display:none; }
+  .submenu-item{
+    appearance:none; -webkit-appearance:none;
+    display:block; width:100%;
+    text-align:left;
+    font:inherit; font-size:13px; font-weight:600;
+    color:var(--ink-primary);
+    background:transparent;
+    border:none;
+    border-radius:7px;
+    padding:9px 10px;
+    cursor:pointer;
+  }
+  .submenu-item:hover, .submenu-item:focus-visible{ background:rgba(var(--ink-blue-rgb),0.16); }
+  .submenu-item.active{ background:rgba(var(--ink-hot-rgb),0.22); color:var(--ink-hot); }
+
   .toolbar-spacer{ flex:1 1 auto; }
 
   /* ---- neutral glass chips (toggles / undo / clear) ---- */
@@ -728,14 +762,6 @@
         <span class="tool-label">Точка</span>
       </button>
 
-      <button class="tool-btn" data-tool="pointon" data-tint="white" title="Точка върху обект — остава закачена за отсечка, права или окръжност">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="3" y1="19" x2="21" y2="5"/>
-          <circle cx="12" cy="12" r="3" fill="none" stroke-dasharray="2,2"/>
-          <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/>
-        </svg>
-        <span class="tool-label">Точка върху обект</span>
-      </button>
 
       <button class="tool-btn" data-tool="segment" data-tint="white" title="Отсечка">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
@@ -771,6 +797,35 @@
         <span class="tool-label">Многоъгълник</span>
       </button>
 
+      <div class="tool-menu" id="triangleMenu">
+        <button type="button" class="tool-btn menu-trigger" id="triangleMenuBtn" data-tint="white" title="Триъгълник" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,4 21,20 3,20"/></svg>
+          <span class="tool-label">Триъгълник</span>
+        </button>
+        <div class="tool-submenu" id="triangleSubmenu" role="menu" aria-label="Вид триъгълник" hidden>
+          <button type="button" class="submenu-item" data-tool="tri_equilateral" role="menuitem">Равностранен</button>
+          <button type="button" class="submenu-item" data-tool="tri_isosceles" role="menuitem">Равнобедрен</button>
+          <button type="button" class="submenu-item" data-tool="tri_right" role="menuitem">Правоъгълен</button>
+          <button type="button" class="submenu-item" data-tool="tri_free" role="menuitem">Произволен</button>
+        </div>
+      </div>
+
+      <div class="tool-menu" id="quadMenu">
+        <button type="button" class="tool-btn menu-trigger" id="quadMenuBtn" data-tint="white" title="Четириъгълник" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="4,8 20,5 20,16 4,19"/></svg>
+          <span class="tool-label">Четириъгълник</span>
+        </button>
+        <div class="tool-submenu" id="quadSubmenu" role="menu" aria-label="Вид четириъгълник" hidden>
+          <button type="button" class="submenu-item" data-tool="quad_parallelogram" role="menuitem">Успоредник</button>
+          <button type="button" class="submenu-item" data-tool="quad_rhombus" role="menuitem">Ромб</button>
+          <button type="button" class="submenu-item" data-tool="quad_rectangle" role="menuitem">Правоъгълник</button>
+          <button type="button" class="submenu-item" data-tool="quad_square" role="menuitem">Квадрат</button>
+          <button type="button" class="submenu-item" data-tool="quad_trap_iso" role="menuitem">Равнобедрен трапец</button>
+          <button type="button" class="submenu-item" data-tool="quad_trap_right" role="menuitem">Правоъгълен трапец</button>
+          <button type="button" class="submenu-item" data-tool="quad_trap_free" role="menuitem">Произволен трапец</button>
+        </div>
+      </div>
+
       <button class="tool-btn" data-tool="vector" data-tint="orange" title="Вектор">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <line x1="4" y1="20" x2="17" y2="7"/>
@@ -783,50 +838,30 @@
     <div class="tool-group">
       <div class="tool-group-label">Построения</div>
 
-      <button class="tool-btn" data-tool="perpendicular" data-tint="rose" title="Перпендикуляр">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="2" y1="16" x2="22" y2="16"/>
-          <line x1="8" y1="2" x2="8" y2="22"/>
-          <path d="M8 16 h4 v-4"/>
-        </svg>
-        <span class="tool-label">Перпендикуляр</span>
-      </button>
+      <div class="tool-menu" id="linesMenu">
+        <button type="button" class="tool-btn menu-trigger" id="linesMenuBtn" data-tint="rose" title="Прави" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="16" x2="15" y2="4"/><line x1="9" y1="21" x2="21" y2="9"/></svg>
+          <span class="tool-label">Прави</span>
+        </button>
+        <div class="tool-submenu" id="linesSubmenu" role="menu" aria-label="Вид права" hidden>
+          <button type="button" class="submenu-item" data-tool="perpendicular" role="menuitem">Перпендикуляр</button>
+          <button type="button" class="submenu-item" data-tool="parallel" role="menuitem">Успоредна права</button>
+          <button type="button" class="submenu-item" data-tool="bisector" role="menuitem">Ъглополовяща</button>
+          <button type="button" class="submenu-item" data-tool="tangent" role="menuitem">Допирателна към окръжност</button>
+        </div>
+      </div>
 
-      <button class="tool-btn" data-tool="bisector" data-tint="yellow" title="Ъглополовяща">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="4" y1="20" x2="20" y2="20"/>
-          <line x1="4" y1="20" x2="17" y2="6"/>
-          <line x1="4" y1="20" x2="19" y2="13" stroke-dasharray="2,2.2"/>
-        </svg>
-        <span class="tool-label">Ъглополовяща</span>
-      </button>
-
-      <button class="tool-btn" data-tool="midpoint" data-tint="white" title="Среда на отсечка">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="3" y1="19" x2="21" y2="5"/>
-          <circle cx="3" cy="19" r="1.6" fill="currentColor" stroke="none"/>
-          <circle cx="21" cy="5" r="1.6" fill="currentColor" stroke="none"/>
-          <circle cx="12" cy="12" r="2.6" fill="none"/>
-        </svg>
-        <span class="tool-label">Среда</span>
-      </button>
-
-      <button class="tool-btn" data-tool="parallel" data-tint="green" title="Успоредна права">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="3" y1="16" x2="15" y2="4"/>
-          <line x1="9" y1="21" x2="21" y2="9"/>
-        </svg>
-        <span class="tool-label">Успоредна</span>
-      </button>
-
-      <button class="tool-btn" data-tool="intersect" data-tint="white" title="Пресечна точка">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="4" y1="19" x2="20" y2="5"/>
-          <line x1="4" y1="5" x2="20" y2="19"/>
-          <circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/>
-        </svg>
-        <span class="tool-label">Пресечна т.</span>
-      </button>
+      <div class="tool-menu" id="pointsMenu">
+        <button type="button" class="tool-btn menu-trigger" id="pointsMenuBtn" data-tint="white" title="Точки" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="19" x2="21" y2="5"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>
+          <span class="tool-label">Точки</span>
+        </button>
+        <div class="tool-submenu" id="pointsSubmenu" role="menu" aria-label="Вид точка" hidden>
+          <button type="button" class="submenu-item" data-tool="midpoint" role="menuitem">Среда на отсечка</button>
+          <button type="button" class="submenu-item" data-tool="intersect" role="menuitem">Пресечна точка</button>
+          <button type="button" class="submenu-item" data-tool="pointon" role="menuitem">Точка върху обект</button>
+        </div>
+      </div>
 
       <button class="tool-btn" data-tool="vectorEqual" data-tint="orange" title="Равен вектор">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -836,24 +871,6 @@
           <path d="M16 13h5v5" stroke-dasharray="2,2"/>
         </svg>
         <span class="tool-label">Равен вектор</span>
-      </button>
-
-      <button class="tool-btn" data-tool="tangent" data-tint="blue" title="Допирателна към окръжност">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="10" cy="14" r="6.4"/>
-          <line x1="3" y1="4" x2="20" y2="9.6"/>
-          <circle cx="14.9" cy="9.2" r="1.4" fill="currentColor" stroke="none"/>
-        </svg>
-        <span class="tool-label">Допирателна</span>
-      </button>
-
-      <button class="tool-btn" data-tool="rightangle" data-tint="white" title="Обозначение на прав ъгъл">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="4" y1="20" x2="4" y2="6"/>
-          <line x1="4" y1="20" x2="20" y2="20"/>
-          <path d="M4 13h7v7"/>
-        </svg>
-        <span class="tool-label">Прав ъгъл</span>
       </button>
 
       <button class="tool-btn" data-tool="angle" data-tint="yellow" title="Избери ъгъл — стойността му се показва при включен бутон Стойности">
@@ -1134,6 +1151,18 @@
   function rotateVec(v, ang){ const c=Math.cos(ang), s=Math.sin(ang); return { x:v.x*c-v.y*s, y:v.x*s+v.y*c }; }
 
   const LINE_TYPES = ['segment','line','perpendicular','bisector','parallel','tangent'];
+  /* point subs that stay draggable after a shape construction finishes — each recomputes
+     its own stored parameter (t / angle) from the drag position, see the pointermove handler */
+  const DRAGGABLE_SUBS = new Set(['free','onobject','onPerpBisector','onPerpThrough','onCircleRadiusFrom','onParallelThrough']);
+  /* which category button (Триъгълник / Четириъгълник / Прави / Точки) should show as
+     "active" for a given currentTool, so the flyout trigger reflects the live selection
+     even while its submenu is closed */
+  const MENU_TRIGGER_MEMBERSHIP = new Map([
+    ['triangleMenuBtn', tool => tool.indexOf('tri_')===0],
+    ['quadMenuBtn', tool => tool.indexOf('quad_')===0],
+    ['linesMenuBtn', tool => ['perpendicular','parallel','bisector','tangent'].includes(tool)],
+    ['pointsMenuBtn', tool => ['midpoint','intersect','pointon'].includes(tool)]
+  ]);
   const DASH_PATTERNS = { dashed:[8,5], dotted:[1.6,3.6] };
 
   function formatNum(v){
@@ -1318,6 +1347,50 @@
       }
       if(p._lastX !== undefined) return { x:p._lastX, y:p._lastY };
       return { x:0, y:0 };
+    }
+    /* ---- computed vertices used by the triangle/quadrilateral construction menus ---- */
+    if(p.sub === 'equilateralApex'){
+      const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]);
+      const v = rotateVec(sub(B,A), Math.PI/3);
+      return { x:A.x+v.x, y:A.y+v.y };
+    }
+    if(p.sub === 'onPerpBisector'){
+      const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]);
+      const M = { x:(A.x+B.x)/2, y:(A.y+B.y)/2 };
+      const perp = rot90(normalize(sub(B,A)));
+      return { x:M.x+perp.x*p.t, y:M.y+perp.y*p.t };
+    }
+    if(p.sub === 'onPerpThrough'){
+      const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]);
+      const anchor = p.anchorEnd===0 ? A : B;
+      const perp = rot90(normalize(sub(B,A)));
+      return { x:anchor.x+perp.x*p.t, y:anchor.y+perp.y*p.t };
+    }
+    if(p.sub === 'onCircleRadiusFrom'){
+      const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]);
+      const r = dist(A,B);
+      return { x:B.x+r*Math.cos(p.t), y:B.y+r*Math.sin(p.t) };
+    }
+    if(p.sub === 'onParallelThrough'){
+      const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]), C = getPointXY(p.parents[2]);
+      const dir = normalize(sub(B,A));
+      return { x:C.x+dir.x*p.t, y:C.y+dir.y*p.t };
+    }
+    if(p.sub === 'parallelogramD'){
+      const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]), C = getPointXY(p.parents[2]);
+      return { x:A.x-B.x+C.x, y:A.y-B.y+C.y };
+    }
+    if(p.sub === 'squareApex'){
+      const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]);
+      const v = rot90(sub(B,A));
+      return p.index===0 ? { x:B.x+v.x, y:B.y+v.y } : { x:A.x+v.x, y:A.y+v.y };
+    }
+    if(p.sub === 'isoTrapMirror'){
+      const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]), C = getPointXY(p.parents[2]);
+      const M = { x:(A.x+B.x)/2, y:(A.y+B.y)/2 };
+      const u = normalize(sub(B,A));
+      const t = dot(sub(C,M), u);
+      return { x:C.x-2*t*u.x, y:C.y-2*t*u.y };
     }
     return { x:p.x, y:p.y };
   }
@@ -2001,7 +2074,18 @@
     circumcircle: 'Кликни триъгълник (многоъгълник с 3 върха), за да построиш описаната около него окръжност.',
     pen: 'Пиши или рисувай свободно с мишка, пръст или писалка на екрана.',
     smartpen: 'Начертай на ръка права, окръжност или многоъгълник — при пускане ще стане точна геометрична фигура.',
-    delete: 'Кликни обект (или бележка), за да го изтриеш завинаги — заедно със зависимите от него построения.'
+    delete: 'Кликни обект (или бележка), за да го изтриеш завинаги — заедно със зависимите от него построения.',
+    tri_equilateral: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка — равностранният триъгълник се построява автоматично.'],
+    tri_isosceles: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка от основата.', 'Кликни, за да зададеш височината на връхния ъгъл.'],
+    tri_right: ['Избери или постави първата точка.', 'Избери или постави точката с правия ъгъл.', 'Кликни, за да зададеш третия връх — правият ъгъл остава при втората точка.'],
+    tri_free: ['Избери или постави първата точка.', 'Избери или постави втората точка.', 'Избери или постави третата точка — триъгълникът се затваря автоматично.'],
+    quad_parallelogram: ['Избери или постави първата точка.', 'Избери или постави втората точка.', 'Избери или постави третата точка — четвъртият връх се построява автоматично.'],
+    quad_rhombus: ['Избери или постави първата точка.', 'Избери или постави втората точка (страна на ромба).', 'Кликни, за да зададеш посоката — всички страни ще са равни.'],
+    quad_rectangle: ['Избери или постави първата точка.', 'Избери или постави втората точка (страна).', 'Кликни, за да зададеш височината — под прав ъгъл.'],
+    quad_square: ['Избери или постави първата точка.', 'Избери или постави втората точка — квадратът се построява автоматично.'],
+    quad_trap_iso: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка от основата.', 'Кликни за горния ляв връх — десният се построява като огледален, така че бедрата остават равни.'],
+    quad_trap_right: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка от основата.', 'Кликни за височината над втората точка — под прав ъгъл.', 'Кликни, за да зададеш дължината на горната страна.'],
+    quad_trap_free: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка от основата.', 'Избери или постави горния ляв връх.', 'Кликни, за да зададеш дължината на горната страна — успоредна на основата.']
   };
 
   function updateHint(){
@@ -2039,6 +2123,13 @@
       const isActive = b.dataset.tool===tool;
       b.classList.toggle('active', isActive);
       b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+    document.querySelectorAll('.submenu-item[data-tool]').forEach(b=>{
+      b.classList.toggle('active', b.dataset.tool===tool);
+    });
+    MENU_TRIGGER_MEMBERSHIP.forEach((matches, btnId)=>{
+      const btn = document.getElementById(btnId);
+      if(btn) btn.classList.toggle('active', matches(tool));
     });
     document.getElementById('penOptions').classList.toggle('show', tool==='pen' || tool==='smartpen');
     canvas.style.cursor = tool==='move' ? 'default' : 'crosshair';
@@ -2381,6 +2472,109 @@
     saveHistory();
     objects.push({ id:uid(), type:'rightangle', parents:[A.id,B.id] });
     resetPending();
+    render();
+  }
+
+  /* ================= triangle / quadrilateral construction menus =================
+     Each shape is built by clicking a small number of points; some vertices are fully
+     free (draggable anywhere), others are computed so the shape's defining property
+     (equal sides, a right angle, parallel sides, ...) always holds — those still drag
+     along their one remaining degree of freedom via the DRAGGABLE_SUBS point subs
+     above. Every shape ends the same way any hand-drawn polygon does: a single
+     type:'polygon' object over the vertex points, so fill/area/incircle/circumcircle/
+     drag/delete all work exactly as they already do for the generic Многоъгълник tool. */
+  const SHAPE_SPECS = {
+    tri_equilateral:    { steps:['free','free'],                                  finish:'equilateral' },
+    tri_isosceles:      { steps:['free','free','projPerpBisector'],               finish:'plain' },
+    tri_right:          { steps:['free','free','projPerpThrough1'],               finish:'plain' },
+    tri_free:           { steps:['free','free','free'],                          finish:'plain' },
+    quad_parallelogram: { steps:['free','free','free'],                          finish:'parallelogram' },
+    quad_rhombus:       { steps:['free','free','projCircleFrom'],                 finish:'parallelogram' },
+    quad_rectangle:     { steps:['free','free','projPerpThrough1'],               finish:'parallelogram' },
+    quad_square:        { steps:['free','free'],                                  finish:'square' },
+    quad_trap_iso:      { steps:['free','free','free'],                          finish:'isoTrapMirror' },
+    quad_trap_right:    { steps:['free','free','projPerpThrough1','projParallelThrough'], finish:'plain' },
+    quad_trap_free:     { steps:['free','free','free','projParallelThrough'],     finish:'plain' }
+  };
+
+  function handleShapeClick(sx,sy){
+    const spec = SHAPE_SPECS[currentTool];
+    if(!spec) return;
+    const stepKind = spec.steps[pending.length];
+
+    armHistory();
+    let objectsChanged = false;
+
+    if(stepKind === 'free'){
+      const before = objects.length;
+      const pid = getOrCreatePointAt(sx,sy);
+      if(pid === pending[pending.length-1]){
+        discardArmedHistory();
+        return;
+      }
+      objectsChanged = objects.length !== before;
+      pending.push(pid);
+    } else {
+      const w = screenToWorld(sx,sy);
+      const A = getPointXY(pending[0]), B = getPointXY(pending[1]);
+      const pid = uid();
+      let pointObj = null;
+      if(stepKind === 'projPerpBisector'){
+        const M = { x:(A.x+B.x)/2, y:(A.y+B.y)/2 };
+        const perp = rot90(normalize(sub(B,A)));
+        const t = dot(sub(w,M), perp);
+        pointObj = { id:pid, type:'point', sub:'onPerpBisector', parents:[pending[0],pending[1]], t, label:nextLabel() };
+      } else if(stepKind === 'projPerpThrough0' || stepKind === 'projPerpThrough1'){
+        const anchorEnd = stepKind==='projPerpThrough0' ? 0 : 1;
+        const anchor = anchorEnd===0 ? A : B;
+        const perp = rot90(normalize(sub(B,A)));
+        const t = dot(sub(w,anchor), perp);
+        pointObj = { id:pid, type:'point', sub:'onPerpThrough', parents:[pending[0],pending[1]], anchorEnd, t, label:nextLabel() };
+      } else if(stepKind === 'projCircleFrom'){
+        const t = Math.atan2(w.y-B.y, w.x-B.x);
+        pointObj = { id:pid, type:'point', sub:'onCircleRadiusFrom', parents:[pending[0],pending[1]], t, label:nextLabel() };
+      } else if(stepKind === 'projParallelThrough'){
+        const lastId = pending[pending.length-1];
+        const C = getPointXY(lastId);
+        const dir = normalize(sub(B,A));
+        const t = dot(sub(w,C), dir);
+        pointObj = { id:pid, type:'point', sub:'onParallelThrough', parents:[pending[0],pending[1],lastId], t, label:nextLabel() };
+      }
+      objects.push(pointObj);
+      pending.push(pid);
+      objectsChanged = true;
+    }
+
+    if(pending.length === spec.steps.length){
+      const verts = pending.slice();
+      if(spec.finish === 'equilateral'){
+        const cid = uid();
+        objects.push({ id:cid, type:'point', sub:'equilateralApex', parents:[verts[0],verts[1]], label:nextLabel() });
+        verts.push(cid);
+      } else if(spec.finish === 'parallelogram'){
+        const did = uid();
+        objects.push({ id:did, type:'point', sub:'parallelogramD', parents:[verts[0],verts[1],verts[2]], label:nextLabel() });
+        verts.push(did);
+      } else if(spec.finish === 'square'){
+        const cid = uid();
+        objects.push({ id:cid, type:'point', sub:'squareApex', parents:[verts[0],verts[1]], index:0, label:nextLabel() });
+        const did = uid();
+        objects.push({ id:did, type:'point', sub:'squareApex', parents:[verts[0],verts[1]], index:1, label:nextLabel() });
+        verts.push(cid, did);
+      } else if(spec.finish === 'isoTrapMirror'){
+        const did = uid();
+        objects.push({ id:did, type:'point', sub:'isoTrapMirror', parents:[verts[0],verts[1],verts[2]], label:nextLabel() });
+        verts.push(did);
+      }
+      objects.push({ id:uid(), type:'polygon', parents:verts });
+      commitArmedHistory();
+      resetPending();
+      render();
+      return;
+    }
+
+    if(objectsChanged) commitArmedHistory(); else discardArmedHistory();
+    updateHint();
     render();
   }
 
@@ -3006,7 +3200,7 @@
 
     if(currentTool==='move'){
       const pid = pickPoint(sx,sy);
-      if(pid && (getObj(pid).sub==='free' || getObj(pid).sub==='onobject')){
+      if(pid && DRAGGABLE_SUBS.has(getObj(pid).sub)){
         selectedId = pid;
         // History is only armed here, not committed — a click that never actually
         // drags the point should not leave a no-op entry on the undo stack (task 6).
@@ -3078,6 +3272,7 @@
     if(currentTool==='pointon'){ handlePointOnObjectClick(sx,sy); return; }
     if(currentTool==='incircle'){ handleIncircleClick(sx,sy); return; }
     if(currentTool==='circumcircle'){ handleCircumcircleClick(sx,sy); return; }
+    if(SHAPE_SPECS[currentTool]){ handleShapeClick(sx,sy); return; }
     if(currentTool==='delete'){ handleDeleteClick(sx,sy); return; }
     if(currentTool==='pen' || currentTool==='smartpen'){
       saveHistory();
@@ -3112,6 +3307,39 @@
             p.t = projectOntoLineGeom(obj, g, w);
           }
         }
+        render();
+        return;
+      }
+      if(p.sub==='onPerpBisector'){
+        const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]);
+        const M = { x:(A.x+B.x)/2, y:(A.y+B.y)/2 };
+        const perp = rot90(normalize(sub(B,A)));
+        const w = screenToWorld(sx,sy);
+        p.t = dot(sub(w,M), perp);
+        render();
+        return;
+      }
+      if(p.sub==='onPerpThrough'){
+        const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]);
+        const anchor = p.anchorEnd===0 ? A : B;
+        const perp = rot90(normalize(sub(B,A)));
+        const w = screenToWorld(sx,sy);
+        p.t = dot(sub(w,anchor), perp);
+        render();
+        return;
+      }
+      if(p.sub==='onCircleRadiusFrom'){
+        const B = getPointXY(p.parents[1]);
+        const w = screenToWorld(sx,sy);
+        p.t = Math.atan2(w.y-B.y, w.x-B.x);
+        render();
+        return;
+      }
+      if(p.sub==='onParallelThrough'){
+        const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]), C = getPointXY(p.parents[2]);
+        const dir = normalize(sub(B,A));
+        const w = screenToWorld(sx,sy);
+        p.t = dot(sub(w,C), dir);
         render();
         return;
       }
@@ -3260,6 +3488,59 @@
   document.querySelectorAll('.tool-btn[data-tool]').forEach(btn=>{
     btn.addEventListener('click', ()=> setTool(btn.dataset.tool));
   });
+
+  /* ---- Триъгълник / Четириъгълник category buttons: each opens a small flyout
+     menu of shape-specific construction tools (see SHAPE_SPECS / handleShapeClick). ---- */
+  function setupToolMenu(triggerId, submenuId){
+    const trigger = document.getElementById(triggerId);
+    const submenu = document.getElementById(submenuId);
+    if(!trigger || !submenu) return;
+
+    function closeMenu(){
+      submenu.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+    function positionMenu(){
+      const r = trigger.getBoundingClientRect();
+      submenu.style.left = '0px';
+      submenu.style.top = '0px';
+      const mw = submenu.offsetWidth, mh = submenu.offsetHeight;
+      let left = r.right + 6;
+      if(left + mw > window.innerWidth - 8) left = Math.max(8, r.left - mw - 6);
+      let top = Math.min(r.top, window.innerHeight - mh - 8);
+      top = Math.max(8, top);
+      submenu.style.left = left+'px';
+      submenu.style.top = top+'px';
+    }
+    function openMenu(){
+      document.querySelectorAll('.tool-submenu').forEach(m=>{ if(m!==submenu) m.hidden = true; });
+      submenu.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      positionMenu();
+    }
+    trigger.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(submenu.hidden) openMenu(); else closeMenu();
+    });
+    submenu.querySelectorAll('.submenu-item[data-tool]').forEach(item=>{
+      item.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        setTool(item.dataset.tool);
+        closeMenu();
+      });
+    });
+    document.addEventListener('click', (e)=>{
+      if(!submenu.hidden && !submenu.contains(e.target) && e.target!==trigger) closeMenu();
+    });
+    document.addEventListener('keydown', (e)=>{
+      if(e.key==='Escape' && !submenu.hidden){ closeMenu(); trigger.focus(); }
+    });
+    window.addEventListener('resize', ()=>{ if(!submenu.hidden) positionMenu(); });
+  }
+  setupToolMenu('triangleMenuBtn', 'triangleSubmenu');
+  setupToolMenu('quadMenuBtn', 'quadSubmenu');
+  setupToolMenu('linesMenuBtn', 'linesSubmenu');
+  setupToolMenu('pointsMenuBtn', 'pointsSubmenu');
 
   // Toggle-chip buttons carry their on/off state visually via the ".on" class;
   // aria-pressed must mirror it at all times (task 2), both at boot and on every click.
