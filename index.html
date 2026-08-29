@@ -845,6 +845,7 @@
         </button>
         <div class="tool-submenu" id="linesSubmenu" role="menu" aria-label="Вид права" hidden>
           <button type="button" class="submenu-item" data-tool="perpendicular" role="menuitem">Перпендикуляр</button>
+          <button type="button" class="submenu-item" data-tool="altitude" role="menuitem">Височина</button>
           <button type="button" class="submenu-item" data-tool="parallel" role="menuitem">Успоредна права</button>
           <button type="button" class="submenu-item" data-tool="bisector" role="menuitem">Ъглополовяща</button>
           <button type="button" class="submenu-item" data-tool="tangent" role="menuitem">Допирателна към окръжност</button>
@@ -1160,7 +1161,7 @@
   const MENU_TRIGGER_MEMBERSHIP = new Map([
     ['triangleMenuBtn', tool => tool.indexOf('tri_')===0],
     ['quadMenuBtn', tool => tool.indexOf('quad_')===0],
-    ['linesMenuBtn', tool => ['perpendicular','parallel','bisector','tangent'].includes(tool)],
+    ['linesMenuBtn', tool => ['perpendicular','parallel','bisector','tangent','altitude'].includes(tool)],
     ['pointsMenuBtn', tool => ['midpoint','intersect','pointon'].includes(tool)]
   ]);
   const DASH_PATTERNS = { dashed:[8,5], dotted:[1.6,3.6] };
@@ -1391,6 +1392,22 @@
       const u = normalize(sub(B,A));
       const t = dot(sub(C,M), u);
       return { x:C.x-2*t*u.x, y:C.y-2*t*u.y };
+    }
+    if(p.sub === 'altitudeFoot'){
+      /* the foot of the perpendicular dropped from a vertex onto a side (or its
+         extension) — always the LIVE perpendicular projection, recomputed from the
+         current vertex and side each time, so the altitude stays correct if either
+         is dragged afterwards */
+      const V = getPointXY(p.parents[0]);
+      const lineObj = getObj(p.parents[1]);
+      if(lineObj){
+        const g = getLineGeom(lineObj);
+        if(len(g.dir) > 1e-9){
+          const t = dot(sub(V,g.anchor), g.dir);
+          return { x:g.anchor.x+g.dir.x*t, y:g.anchor.y+g.dir.y*t };
+        }
+      }
+      return { x:V.x, y:V.y };
     }
     return { x:p.x, y:p.y };
   }
@@ -2070,6 +2087,7 @@
     vectorEqual: ['Избери съществуващ вектор.', 'Избери или постави точка — новото начало на равния вектор.'],
     tangent: ['Избери окръжност.', 'Избери или постави точка извън окръжността — допирателната(ите) ще минат през нея.'],
     rightangle: ['Избери първата права/отсечка.', 'Избери втора права/отсечка, перпендикулярна на първата.'],
+    altitude: ['Избери страната (правата или отсечката), към която ще спуснеш височината.', 'Избери или постави върха, от който тръгва височината — стъпалото и отсечката на височината се построяват автоматично, с отбелязан прав ъгъл.'],
     incircle: 'Кликни триъгълник (многоъгълник с 3 върха), за да построиш вписаната му окръжност.',
     circumcircle: 'Кликни триъгълник (многоъгълник с 3 върха), за да построиш описаната около него окръжност.',
     pen: 'Пиши или рисувай свободно с мишка, пръст или писалка на екрана.',
@@ -2091,7 +2109,7 @@
   function updateHint(){
     let h = TOOL_HINTS[currentTool];
     if(Array.isArray(h)){
-      if(currentTool==='perpendicular' || currentTool==='parallel' || currentTool==='intersect' || currentTool==='vectorEqual' || currentTool==='tangent' || currentTool==='rightangle'){
+      if(currentTool==='perpendicular' || currentTool==='parallel' || currentTool==='intersect' || currentTool==='vectorEqual' || currentTool==='tangent' || currentTool==='rightangle' || currentTool==='altitude'){
         h = h[pendingBase!==null ? 1 : 0];
       } else {
         const step = Math.min(pending.length, h.length-1);
@@ -2442,6 +2460,42 @@
     }
     commitArmedHistory();
     resetPending();
+    render();
+  }
+
+  function handleAltitudeClick(sx,sy){
+    if(pendingBase===null){
+      const lineId = pickLineLike(sx,sy, LINE_TYPES);
+      if(!lineId) return;
+      pendingBase = lineId;
+      updateHint();
+      render();
+      return;
+    }
+    armHistory();
+    const before = objects.length;
+    const vId = getOrCreatePointAt(sx,sy);
+    const created = objects.length !== before;
+    const lineObj = getObj(pendingBase);
+    if(!lineObj){ discardArmedHistory(); resetPending(); return; }
+    const g = getLineGeom(lineObj);
+    if(len(g.dir) < 1e-9){ discardArmedHistory(); resetPending(); return; }
+    const V = getPointXY(vId);
+    const distToLine = Math.abs(dot(sub(V,g.anchor), rot90(g.dir)));
+    if(distToLine < 1e-4){
+      if(created) commitArmedHistory(); else discardArmedHistory();
+      hintText.textContent = 'Върхът лежи върху избраната страна — височината би била нулева. Избери друг връх.';
+      render();
+      return;
+    }
+    const footId = uid();
+    objects.push({ id:footId, type:'point', sub:'altitudeFoot', parents:[vId, pendingBase], label:nextLabel() });
+    const segId = uid();
+    objects.push({ id:segId, type:'segment', parents:[vId, footId], tint:'rose' });
+    objects.push({ id:uid(), type:'rightangle', parents:[pendingBase, segId] });
+    commitArmedHistory();
+    resetPending();
+    hintText.textContent = 'Построена височина.';
     render();
   }
 
@@ -3265,6 +3319,7 @@
     if(currentTool==='vector'){ handleTwoPointTool(sx,sy,'vector'); return; }
     if(currentTool==='vectorEqual'){ handleVectorEqualClick(sx,sy); return; }
     if(currentTool==='tangent'){ handleTangentClick(sx,sy); return; }
+    if(currentTool==='altitude'){ handleAltitudeClick(sx,sy); return; }
     if(currentTool==='rightangle'){ handleRightAngleClick(sx,sy); return; }
     if(currentTool==='bisector'){ handleBisectorClick(sx,sy); return; }
     if(currentTool==='midpoint'){ handleMidpointClick(sx,sy); return; }
