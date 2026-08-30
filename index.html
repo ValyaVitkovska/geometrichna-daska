@@ -2288,9 +2288,27 @@
     render();
   }
 
+  // Shared by perpendicular/parallel (and mirrored in handleIntersectClick):
+  // pickLineLike alone can't target a polygon's side, since a polygon's edges
+  // aren't separate line-like objects. Fall back to materializing (or reusing)
+  // a real segment for the nearest polygon edge under the click.
+  function pickOrMakePolygonAwareLine(sx,sy){
+    let lineId = pickLineLike(sx,sy, LINE_TYPES);
+    if(!lineId){
+      const edge = pickPolygonEdge(sx,sy);
+      if(edge){
+        armHistory();
+        const before = objects.length;
+        lineId = getOrCreateSegmentFor(edge[0], edge[1]);
+        if(objects.length !== before) commitArmedHistory(); else discardArmedHistory();
+      }
+    }
+    return lineId;
+  }
+
   function handlePerpendicularClick(sx,sy){
     if(pendingBase===null){
-      const lineId = pickLineLike(sx,sy, LINE_TYPES);
+      const lineId = pickOrMakePolygonAwareLine(sx,sy);
       if(!lineId) return;
       pendingBase = lineId;
       updateHint();
@@ -2306,7 +2324,7 @@
 
   function handleParallelClick(sx,sy){
     if(pendingBase===null){
-      const lineId = pickLineLike(sx,sy, LINE_TYPES);
+      const lineId = pickOrMakePolygonAwareLine(sx,sy);
       if(!lineId) return;
       pendingBase = lineId;
       updateHint();
@@ -2321,15 +2339,33 @@
   }
 
   function handleIntersectClick(sx,sy){
+    // Same limitation as the altitude tool ran into: a polygon's sides aren't
+    // separate line-like objects, so pickLineOrCircle alone can't target a
+    // triangle/quadrilateral's edge. Fall back to materializing (or reusing) a
+    // real segment for the nearest polygon edge, so "pick the side of this
+    // triangle" works for intersect the same way it now does for altitude.
+    function pickOrMakeLineOrCircle(){
+      let oid = pickLineOrCircle(sx,sy);
+      if(!oid){
+        const edge = pickPolygonEdge(sx,sy);
+        if(edge){
+          armHistory();
+          const before = objects.length;
+          oid = getOrCreateSegmentFor(edge[0], edge[1]);
+          if(objects.length !== before) commitArmedHistory(); else discardArmedHistory();
+        }
+      }
+      return oid;
+    }
     if(pendingBase===null){
-      const oid = pickLineOrCircle(sx,sy);
+      const oid = pickOrMakeLineOrCircle();
       if(!oid) return;
       pendingBase = oid;
       updateHint();
       render();
       return;
     }
-    const oid = pickLineOrCircle(sx,sy);
+    const oid = pickOrMakeLineOrCircle();
     if(!oid || oid===pendingBase) return;
     const A = getObj(pendingBase), B = getObj(oid);
     const pts = computeIntersections(A,B);
@@ -2522,19 +2558,7 @@
 
   function handleAltitudeClick(sx,sy){
     if(pendingBase===null){
-      let lineId = pickLineLike(sx,sy, LINE_TYPES);
-      if(!lineId){
-        // no standalone segment/line under the click — allow picking a side of an
-        // already-built triangle/polygon directly, materializing (or reusing) a
-        // real segment object for that edge so the rest of the tool works unchanged
-        const edge = pickPolygonEdge(sx,sy);
-        if(edge){
-          armHistory();
-          const before = objects.length;
-          lineId = getOrCreateSegmentFor(edge[0], edge[1]);
-          if(objects.length !== before) commitArmedHistory(); else discardArmedHistory();
-        }
-      }
+      const lineId = pickOrMakePolygonAwareLine(sx,sy);
       if(!lineId) return;
       pendingBase = lineId;
       updateHint();
