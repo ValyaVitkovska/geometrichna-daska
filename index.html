@@ -1791,8 +1791,20 @@
   }
 
   /* ================= history ================= */
-  /* image objects carry a live (non-serializable) HTMLImageElement cache in _img;
-     strip it before JSON.stringify and rebuild it after JSON.parse */
+  /* image objects carry a live (non-serializable) HTMLImageElement cache in _img.
+     The actual (often large, base64) image bytes are NOT kept on the object at all —
+     they live only in imageCache, keyed by object id, outside of undo/redo history.
+     Reasoning: history snapshots are taken on nearly every edit (up to 60 kept at
+     once); if a multi-MB data URL were duplicated into every one of those JSON
+     snapshots, a single inserted photo could balloon session memory into the
+     hundreds of MB and stall lower-end classroom tablets. Keeping one live copy
+     per image, addressed by id, fixes that while still letting undo/redo restore
+     an image after its object is deleted and recreated (see restoreSnapshot /
+     hydrateImages below) — the cache is intentionally never evicted mid-session,
+     since a cheap per-image leak is a fine trade for never risking a dangling
+     reference from a still-reachable history entry. */
+  const imageCache = new Map(); // object id -> data URL
+
   function serializeObjects(objs){
     return objs.map(o=>{
       if(o.type==='image'){
@@ -1803,12 +1815,34 @@
       return o;
     });
   }
+  // Only used for the "save construction" file export (see saveBtn below), where the
+  // whole point is a portable, self-contained file — so unlike serializeObjects()
+  // above (used for in-memory undo/redo history), this one deliberately re-attaches
+  // each image's actual bytes from imageCache.
+  function serializeObjectsWithImageData(objs){
+    return objs.map(o=>{
+      if(o.type==='image'){
+        const copy = {};
+        for(const k in o){ if(k!=='_img') copy[k] = o[k]; }
+        copy.src = imageCache.get(o.id) || '';
+        return copy;
+      }
+      return o;
+    });
+  }
   function hydrateImages(objs){
     for(const o of objs){
-      if(o.type==='image' && o.src && !o._img){
+      if(o.type==='image' && !o._img){
+        // A freshly opened file carries the image bytes inline (src); cache them
+        // and strip src off the live object so it never re-enters history snapshots.
+        // A snapshot restored from undo/redo carries no src at all — look its bytes
+        // up in the cache by id instead.
+        if(o.src){ imageCache.set(o.id, o.src); delete o.src; }
+        const src = imageCache.get(o.id);
+        if(!src) continue;
         const img = new Image();
         img.onload = render;
-        img.src = o.src;
+        img.src = src;
         o._img = img;
       }
     }
@@ -2766,9 +2800,19 @@
   }
 
   /* ================= rendering ================= */
+  // render() calls this on every frame (including every pointermove while dragging,
+  // panning, or drawing ink), but actually assigning canvas.width/height — even to
+  // the value it already holds — always clears the bitmap and resets the whole 2D
+  // context per spec. Skipping that work when the board's on-screen size and dpr
+  // haven't actually changed avoids doing it dozens of times a second; real resizes
+  // (window resize / ResizeObserver, see boot section) still pick it up immediately
+  // since they call render() too.
+  let lastCanvasW = -1, lastCanvasH = -1, lastCanvasDpr = -1;
   function resizeCanvas(){
     dpr = Math.max(1, window.devicePixelRatio || 1);
     const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
+    if(w===lastCanvasW && h===lastCanvasH && dpr===lastCanvasDpr) return;
+    lastCanvasW = w; lastCanvasH = h; lastCanvasDpr = dpr;
     canvas.width = Math.max(1, Math.round(w*dpr));
     canvas.height = Math.max(1, Math.round(h*dpr));
     canvas.style.width = w+'px';
@@ -3638,15 +3682,11 @@
     if(wasDrawingInk && finishedStroke && currentTool==='smartpen'){
       const newId = recognizeStrokeAsShape(finishedStroke);
       if(newId){
-        currentTool = 'move';
-        document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>{
-          const isActive = b.dataset.tool==='move';
-          b.classList.toggle('active', isActive);
-          b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-        });
-        document.getElementById('penOptions').classList.toggle('show', false);
-        canvas.style.cursor = 'default';
+        // Route through setTool() itself rather than re-doing its DOM sync by hand,
+        // so this stays correct if setTool ever grows more state to reset.
+        setTool('move');
         selectedId = newId;
+        updateHint();
       } else {
         hintText.textContent = 'Не разпознах точна фигура — рисунката остава като бележка с писалка.';
       }
@@ -3839,20 +3879,16 @@
         const worldWidth = targetScreenWidth / view.scale;
         const aspect = (img.naturalHeight && img.naturalWidth) ? img.naturalHeight/img.naturalWidth : 1;
         const obj = {
-          id: uid(), type:'image', src,
+          id: uid(), type:'image',
           x: centerWorld.x, y: centerWorld.y,
           width: worldWidth, height: worldWidth*aspect
         };
+        // src lives only in imageCache (keyed by id), never on the object itself —
+        // see the imageCache comment above hydrateImages for why.
+        imageCache.set(obj.id, src);
         obj._img = img;
         objects.push(obj);
-        currentTool = 'move';
-        document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>{
-          const isActive = b.dataset.tool==='move';
-          b.classList.toggle('active', isActive);
-          b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-        });
-        document.getElementById('penOptions').classList.toggle('show', false);
-        canvas.style.cursor = 'default';
+        setTool('move');
         selectedId = obj.id;
         updateHint();
         render();
@@ -4117,7 +4153,7 @@
   document.getElementById('saveBtn').addEventListener('click', ()=>{
     const data = {
       app: 'geoboard', version: 1,
-      objects: serializeObjects(objects), idCounter, inkStrokes,
+      objects: serializeObjectsWithImageData(objects), idCounter, inkStrokes,
       savedAt: new Date().toISOString()
     };
     const blob = new Blob([JSON.stringify(data)], { type:'application/json' });
@@ -4143,12 +4179,26 @@
     if(!file) return;
     const reader = new FileReader();
     reader.onload = function(ev){
+      const FAIL_MSG = 'Файлът не можа да бъде отворен — невалиден или повреден формат.';
+      let data;
       try{
-        const data = JSON.parse(ev.target.result);
+        data = JSON.parse(ev.target.result);
         if(!data || typeof data !== 'object' || !Array.isArray(data.objects)){
           throw new Error('not-a-geoboard-file');
         }
-        saveHistory();
+      }catch(err){
+        hintText.textContent = FAIL_MSG;
+        return;
+      }
+      // Keep the pre-import state around so a problem partway through loading (a
+      // structurally valid JSON file with semantically broken content, e.g. an
+      // object missing fields that render()/hydrateImages() need) can be rolled
+      // back cleanly instead of leaving the live board half-replaced with bad data
+      // while telling the user the file "failed to open".
+      const prevObjects = objects, prevIdCounter = idCounter, prevInkStrokes = inkStrokes,
+            prevSelectedId = selectedId, prevHoverId = hoverId;
+      saveHistory();
+      try{
         objects = data.objects;
         idCounter = data.idCounter || (objects.reduce((m,o)=>Math.max(m,o.id||0),0)+1);
         inkStrokes = Array.isArray(data.inkStrokes) ? data.inkStrokes : [];
@@ -4158,7 +4208,12 @@
         render();
         hintText.textContent = 'Файлът е отворен успешно.';
       }catch(err){
-        hintText.textContent = 'Файлът не можа да бъде отворен — невалиден или повреден формат.';
+        objects = prevObjects; idCounter = prevIdCounter; inkStrokes = prevInkStrokes;
+        selectedId = prevSelectedId; hoverId = prevHoverId;
+        history.pop();
+        updateUndoRedoUI();
+        render();
+        hintText.textContent = FAIL_MSG;
       }
     };
     reader.readAsText(file);
@@ -4206,9 +4261,14 @@
   });
 
   /* ================= boot ================= */
-  window.addEventListener('resize', render);
+  // ResizeObserver on boardWrap already catches every case a window 'resize' event
+  // would (and more — e.g. layout shifts with no viewport change); registering both
+  // just double-renders on every resize, so the plain listener is only a fallback
+  // for browsers without ResizeObserver.
   if(window.ResizeObserver){
     new ResizeObserver(render).observe(boardWrap);
+  } else {
+    window.addEventListener('resize', render);
   }
 
   /* ================= accessibility: names, tooltips, decorative icons ================= */
