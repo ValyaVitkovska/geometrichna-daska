@@ -1109,9 +1109,9 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h9l3 3v2"/><rect x="3" y="9" width="18" height="8" rx="1.4"/><path d="M6 17v3h12v-3"/></svg>
         Печат/PDF
       </button>
-      <button class="util-btn" id="installBtn" style="display:none" title="Инсталирай приложението на устройството">
+      <button class="util-btn" id="installBtn" title="Инсталирай приложението на устройството">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="10" y1="19" x2="14" y2="19"/></svg>
-        Инсталирай
+        <span id="installBtnLabel">Инсталирай</span>
       </button>
       <button class="util-btn" id="showAllBtn" title="Покажи всички скрити обекти и бележки">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -1274,7 +1274,7 @@
       </section>
       <section class="welcome-section">
         <h3>Управление</h3>
-        <p>Отмени/повтори, запазване и отваряне на чертеж (с всички листове), изтегляне като PNG с прозрачен фон (удобно за поставяне в Word), печат/PDF, тъмна/светла тема и приближаване на изгледа. Бутонът „Инсталирай“ се появява, когато браузърът позволи дъската да се сложи като отделно приложение на устройството (компютър, телефон или таблет) — след инсталиране се отваря от собствена икона, без адресна лента.</p>
+        <p>Отмени/повтори, запазване и отваряне на чертеж (с всички листове), изтегляне като PNG с прозрачен фон (удобно за поставяне в Word), печат/PDF, тъмна/светла тема и приближаване на изгледа. Бутонът „Инсталирай“ слага дъската като отделно приложение на устройството (компютър, телефон или таблет) — след инсталиране се отваря от собствена икона, без адресна лента. Ако браузърът не предложи директно инсталиране, бутонът показва как се прави ръчно на съответното устройство.</p>
       </section>
     </div>
     <div class="welcome-actions">
@@ -3331,11 +3331,32 @@
     else { rw = availW; rh = rw/A4_RATIO; }
     return { x:(w-rw)/2, y:(h-rh)/2, w:rw, h:rh };
   }
-  function drawPageFrame(w,h,pal){
+  // Drawn in two separate passes (see render() below), like the existing photo-crop
+  // overlay elsewhere in this file: the dim goes down early, right after the grid/
+  // axes so it fades the background grid "squares" outside the sheet toward the
+  // board colour (an evenodd fill with a hole punched out for the frame — the same
+  // trick the crop tool uses for its own darken-outside-the-selection overlay) —
+  // that happens BEFORE any geometry is drawn, so points/lines/circles the user
+  // built stay fully visible whether they land inside or outside the sheet. The
+  // dashed border + label are drawn again at the very end of render(), on top of
+  // everything, so the sheet's edge always reads clearly no matter what's under it.
+  function drawPageFrameDim(w,h,pal){
+    const r = getPageFrameRect(w,h);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0,0,w,h);
+    ctx.rect(r.x, r.y, r.w, r.h);
+    ctx.closePath();
+    ctx.fillStyle = pal.board;
+    ctx.globalAlpha = 0.72;
+    ctx.fill('evenodd');
+    ctx.restore();
+  }
+  function drawPageFrameBorder(w,h,pal){
     const r = getPageFrameRect(w,h);
     ctx.save();
     ctx.strokeStyle = pal.blue;
-    ctx.lineWidth = 1.6;
+    ctx.lineWidth = 1.8;
     ctx.setLineDash([9,6]);
     ctx.strokeRect(r.x+0.5, r.y+0.5, r.w, r.h);
     ctx.setLineDash([]);
@@ -3741,7 +3762,8 @@
     if(gridEnabled) drawGridLines(w,h,pal);
     if(axesEnabled) drawAxesAndTicks(w,h,pal);
     if(axesEnabled && axisNamesEnabled) drawAxisNames(w,h,pal);
-    if(pageFrameEnabled && !(opts && opts.hidePageFrame)) drawPageFrame(w,h,pal);
+    const showPageFrame = pageFrameEnabled && !(opts && opts.hidePageFrame);
+    if(showPageFrame) drawPageFrameDim(w,h,pal);
 
     for(const o of objects){ if(o.type==='image' && !o.hidden) drawImageObj(o, o.id===hoverId||o.id===selectedId, pal); }
     for(const o of objects){ if(o.type==='polygon' && !o.hidden) drawPolygonObj(o, o.id===hoverId||o.id===selectedId, pal); }
@@ -3780,6 +3802,7 @@
       if(!s.hidden) drawInkStroke(s, s.id===hoverId||s.id===selectedId, pal);
     }
     if(measurementsEnabled) drawMeasurements(pal);
+    if(showPageFrame) drawPageFrameBorder(w,h,pal);
     if(selectedId!==null){
       const selObj = getObj(selectedId);
       if(selObj && selObj.type==='image' && !selObj.hidden) drawImageResizeHandle(selObj, pal);
@@ -4921,21 +4944,42 @@
   });
 
   /* ---------- install as app ---------- */
+  // The button stays visible at all times (rather than hidden until the browser
+  // fires beforeinstallprompt) because that event never fires in a lot of real
+  // situations — Safari/iOS doesn't support it at all, and Chrome/Edge only fire
+  // it once their own "installability" heuristics are satisfied, which can take
+  // a while or never happen. Hiding the button until then made the whole feature
+  // invisible for many users. Now: if the browser handed us a real install
+  // prompt, use it; otherwise explain, in plain language, how to install
+  // manually on that platform instead of doing nothing.
   const installBtn = document.getElementById('installBtn');
   let deferredInstallPrompt = null;
   window.addEventListener('beforeinstallprompt', (e)=>{
     e.preventDefault();
     deferredInstallPrompt = e;
-    installBtn.style.display = '';
   });
   installBtn.addEventListener('click', async ()=>{
-    if(!deferredInstallPrompt) return;
-    deferredInstallPrompt.prompt();
-    try{ await deferredInstallPrompt.userChoice; }catch(err){}
-    deferredInstallPrompt = null;
-    installBtn.style.display = 'none';
+    if(deferredInstallPrompt){
+      deferredInstallPrompt.prompt();
+      try{ await deferredInstallPrompt.userChoice; }catch(err){}
+      deferredInstallPrompt = null;
+      return;
+    }
+    const ua = navigator.userAgent || '';
+    const isIOS = /iphone|ipad|ipod/i.test(ua);
+    if(isIOS){
+      alert('На iPhone/iPad: отвори страницата в Safari, после бутона „Споделяне“ и избери „Добави към Начален екран“.');
+    } else if(location.protocol === 'file:'){
+      alert('За да се инсталира като приложение, дъската трябва да е отворена през интернет адрес (https://…), а не като локален файл.');
+    } else {
+      alert('Ако браузърът поддържа инсталиране, потърси иконата за инсталиране в адресната лента, или менюто на браузъра (обикновено „Инсталиране на приложение“ / „Add to Home screen“).');
+    }
   });
-  window.addEventListener('appinstalled', ()=>{ installBtn.style.display = 'none'; deferredInstallPrompt = null; });
+  window.addEventListener('appinstalled', ()=>{
+    deferredInstallPrompt = null;
+    const label = document.getElementById('installBtnLabel');
+    if(label) label.textContent = '✓ Инсталирано';
+  });
 
   document.getElementById('zoomIn').addEventListener('click', ()=>{
     const w=boardWrap.clientWidth, h=boardWrap.clientHeight;
