@@ -954,7 +954,7 @@
         <div class="tool-submenu" id="cevianSubmenu" role="menu" aria-label="Вид отсечка" hidden>
           <button type="button" class="submenu-item" data-tool="altitude" role="menuitem">Височина</button>
           <button type="button" class="submenu-item" data-tool="median" role="menuitem">Медиана</button>
-          <button type="button" class="submenu-item" data-tool="bisector" role="menuitem">Ъглополовяща</button>
+          <button type="button" class="submenu-item" data-tool="bisectorSeg" role="menuitem">Ъглополовяща</button>
         </div>
       </div>
 
@@ -1315,7 +1315,7 @@
     ['pointMenuBtn', tool => ['point','pointon'].includes(tool)],
     ['vectorsMenuBtn', tool => ['vector','vectorEqual'].includes(tool)],
     ['linesMenuBtn', tool => ['perpendicular','parallel','bisector','tangent'].includes(tool)],
-    ['cevianMenuBtn', tool => ['altitude','median','bisector'].includes(tool)],
+    ['cevianMenuBtn', tool => ['altitude','median','bisectorSeg'].includes(tool)],
     ['pointsMenuBtn', tool => ['midpoint','intersect'].includes(tool)],
     ['circlesMenuBtn', tool => ['incircle','circumcircle'].includes(tool)]
   ]);
@@ -1652,6 +1652,26 @@
       const u = normalize(sub(B,A));
       const t = dot(sub(C,M), u);
       return { x:C.x-2*t*u.x, y:C.y-2*t*u.y };
+    }
+    if(p.sub === 'bisectorFoot'){
+      /* Where the internal angle bisector from a triangle's vertex meets the
+         opposite side — by the angle bisector theorem the point D on side BC
+         satisfies BD/DC = AB/AC, i.e. D = B + AB/(AB+AC) * (C-B). Recomputed live
+         from the current vertex and side endpoints, same as altitudeFoot above,
+         so dragging any of the three points keeps the bisector correct. */
+      const V = getPointXY(p.parents[0]);
+      const lineObj = getObj(p.parents[1]);
+      if(lineObj){
+        const B = getPointXY(lineObj.parents[0]), C = getPointXY(lineObj.parents[1]);
+        const vb = dist(V,B), vc = dist(V,C);
+        const sum = vb+vc;
+        if(sum > 1e-9){
+          const t = vb/sum;
+          return { x:B.x+(C.x-B.x)*t, y:B.y+(C.y-B.y)*t };
+        }
+      }
+      if(p._lastX !== undefined) return { x:p._lastX, y:p._lastY };
+      return { x:0, y:0 };
     }
     if(p.sub === 'altitudeFoot'){
       /* the foot of the perpendicular dropped from a vertex onto a side (or its
@@ -2441,6 +2461,7 @@
     rightangle: ['Избери първата права/отсечка.', 'Избери втора права/отсечка, перпендикулярна на първата.'],
     altitude: ['Избери страната (права, отсечка или страна на построен триъгълник/многоъгълник), към която ще спуснеш височината.', 'Избери или постави върха, от който тръгва височината — стъпалото и отсечката на височината се построяват автоматично, с отбелязан прав ъгъл.'],
     median: ['Избери страната, срещу която е върхът, от който ще построиш медианата.', 'Избери или постави срещуположния връх — медианата се построява автоматично до средата на страната.'],
+    bisectorSeg: ['Избери страната, срещу която е върхът, от който ще построиш ъглополовящата.', 'Избери или постави срещуположния връх — ъглополовящата се построява автоматично до пресечната точка със страната.'],
     incircle: 'Кликни триъгълник (многоъгълник с 3 върха), за да построиш вписаната му окръжност.',
     circumcircle: 'Кликни триъгълник (многоъгълник с 3 върха), за да построиш описаната около него окръжност.',
     pen: 'Пиши или рисувай свободно с мишка, пръст или писалка на екрана.',
@@ -2463,7 +2484,7 @@
   function updateHint(){
     let h = TOOL_HINTS[currentTool];
     if(Array.isArray(h)){
-      if(currentTool==='perpendicular' || currentTool==='parallel' || currentTool==='intersect' || currentTool==='vectorEqual' || currentTool==='tangent' || currentTool==='rightangle' || currentTool==='altitude' || currentTool==='median'){
+      if(currentTool==='perpendicular' || currentTool==='parallel' || currentTool==='intersect' || currentTool==='vectorEqual' || currentTool==='tangent' || currentTool==='rightangle' || currentTool==='altitude' || currentTool==='median' || currentTool==='bisectorSeg'){
         h = h[pendingBase!==null ? 1 : 0];
       } else {
         const step = Math.min(pending.length, h.length-1);
@@ -2950,6 +2971,40 @@
     commitArmedHistory();
     resetPending();
     hintText.textContent = 'Построена медиана.';
+    render();
+  }
+
+  // The angle bisector from a vertex, drawn as a SEGMENT ending where it meets the
+  // opposite side (the point given by the angle bisector theorem — see the
+  // 'bisectorFoot' case in getPointXY) — distinct from the "Прави" menu's ъглополо-
+  // вяща, which draws the bisector of an arbitrary 3-point angle as an unbounded ray.
+  function handleBisectorSegClick(sx,sy){
+    if(pendingBase===null){
+      const lineId = pickOrMakePolygonAwareLine(sx,sy);
+      if(!lineId) return;
+      pendingBase = lineId;
+      updateHint();
+      render();
+      return;
+    }
+    armHistory();
+    const before = objects.length;
+    const vId = getOrCreatePointAt(sx,sy);
+    const created = objects.length !== before;
+    const lineObj = getObj(pendingBase);
+    if(!lineObj){ discardArmedHistory(); resetPending(); return; }
+    if(vId===lineObj.parents[0] || vId===lineObj.parents[1]){
+      if(created) commitArmedHistory(); else discardArmedHistory();
+      hintText.textContent = 'Върхът съвпада с край на избраната страна — избери срещуположния връх.';
+      render();
+      return;
+    }
+    const footId = uid();
+    objects.push({ id:footId, type:'point', sub:'bisectorFoot', parents:[vId, pendingBase], label:nextLabel() });
+    objects.push({ id:uid(), type:'segment', parents:[vId, footId], tint:'orange' });
+    commitArmedHistory();
+    resetPending();
+    hintText.textContent = 'Построена ъглополовяща.';
     render();
   }
 
@@ -3899,6 +3954,7 @@
     if(currentTool==='tangent'){ handleTangentClick(sx,sy); return; }
     if(currentTool==='altitude'){ handleAltitudeClick(sx,sy); return; }
     if(currentTool==='median'){ handleMedianClick(sx,sy); return; }
+    if(currentTool==='bisectorSeg'){ handleBisectorSegClick(sx,sy); return; }
     if(currentTool==='rightangle'){ handleRightAngleClick(sx,sy); return; }
     if(currentTool==='bisector'){ handleBisectorClick(sx,sy); return; }
     if(currentTool==='midpoint'){ handleMidpointClick(sx,sy); return; }
