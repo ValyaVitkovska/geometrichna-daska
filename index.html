@@ -510,19 +510,27 @@
   .hint-wrap{
     display:flex;
     align-items:center;
-    gap:7px;
+    gap:9px;
     flex:1 1 auto;
     min-width:0;
+    /* A warm, colorful "speech bubble" for Гео's step-by-step hint — was plain
+       dimmed text before, easy to miss among the rest of the topbar. */
+    background:linear-gradient(135deg, rgba(var(--ink-hot-rgb),0.22), rgba(var(--ink-blue-rgb),0.13));
+    border:1.5px solid rgba(var(--ink-hot-rgb),0.5);
+    border-radius:999px;
+    padding:5px 16px 5px 5px;
   }
   .hint-avatar{
-    width:26px; height:auto; display:block; flex:0 0 auto;
+    width:28px; height:auto; display:block; flex:0 0 auto;
     filter:drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+    background:radial-gradient(circle, rgba(var(--ink-hot-rgb),0.4), transparent 72%);
+    border-radius:50%;
   }
   .hint{
     font-family:var(--font-ui);
-    font-size:12.5px;
-    font-weight:600;
-    color:var(--ink-primary-dim);
+    font-size:13px;
+    font-weight:800;
+    color:var(--ink-hot);
     flex:1 1 auto;
     min-width:0;
     white-space:nowrap;
@@ -829,13 +837,19 @@
         <span class="tool-label">Избери</span>
       </button>
 
-      <button class="tool-btn" data-tool="point" data-tint="white" title="Точка">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>
-          <circle cx="12" cy="12" r="8" opacity="0.35"/>
-        </svg>
-        <span class="tool-label">Точка</span>
-      </button>
+      <div class="tool-menu" id="pointMenu">
+        <button type="button" class="tool-btn menu-trigger" id="pointMenuBtn" data-tint="white" title="Точка" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>
+            <circle cx="12" cy="12" r="8" opacity="0.35"/>
+          </svg>
+          <span class="tool-label">Точка</span>
+        </button>
+        <div class="tool-submenu" id="pointSubmenu" role="menu" aria-label="Вид точка" hidden>
+          <button type="button" class="submenu-item" data-tool="point" role="menuitem">Точка</button>
+          <button type="button" class="submenu-item" data-tool="pointon" role="menuitem">Точка върху обект</button>
+        </div>
+      </div>
 
 
       <button class="tool-btn" data-tool="segment" data-tint="white" title="Отсечка">
@@ -901,13 +915,19 @@
         </div>
       </div>
 
-      <button class="tool-btn" data-tool="vector" data-tint="orange" title="Вектор">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="4" y1="20" x2="17" y2="7"/>
-          <path d="M11 7h6v6"/>
-        </svg>
-        <span class="tool-label">Вектор</span>
-      </button>
+      <div class="tool-menu" id="vectorsMenu">
+        <button type="button" class="tool-btn menu-trigger" id="vectorsMenuBtn" data-tint="orange" title="Вектори" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="20" x2="17" y2="7"/>
+            <path d="M11 7h6v6"/>
+          </svg>
+          <span class="tool-label">Вектори</span>
+        </button>
+        <div class="tool-submenu" id="vectorsSubmenu" role="menu" aria-label="Вид вектор" hidden>
+          <button type="button" class="submenu-item" data-tool="vector" role="menuitem">Вектор</button>
+          <button type="button" class="submenu-item" data-tool="vectorEqual" role="menuitem">Равен вектор</button>
+        </div>
+      </div>
     </div>
 
     <div class="tool-group">
@@ -920,34 +940,34 @@
         </button>
         <div class="tool-submenu" id="linesSubmenu" role="menu" aria-label="Вид права" hidden>
           <button type="button" class="submenu-item" data-tool="perpendicular" role="menuitem">Перпендикуляр</button>
-          <button type="button" class="submenu-item" data-tool="altitude" role="menuitem">Височина</button>
-          <button type="button" class="submenu-item" data-tool="parallel" role="menuitem">Успоредна права</button>
           <button type="button" class="submenu-item" data-tool="bisector" role="menuitem">Ъглополовяща</button>
           <button type="button" class="submenu-item" data-tool="tangent" role="menuitem">Допирателна към окръжност</button>
+          <button type="button" class="submenu-item" data-tool="parallel" role="menuitem">Успоредна права</button>
+        </div>
+      </div>
+
+      <div class="tool-menu" id="cevianMenu">
+        <button type="button" class="tool-btn menu-trigger" id="cevianMenuBtn" data-tint="green" title="Отсечки в триъгълник и четириъгълник" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,4 21,20 3,20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+          <span class="tool-label">Отсечки във фигура</span>
+        </button>
+        <div class="tool-submenu" id="cevianSubmenu" role="menu" aria-label="Вид отсечка" hidden>
+          <button type="button" class="submenu-item" data-tool="altitude" role="menuitem">Височина</button>
+          <button type="button" class="submenu-item" data-tool="median" role="menuitem">Медиана</button>
+          <button type="button" class="submenu-item" data-tool="bisector" role="menuitem">Ъглополовяща</button>
         </div>
       </div>
 
       <div class="tool-menu" id="pointsMenu">
-        <button type="button" class="tool-btn menu-trigger" id="pointsMenuBtn" data-tint="white" title="Точки" aria-haspopup="true" aria-expanded="false">
+        <button type="button" class="tool-btn menu-trigger" id="pointsMenuBtn" data-tint="white" title="Построени точки" aria-haspopup="true" aria-expanded="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="19" x2="21" y2="5"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>
-          <span class="tool-label">Точки</span>
+          <span class="tool-label">Построени точки</span>
         </button>
         <div class="tool-submenu" id="pointsSubmenu" role="menu" aria-label="Вид точка" hidden>
           <button type="button" class="submenu-item" data-tool="midpoint" role="menuitem">Среда на отсечка</button>
           <button type="button" class="submenu-item" data-tool="intersect" role="menuitem">Пресечна точка</button>
-          <button type="button" class="submenu-item" data-tool="pointon" role="menuitem">Точка върху обект</button>
         </div>
       </div>
-
-      <button class="tool-btn" data-tool="vectorEqual" data-tint="orange" title="Равен вектор">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="3" y1="11" x2="12" y2="2"/>
-          <path d="M7 2h5v5"/>
-          <line x1="12" y1="22" x2="21" y2="13" stroke-dasharray="2,2"/>
-          <path d="M16 13h5v5" stroke-dasharray="2,2"/>
-        </svg>
-        <span class="tool-label">Равен вектор</span>
-      </button>
 
       <button class="tool-btn" data-tool="angle" data-tint="yellow" title="Избери ъгъл — стойността му се показва при включен бутон Стойности">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
@@ -958,21 +978,19 @@
         <span class="tool-label">Ъгъл</span>
       </button>
 
-      <button class="tool-btn" data-tool="incircle" data-tint="green" title="Вписана окръжност в триъгълник">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="12,3 21,20 3,20"/>
-          <circle cx="12" cy="15" r="4.6"/>
-        </svg>
-        <span class="tool-label">Вписана окр.</span>
-      </button>
-
-      <button class="tool-btn" data-tool="circumcircle" data-tint="blue" title="Описана окръжност около триъгълник">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="12,7 18,17 6,17"/>
-          <circle cx="12" cy="14" r="9.2"/>
-        </svg>
-        <span class="tool-label">Описана окр.</span>
-      </button>
+      <div class="tool-menu" id="circlesMenu">
+        <button type="button" class="tool-btn menu-trigger" id="circlesMenuBtn" data-tint="green" title="Окръжности в триъгълник" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12,3 21,20 3,20"/>
+            <circle cx="12" cy="15" r="4.6"/>
+          </svg>
+          <span class="tool-label">Окръжности</span>
+        </button>
+        <div class="tool-submenu" id="circlesSubmenu" role="menu" aria-label="Вид окръжност" hidden>
+          <button type="button" class="submenu-item" data-tool="incircle" role="menuitem">Вписана окръжност</button>
+          <button type="button" class="submenu-item" data-tool="circumcircle" role="menuitem">Описана окръжност</button>
+        </div>
+      </div>
     </div>
 
     <div class="tool-group">
@@ -1228,23 +1246,27 @@
     <div class="welcome-body">
       <section class="welcome-section">
         <h3>Чертане</h3>
-        <p>Точки, отсечки, прави, окръжности, многоъгълници и вектори — с едно кликване на дъската.</p>
+        <p>Менюто „Точка“ (точка и точка върху обект), отсечки, прави, окръжности, многоъгълници и менюто „Вектори“ (вектор и равен вектор) — с едно кликване на дъската.</p>
       </section>
       <section class="welcome-section">
         <h3>Триъгълник и Четириъгълник</h3>
         <p>Готови построения от менютата „Триъгълник“ (равностранен, равнобедрен, правоъгълен — с прав ъгъл при връх C, произволен) и „Четириъгълник“ (успоредник, ромб, правоъгълник, квадрат, равнобедрен/правоъгълен/произволен трапец). Влачиш свободните върхове — фигурата пази свойството си.</p>
       </section>
       <section class="welcome-section">
-        <h3>Прави и Точки</h3>
-        <p>От „Прави“: перпендикуляр, успоредна права, ъглополовяща, допирателна към окръжност и височина в триъгълник (стъпало, отсечка и прав ъгъл — автоматично, дори върху страна на готов триъгълник). От „Точки“: среда на отсечка, пресечна точка, точка върху обект.</p>
+        <h3>Прави, отсечки във фигура и построени точки</h3>
+        <p>От „Прави“: перпендикуляр, ъглополовяща, допирателна към окръжност и успоредна права. От „Отсечки във фигура“: височина, медиана и ъглополовяща в триъгълник или четириъгълник — автоматично, дори върху страна на готов триъгълник. От „Построени точки“: среда на отсечка и пресечна точка.</p>
       </section>
       <section class="welcome-section">
         <h3>Още построения</h3>
-        <p>Ъгъл с именуване на гръцки букви, равен вектор, вписана и описана окръжност около триъгълник.</p>
+        <p>Ъгъл с именуване на гръцки букви и менюто „Окръжности“ — вписана и описана окръжност около триъгълник.</p>
       </section>
       <section class="welcome-section">
-        <h3>Бележки и изображения</h3>
-        <p>Рисувай свободно с писалка — дъската разпознава прави фигури (отсечки, окръжности, многоъгълници). Можеш да вмъкваш и готови изображения.</p>
+        <h3>Листове</h3>
+        <p>Работи с няколко листа наведнъж — нов, дублиран или изтрит лист горе вляво. Запазването във файл носи всички листове; „Печат/PDF“ подрежда всеки лист на отделна страница за разпечатване.</p>
+      </section>
+      <section class="welcome-section">
+        <h3>Бележки, текст и изображения</h3>
+        <p>Рисувай свободно с писалка — дъската разпознава прави фигури (отсечки, окръжности, многоъгълници). Инструментът „Текст“ и менюто „Символи“ (√, π, ≤, ∠ и други) поставят надписи и знаци, а вмъкната снимка може да се мести, оразмерява и изрязва.</p>
       </section>
       <section class="welcome-section">
         <h3>Персонализация</h3>
@@ -1256,7 +1278,7 @@
       </section>
       <section class="welcome-section">
         <h3>Управление</h3>
-        <p>Отмени/повтори, запазване и отваряне на чертеж, изтегляне като PNG с прозрачен фон (удобно за поставяне в Word), тъмна/светла тема и приближаване на изгледа.</p>
+        <p>Отмени/повтори, запазване и отваряне на чертеж (с всички листове), изтегляне като PNG с прозрачен фон (удобно за поставяне в Word), печат/PDF, тъмна/светла тема и приближаване на изгледа.</p>
       </section>
     </div>
     <div class="welcome-actions">
@@ -1290,8 +1312,12 @@
   const MENU_TRIGGER_MEMBERSHIP = new Map([
     ['triangleMenuBtn', tool => tool.indexOf('tri_')===0],
     ['quadMenuBtn', tool => tool.indexOf('quad_')===0],
-    ['linesMenuBtn', tool => ['perpendicular','parallel','bisector','tangent','altitude'].includes(tool)],
-    ['pointsMenuBtn', tool => ['midpoint','intersect','pointon'].includes(tool)]
+    ['pointMenuBtn', tool => ['point','pointon'].includes(tool)],
+    ['vectorsMenuBtn', tool => ['vector','vectorEqual'].includes(tool)],
+    ['linesMenuBtn', tool => ['perpendicular','parallel','bisector','tangent'].includes(tool)],
+    ['cevianMenuBtn', tool => ['altitude','median','bisector'].includes(tool)],
+    ['pointsMenuBtn', tool => ['midpoint','intersect'].includes(tool)],
+    ['circlesMenuBtn', tool => ['incircle','circumcircle'].includes(tool)]
   ]);
   const DASH_PATTERNS = { dashed:[8,5], dotted:[1.6,3.6] };
 
@@ -2414,6 +2440,7 @@
     tangent: ['Избери окръжност.', 'Избери или постави точка извън окръжността — допирателната(ите) ще минат през нея.'],
     rightangle: ['Избери първата права/отсечка.', 'Избери втора права/отсечка, перпендикулярна на първата.'],
     altitude: ['Избери страната (права, отсечка или страна на построен триъгълник/многоъгълник), към която ще спуснеш височината.', 'Избери или постави върха, от който тръгва височината — стъпалото и отсечката на височината се построяват автоматично, с отбелязан прав ъгъл.'],
+    median: ['Избери страната, срещу която е върхът, от който ще построиш медианата.', 'Избери или постави срещуположния връх — медианата се построява автоматично до средата на страната.'],
     incircle: 'Кликни триъгълник (многоъгълник с 3 върха), за да построиш вписаната му окръжност.',
     circumcircle: 'Кликни триъгълник (многоъгълник с 3 върха), за да построиш описаната около него окръжност.',
     pen: 'Пиши или рисувай свободно с мишка, пръст или писалка на екрана.',
@@ -2436,7 +2463,7 @@
   function updateHint(){
     let h = TOOL_HINTS[currentTool];
     if(Array.isArray(h)){
-      if(currentTool==='perpendicular' || currentTool==='parallel' || currentTool==='intersect' || currentTool==='vectorEqual' || currentTool==='tangent' || currentTool==='rightangle' || currentTool==='altitude'){
+      if(currentTool==='perpendicular' || currentTool==='parallel' || currentTool==='intersect' || currentTool==='vectorEqual' || currentTool==='tangent' || currentTool==='rightangle' || currentTool==='altitude' || currentTool==='median'){
         h = h[pendingBase!==null ? 1 : 0];
       } else {
         const step = Math.min(pending.length, h.length-1);
@@ -2890,6 +2917,39 @@
     commitArmedHistory();
     resetPending();
     hintText.textContent = 'Построена височина.';
+    render();
+  }
+
+  // A median connects a vertex to the MIDPOINT of the opposite side — same two-step
+  // pick (side, then vertex) as the altitude tool above, but with no perpendicular
+  // projection or right-angle marker: the far endpoint is just createMidpoint() of
+  // the chosen side's own two endpoints.
+  function handleMedianClick(sx,sy){
+    if(pendingBase===null){
+      const lineId = pickOrMakePolygonAwareLine(sx,sy);
+      if(!lineId) return;
+      pendingBase = lineId;
+      updateHint();
+      render();
+      return;
+    }
+    armHistory();
+    const before = objects.length;
+    const vId = getOrCreatePointAt(sx,sy);
+    const created = objects.length !== before;
+    const lineObj = getObj(pendingBase);
+    if(!lineObj){ discardArmedHistory(); resetPending(); return; }
+    if(vId===lineObj.parents[0] || vId===lineObj.parents[1]){
+      if(created) commitArmedHistory(); else discardArmedHistory();
+      hintText.textContent = 'Върхът съвпада с край на избраната страна — избери срещуположния връх.';
+      render();
+      return;
+    }
+    const midId = createMidpoint(lineObj.parents[0], lineObj.parents[1]);
+    objects.push({ id:uid(), type:'segment', parents:[vId, midId], tint:'green' });
+    commitArmedHistory();
+    resetPending();
+    hintText.textContent = 'Построена медиана.';
     render();
   }
 
@@ -3838,6 +3898,7 @@
     if(currentTool==='vectorEqual'){ handleVectorEqualClick(sx,sy); return; }
     if(currentTool==='tangent'){ handleTangentClick(sx,sy); return; }
     if(currentTool==='altitude'){ handleAltitudeClick(sx,sy); return; }
+    if(currentTool==='median'){ handleMedianClick(sx,sy); return; }
     if(currentTool==='rightangle'){ handleRightAngleClick(sx,sy); return; }
     if(currentTool==='bisector'){ handleBisectorClick(sx,sy); return; }
     if(currentTool==='midpoint'){ handleMidpointClick(sx,sy); return; }
@@ -4216,8 +4277,12 @@
   }
   setupToolMenu('triangleMenuBtn', 'triangleSubmenu');
   setupToolMenu('quadMenuBtn', 'quadSubmenu');
+  setupToolMenu('pointMenuBtn', 'pointSubmenu');
+  setupToolMenu('vectorsMenuBtn', 'vectorsSubmenu');
   setupToolMenu('linesMenuBtn', 'linesSubmenu');
+  setupToolMenu('cevianMenuBtn', 'cevianSubmenu');
   setupToolMenu('pointsMenuBtn', 'pointsSubmenu');
+  setupToolMenu('circlesMenuBtn', 'circlesSubmenu');
   // The Symbols menu reuses setupToolMenu purely for its open/close/position/
   // outside-click behaviour (its items carry data-symbol, not data-tool, so the
   // generic [data-tool] wiring inside setupToolMenu simply finds nothing to bind
