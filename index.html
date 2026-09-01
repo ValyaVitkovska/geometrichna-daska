@@ -154,7 +154,7 @@
 
   /* ---------- toolbar ---------- */
   .toolbar{
-    width:108px;
+    width:156px;
     flex:0 0 auto;
     background:
       radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.16), transparent 60%),
@@ -186,8 +186,8 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:3px;
-    padding:8px 3px 7px;
+    gap:4px;
+    padding:9px 6px 8px;
     border-radius:10px;
     border:1px solid rgba(0,0,0,0.18);
     background:
@@ -204,16 +204,16 @@
     transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
   }
   .tool-btn svg{
-    width:20px; height:20px; display:block;
+    width:22px; height:22px; display:block;
     color:rgb(var(--tint-rgb));
     filter:drop-shadow(0 1px 1px rgba(0,0,0,0.28));
   }
   .tool-btn .tool-label{
-    font-size:9.5px;
+    font-size:10.5px;
     font-weight:700;
     color:var(--tb-text);
     text-align:center;
-    line-height:1.15;
+    line-height:1.2;
   }
   .tool-btn:hover{
     filter:brightness(1.1);
@@ -342,6 +342,7 @@
     filter:none;
   }
   #printPages{ display:none; }
+  @page{ size:A4; margin:0; }
   @media print{
     body > *:not(#printPages){ display:none !important; }
     #printPages{
@@ -629,7 +630,7 @@
 
   /* ---------- responsive ---------- */
   @media (max-width: 820px){
-    .toolbar{ width:86px; gap:8px; padding:8px 5px 10px; }
+    .toolbar{ width:118px; gap:8px; padding:8px 5px 10px; }
     .tool-group-label{ font-size:8px; }
     .tool-btn .tool-label{ font-size:8px; }
     .wordmark{ font-size:20px; }
@@ -838,16 +839,18 @@
       </button>
 
       <div class="tool-menu" id="pointMenu">
-        <button type="button" class="tool-btn menu-trigger" id="pointMenuBtn" data-tint="white" title="Точка" aria-haspopup="true" aria-expanded="false">
+        <button type="button" class="tool-btn menu-trigger" id="pointMenuBtn" data-tint="white" title="Точки" aria-haspopup="true" aria-expanded="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>
             <circle cx="12" cy="12" r="8" opacity="0.35"/>
           </svg>
-          <span class="tool-label">Точка</span>
+          <span class="tool-label">Точки</span>
         </button>
         <div class="tool-submenu" id="pointSubmenu" role="menu" aria-label="Вид точка" hidden>
           <button type="button" class="submenu-item" data-tool="point" role="menuitem">Точка</button>
           <button type="button" class="submenu-item" data-tool="pointon" role="menuitem">Точка върху обект</button>
+          <button type="button" class="submenu-item" data-tool="intersect" role="menuitem">Пресечна точка</button>
+          <button type="button" class="submenu-item" data-tool="midpoint" role="menuitem">Среда на отсечка</button>
         </div>
       </div>
 
@@ -955,17 +958,6 @@
           <button type="button" class="submenu-item" data-tool="altitude" role="menuitem">Височина</button>
           <button type="button" class="submenu-item" data-tool="median" role="menuitem">Медиана</button>
           <button type="button" class="submenu-item" data-tool="bisectorSeg" role="menuitem">Ъглополовяща</button>
-        </div>
-      </div>
-
-      <div class="tool-menu" id="pointsMenu">
-        <button type="button" class="tool-btn menu-trigger" id="pointsMenuBtn" data-tint="white" title="Построени точки" aria-haspopup="true" aria-expanded="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="19" x2="21" y2="5"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>
-          <span class="tool-label">Построени точки</span>
-        </button>
-        <div class="tool-submenu" id="pointsSubmenu" role="menu" aria-label="Вид точка" hidden>
-          <button type="button" class="submenu-item" data-tool="midpoint" role="menuitem">Среда на отсечка</button>
-          <button type="button" class="submenu-item" data-tool="intersect" role="menuitem">Пресечна точка</button>
         </div>
       </div>
 
@@ -1079,6 +1071,10 @@
       <button type="button" class="toggle-chip" id="measureToggle" title="Покажи/скрий дължини, радиуси, лица и ъгли">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 17 4"/><path d="M4 17l2-2M7 14l2-2M10 11l2-2M13 8l2-2"/></svg>
         <span class="chip-label">Стойности</span>
+      </button>
+      <button type="button" class="toggle-chip on" id="pageFrameToggle" title="Покажи/скрий рамката на листа за печат (A4) — показва точно какво ще излезе на хартия">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="1"/></svg>
+        <span class="chip-label">Лист A4</span>
       </button>
     </div>
 
@@ -1246,15 +1242,15 @@
     <div class="welcome-body">
       <section class="welcome-section">
         <h3>Чертане</h3>
-        <p>Менюто „Точка“ (точка и точка върху обект), отсечки, прави, окръжности, многоъгълници и менюто „Вектори“ (вектор и равен вектор) — с едно кликване на дъската.</p>
+        <p>Менюто „Точки“ (точка, точка върху обект, пресечна точка и среда на отсечка), отсечки, прави, окръжности, многоъгълници и менюто „Вектори“ (вектор и равен вектор) — с едно кликване на дъската.</p>
       </section>
       <section class="welcome-section">
         <h3>Триъгълник и Четириъгълник</h3>
         <p>Готови построения от менютата „Триъгълник“ (равностранен, равнобедрен, правоъгълен — с прав ъгъл при връх C, произволен) и „Четириъгълник“ (успоредник, ромб, правоъгълник, квадрат, равнобедрен/правоъгълен/произволен трапец). Влачиш свободните върхове — фигурата пази свойството си.</p>
       </section>
       <section class="welcome-section">
-        <h3>Прави, отсечки във фигура и построени точки</h3>
-        <p>От „Прави“: перпендикуляр, ъглополовяща, допирателна към окръжност и успоредна права. От „Отсечки във фигура“: височина, медиана и ъглополовяща в триъгълник или четириъгълник — автоматично, дори върху страна на готов триъгълник. От „Построени точки“: среда на отсечка и пресечна точка.</p>
+        <h3>Прави и отсечки във фигура</h3>
+        <p>От „Прави“: перпендикуляр, ъглополовяща, допирателна към окръжност и успоредна права. От „Отсечки във фигура“: височина, медиана и ъглополовяща в триъгълник или четириъгълник — автоматично, дори върху страна на готов триъгълник.</p>
       </section>
       <section class="welcome-section">
         <h3>Още построения</h3>
@@ -1262,7 +1258,7 @@
       </section>
       <section class="welcome-section">
         <h3>Листове</h3>
-        <p>Работи с няколко листа наведнъж — нов, дублиран или изтрит лист горе вляво. Запазването във файл носи всички листове; „Печат/PDF“ подрежда всеки лист на отделна страница за разпечатване.</p>
+        <p>Работи с няколко листа наведнъж — нов, дублиран или изтрит лист горе вляво. Запазването във файл носи всички листове; „Печат/PDF“ подрежда всеки лист на отделна страница за разпечатване. Пунктираната рамка „Лист за печат (A4)“ показва точно какво ще излезе на хартия — превключва се от бутона „Лист A4“; вътре в нея остава всичко, което искаш да се разпечата.</p>
       </section>
       <section class="welcome-section">
         <h3>Бележки, текст и изображения</h3>
@@ -1278,7 +1274,7 @@
       </section>
       <section class="welcome-section">
         <h3>Управление</h3>
-        <p>Отмени/повтори, запазване и отваряне на чертеж (с всички листове), изтегляне като PNG с прозрачен фон (удобно за поставяне в Word), печат/PDF, тъмна/светла тема и приближаване на изгледа.</p>
+        <p>Отмени/повтори, запазване и отваряне на чертеж (с всички листове), изтегляне като PNG с прозрачен фон (удобно за поставяне в Word), печат/PDF, тъмна/светла тема и приближаване на изгледа. Бутонът „Инсталирай“ се появява, когато браузърът позволи дъската да се сложи като отделно приложение на устройството (компютър, телефон или таблет) — след инсталиране се отваря от собствена икона, без адресна лента.</p>
       </section>
     </div>
     <div class="welcome-actions">
@@ -1312,11 +1308,10 @@
   const MENU_TRIGGER_MEMBERSHIP = new Map([
     ['triangleMenuBtn', tool => tool.indexOf('tri_')===0],
     ['quadMenuBtn', tool => tool.indexOf('quad_')===0],
-    ['pointMenuBtn', tool => ['point','pointon'].includes(tool)],
+    ['pointMenuBtn', tool => ['point','pointon','intersect','midpoint'].includes(tool)],
     ['vectorsMenuBtn', tool => ['vector','vectorEqual'].includes(tool)],
     ['linesMenuBtn', tool => ['perpendicular','parallel','bisector','tangent'].includes(tool)],
     ['cevianMenuBtn', tool => ['altitude','median','bisectorSeg'].includes(tool)],
-    ['pointsMenuBtn', tool => ['midpoint','intersect'].includes(tool)],
     ['circlesMenuBtn', tool => ['incircle','circumcircle'].includes(tool)]
   ]);
   const DASH_PATTERNS = { dashed:[8,5], dotted:[1.6,3.6] };
@@ -1471,6 +1466,7 @@
   let snapEnabled = true;
   let gridEnabled = true;
   let axesEnabled = true;
+  let pageFrameEnabled = true;
   let axisNamesEnabled = true;
   let measurementsEnabled = false;
 
@@ -3320,6 +3316,37 @@
     }
   }
 
+  // The A4-page guide: a dashed rectangle showing exactly what area will land on
+  // one printed/exported sheet. It always occupies the largest A4-portrait-ratio
+  // rectangle that fits (centered, with a small margin) inside the current board
+  // view — so it moves and resizes live as the user pans/zooms, and Печат/PDF
+  // (collectAllPagePNGs, below) crops precisely to this same rectangle, so what's
+  // inside the dashed border on screen is exactly what comes out on paper.
+  const A4_RATIO = 210/297; // width/height, portrait
+  function getPageFrameRect(w,h){
+    const margin = 14;
+    const availW = Math.max(1, w - margin*2), availH = Math.max(1, h - margin*2);
+    let rw, rh;
+    if(availW/availH > A4_RATIO){ rh = availH; rw = rh*A4_RATIO; }
+    else { rw = availW; rh = rw/A4_RATIO; }
+    return { x:(w-rw)/2, y:(h-rh)/2, w:rw, h:rh };
+  }
+  function drawPageFrame(w,h,pal){
+    const r = getPageFrameRect(w,h);
+    ctx.save();
+    ctx.strokeStyle = pal.blue;
+    ctx.lineWidth = 1.6;
+    ctx.setLineDash([9,6]);
+    ctx.strokeRect(r.x+0.5, r.y+0.5, r.w, r.h);
+    ctx.setLineDash([]);
+    ctx.font = '600 11px Manrope, sans-serif';
+    ctx.fillStyle = pal.blue;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('Лист за печат (A4)', r.x+4, r.y-4>=10 ? r.y-4 : r.y+16);
+    ctx.restore();
+  }
+
   function extendedLinePoints(anchor, dir, ray, w, h){
     const diag = Math.hypot(w,h)/view.scale + 20;
     const a = ray ? anchor : add(anchor, scl(dir, -diag));
@@ -3714,6 +3741,7 @@
     if(gridEnabled) drawGridLines(w,h,pal);
     if(axesEnabled) drawAxesAndTicks(w,h,pal);
     if(axesEnabled && axisNamesEnabled) drawAxisNames(w,h,pal);
+    if(pageFrameEnabled && !(opts && opts.hidePageFrame)) drawPageFrame(w,h,pal);
 
     for(const o of objects){ if(o.type==='image' && !o.hidden) drawImageObj(o, o.id===hoverId||o.id===selectedId, pal); }
     for(const o of objects){ if(o.type==='polygon' && !o.hidden) drawPolygonObj(o, o.id===hoverId||o.id===selectedId, pal); }
@@ -4337,7 +4365,6 @@
   setupToolMenu('vectorsMenuBtn', 'vectorsSubmenu');
   setupToolMenu('linesMenuBtn', 'linesSubmenu');
   setupToolMenu('cevianMenuBtn', 'cevianSubmenu');
-  setupToolMenu('pointsMenuBtn', 'pointsSubmenu');
   setupToolMenu('circlesMenuBtn', 'circlesSubmenu');
   // The Symbols menu reuses setupToolMenu purely for its open/close/position/
   // outside-click behaviour (its items carry data-symbol, not data-tool, so the
@@ -4381,6 +4408,14 @@
     render();
   });
 
+  const pageFrameToggle = document.getElementById('pageFrameToggle');
+  pageFrameToggle.addEventListener('click', ()=>{
+    pageFrameEnabled = !pageFrameEnabled;
+    pageFrameToggle.classList.toggle('on', pageFrameEnabled);
+    pageFrameToggle.setAttribute('aria-pressed', pageFrameEnabled ? 'true' : 'false');
+    render();
+  });
+
   const axisNameToggle = document.getElementById('axisNameToggle');
   axisNameToggle.addEventListener('click', ()=>{
     axisNamesEnabled = !axisNamesEnabled;
@@ -4402,7 +4437,7 @@
     // for this capture — toBlob snapshots the canvas synchronously, so it's safe
     // to immediately render the normal (opaque) view again right after, and the
     // on-screen board never visibly flashes.
-    render({ transparentBg:true });
+    render({ transparentBg:true, hidePageFrame:true });
     canvas.toBlob(function(blob){
       if(!blob) return;
       const url = URL.createObjectURL(blob);
@@ -4423,17 +4458,32 @@
   // own print dialog opens; "Save as PDF" there is what actually produces a PDF —
   // there is no separate PDF-generating library involved, which keeps this fully
   // offline like the rest of the app.
+  //
+  // Each snapshot is cropped to exactly the dashed "Лист за печат (A4)" guide
+  // rectangle (see getPageFrameRect/drawPageFrame above) instead of the whole,
+  // arbitrarily-shaped board window — so what's inside that guide on screen is
+  // exactly what ends up on the printed sheet, at a fixed A4-portrait pixel size
+  // (independent of the browser window's own size/aspect ratio).
+  const PRINT_PAGE_W = 1240, PRINT_PAGE_H = 1754; // ~150dpi A4 portrait
   function collectAllPagePNGs(){
     pages[currentPageIndex] = capturePageRecord();
     const activeIndex = currentPageIndex;
     const dataUrls = [];
+    const off = document.createElement('canvas');
+    off.width = PRINT_PAGE_W; off.height = PRINT_PAGE_H;
+    const octx = off.getContext('2d');
     for(let i=0;i<pages.length;i++){
       const rec = pages[i];
       objects = rec.objects; inkStrokes = rec.inkStrokes;
       view.offsetX = rec.view.offsetX; view.offsetY = rec.view.offsetY; view.scale = rec.view.scale;
       hydrateImages(objects);
-      render();
-      dataUrls.push(canvas.toDataURL('image/png'));
+      render({ hidePageFrame:true });
+      const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
+      const frame = getPageFrameRect(w,h);
+      octx.fillStyle = getPalette().board;
+      octx.fillRect(0,0,PRINT_PAGE_W,PRINT_PAGE_H);
+      octx.drawImage(canvas, frame.x*dpr, frame.y*dpr, frame.w*dpr, frame.h*dpr, 0, 0, PRINT_PAGE_W, PRINT_PAGE_H);
+      dataUrls.push(off.toDataURL('image/png'));
     }
     applyPageRecord(pages[activeIndex]);
     return dataUrls;
@@ -4983,7 +5033,7 @@
      window.__TEST__ = true via an init script BEFORE the page loads. Never
      true for real users, so this has no effect on normal use of the app. */
   if(window.__TEST__){
-    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj, worldToScreen, screenToWorld, getLineGeom, rightAngleRayDir, computeIntersections, render, get view(){ return view; }, get history(){ return history; }, get redoStack(){ return redoStack; }, undo, redo, get selectedId(){ return selectedId; }, get currentTool(){ return currentTool; }, get draggingPointId(){ return draggingPointId; }, get pages(){ return pages; }, get currentPageIndex(){ return currentPageIndex; } };
+    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj, worldToScreen, screenToWorld, getLineGeom, rightAngleRayDir, computeIntersections, render, get view(){ return view; }, get history(){ return history; }, get redoStack(){ return redoStack; }, undo, redo, get selectedId(){ return selectedId; }, get currentTool(){ return currentTool; }, get draggingPointId(){ return draggingPointId; }, get pages(){ return pages; }, get currentPageIndex(){ return currentPageIndex; }, get pageFrameEnabled(){ return pageFrameEnabled; }, getPageFrameRect, collectAllPagePNGs };
   }
 })();
 </script>
