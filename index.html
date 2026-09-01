@@ -284,6 +284,20 @@
   .submenu-item:hover, .submenu-item:focus-visible{ background:rgba(var(--ink-blue-rgb),0.16); }
   .submenu-item.active{ background:rgba(var(--ink-hot-rgb),0.22); color:var(--ink-hot); }
 
+  /* Symbol picker: a compact grid of glyphs instead of the usual one-per-row text
+     menu (a vertical list of single characters would waste most of its width). */
+  .symbol-submenu{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    min-width:168px;
+    gap:2px;
+  }
+  .symbol-submenu .symbol-item{
+    text-align:center;
+    font-size:16px;
+    padding:8px 4px;
+  }
+
   .toolbar-spacer{ flex:1 1 auto; }
 
   /* ---- neutral glass chips (toggles / undo / clear) ---- */
@@ -327,6 +341,43 @@
     pointer-events:none;
     filter:none;
   }
+  #printPages{ display:none; }
+  @media print{
+    body > *:not(#printPages){ display:none !important; }
+    #printPages{
+      display:block !important;
+      position:static;
+      margin:0; padding:0;
+    }
+    #printPages img{
+      display:block;
+      width:100%;
+      height:auto;
+      page-break-after:always;
+      break-after:page;
+    }
+    #printPages img:last-child{ page-break-after:auto; break-after:auto; }
+  }
+
+  .page-bar-row{ display:flex; align-items:center; gap:3px; }
+  .page-bar-row .util-btn{ flex:1 1 0; justify-content:center; }
+  .page-nav-btn{ flex:0 0 auto !important; padding:6px 6px; }
+  .page-nav-btn svg{ width:12px; height:12px; }
+  .page-indicator{
+    flex:1 1 auto;
+    min-width:0;
+    text-align:center;
+    font-family:var(--font-ui);
+    font-size:11px;
+    font-weight:800;
+    color:var(--tb-text);
+    white-space:nowrap;
+    overflow:hidden;
+  }
+  /* Icon-only page-management buttons: three of them share one narrow sidebar row,
+     too tight for an icon+label like the other .util-btn actions elsewhere. */
+  .page-icon-btn{ font-size:0; gap:0; padding:7px 4px; }
+  .page-icon-btn svg{ width:15px; height:15px; }
   .util-btn.warn.confirming{
     border-color:rgba(var(--ink-danger-rgb),0.85);
     background:linear-gradient(160deg, rgba(var(--ink-danger-rgb),0.45), rgba(var(--ink-danger-rgb),0.18));
@@ -743,6 +794,30 @@
 <div class="page">
 <div class="app-shell">
   <aside class="toolbar" id="toolbar">
+    <div class="tool-group page-bar">
+      <div class="tool-group-label">Листове</div>
+      <div class="page-bar-row">
+        <button type="button" class="util-btn page-nav-btn" id="pagePrevBtn" title="Предишен лист">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <span class="page-indicator" id="pageIndicator" aria-live="polite">1 / 1</span>
+        <button type="button" class="util-btn page-nav-btn" id="pageNextBtn" title="Следващ лист">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+      <div class="page-bar-row">
+        <button type="button" class="util-btn page-icon-btn" id="pageAddBtn" title="Нов празен лист">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.6"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+        </button>
+        <button type="button" class="util-btn page-icon-btn" id="pageDupBtn" title="Дублирай листа">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="13" height="14" rx="1.6"/><path d="M4 15V4a1 1 0 0 1 1-1h11"/></svg>
+        </button>
+        <button type="button" class="util-btn warn page-icon-btn" id="pageDeleteBtn" title="Изтрий листа">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="13" width="15" height="6" rx="1.6" transform="rotate(-10 12 16)"/><line x1="9" y1="12" x2="16" y2="3"/></svg>
+        </button>
+      </div>
+    </div>
+
     <div class="tool-group">
       <div class="tool-group-label">Чертане</div>
 
@@ -917,6 +992,41 @@
         </svg>
         <span class="tool-label">Умна писалка</span>
       </button>
+
+      <button class="tool-btn" data-tool="text" data-tint="white" title="Текст — заглавие или условие на задача">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6"/>
+          <line x1="12" y1="6" x2="12" y2="19"/>
+          <line x1="8" y1="19" x2="16" y2="19"/>
+        </svg>
+        <span class="tool-label">Текст</span>
+      </button>
+
+      <div class="tool-menu" id="symbolsMenu">
+        <button type="button" class="tool-btn menu-trigger" id="symbolsMenuBtn" data-tint="white" title="Математически символи" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l5 8-5 8"/><path d="M12 20h7"/></svg>
+          <span class="tool-label">Символи</span>
+        </button>
+        <div class="tool-submenu symbol-submenu" id="symbolsSubmenu" role="menu" aria-label="Символ" hidden>
+          <button type="button" class="submenu-item symbol-item" data-symbol="√" role="menuitem">√</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="π" role="menuitem">π</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="≤" role="menuitem">≤</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="≥" role="menuitem">≥</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="≈" role="menuitem">≈</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="≠" role="menuitem">≠</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="∞" role="menuitem">∞</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="±" role="menuitem">±</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="∠" role="menuitem">∠</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="⊥" role="menuitem">⊥</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="∥" role="menuitem">∥</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="°" role="menuitem">°</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="Δ" role="menuitem">Δ</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="→" role="menuitem">→</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="sin" role="menuitem">sin</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="cos" role="menuitem">cos</button>
+          <button type="button" class="submenu-item symbol-item" data-symbol="tan" role="menuitem">tan</button>
+        </div>
+      </div>
     </div>
 
     <div class="toolbar-spacer"></div>
@@ -980,6 +1090,10 @@
       <button class="util-btn" id="exportBtn" title="Изтегли изгледа на дъската като PNG">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
         PNG
+      </button>
+      <button class="util-btn" id="pdfBtn" title="Отпечатай всички листове (или ги запази като PDF) за раздаване на хартия">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h9l3 3v2"/><rect x="3" y="9" width="18" height="8" rx="1.4"/><path d="M6 17v3h12v-3"/></svg>
+        Печат/PDF
       </button>
       <button class="util-btn" id="installBtn" style="display:none" title="Инсталирай приложението на устройството">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="10" y1="19" x2="14" y2="19"/></svg>
@@ -1055,6 +1169,9 @@
             <circle cx="12" cy="12" r="3"/>
             <line x1="3" y1="3" x2="21" y2="21"/>
           </svg>
+        </button>
+        <button class="width-btn" id="imageCropBtn" title="Изрежи само част от снимката" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
         </button>
         <div class="divider" id="strokeDivider"></div>
         <span class="subgroup" id="widthGroup">
@@ -1218,6 +1335,88 @@
   let history = [];
   let redoStack = [];
 
+  // ---- pages ----
+  // objects/inkStrokes/history/redoStack/view above always describe the CURRENTLY
+  // OPEN page. `pages` holds every other page's own copy of those same five things;
+  // switching pages snapshots the live ones into pages[currentPageIndex] and pulls
+  // the target page's copy back into the live variables (see capturePageRecord /
+  // applyPageRecord below). idCounter and imageCache are deliberately NOT part of a
+  // page record — they stay global for the whole document, so object ids are always
+  // unique across every page and never need remapping when a page is duplicated.
+  let pages = [];
+  let currentPageIndex = 0;
+
+  function computeDefaultView(){
+    const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
+    return { offsetX: w/2, offsetY: h/2, scale: 42 };
+  }
+  function capturePageRecord(){
+    return { objects, inkStrokes, history, redoStack, view: { offsetX:view.offsetX, offsetY:view.offsetY, scale:view.scale } };
+  }
+  function applyPageRecord(rec){
+    objects = rec.objects; inkStrokes = rec.inkStrokes; history = rec.history; redoStack = rec.redoStack;
+    view.offsetX = rec.view.offsetX; view.offsetY = rec.view.offsetY; view.scale = rec.view.scale;
+    selectedId = null; hoverId = null;
+    resetPending();
+    hydrateImages(objects);
+    updateUndoRedoUI();
+    updateZoomLabel();
+    render();
+  }
+  function updatePageBar(){
+    const ind = document.getElementById('pageIndicator');
+    if(ind) ind.textContent = (currentPageIndex+1)+'/'+pages.length;
+    const prevBtn = document.getElementById('pagePrevBtn'), nextBtn = document.getElementById('pageNextBtn'),
+          delBtn = document.getElementById('pageDeleteBtn');
+    if(prevBtn) prevBtn.disabled = currentPageIndex===0;
+    if(nextBtn) nextBtn.disabled = currentPageIndex===pages.length-1;
+    if(delBtn) delBtn.disabled = pages.length<=1;
+  }
+  function switchToPage(idx){
+    if(idx===currentPageIndex || idx<0 || idx>=pages.length) return;
+    pages[currentPageIndex] = capturePageRecord();
+    currentPageIndex = idx;
+    applyPageRecord(pages[currentPageIndex]);
+    updatePageBar();
+  }
+  function addPage(){
+    pages[currentPageIndex] = capturePageRecord();
+    const blank = { objects:[], inkStrokes:[], history:[], redoStack:[], view: computeDefaultView() };
+    pages.splice(currentPageIndex+1, 0, blank);
+    currentPageIndex++;
+    applyPageRecord(pages[currentPageIndex]);
+    updatePageBar();
+  }
+  function duplicateCurrentPage(){
+    pages[currentPageIndex] = capturePageRecord();
+    const src = pages[currentPageIndex];
+    // Deep-clone objects/inkStrokes (JSON round-trip via serializeObjects, which
+    // already strips the live, non-serializable _img off image objects) so editing
+    // the copy can never also mutate the original page. Image objects keep their
+    // original id, so hydrateImages below re-attaches the SAME cached picture from
+    // the shared, never-evicted imageCache — see the `pages` comment above.
+    const clonedObjects = JSON.parse(JSON.stringify(serializeObjects(src.objects)));
+    hydrateImages(clonedObjects);
+    const clone = {
+      objects: clonedObjects,
+      inkStrokes: JSON.parse(JSON.stringify(src.inkStrokes)),
+      history: [], redoStack: [],
+      view: { ...src.view }
+    };
+    pages.splice(currentPageIndex+1, 0, clone);
+    currentPageIndex++;
+    applyPageRecord(pages[currentPageIndex]);
+    updatePageBar();
+  }
+  function deleteCurrentPage(){
+    if(pages.length<=1) return;
+    if(!confirm('Изтриване на лист '+(currentPageIndex+1)+' — построенията и бележките на този лист ще бъдат изгубени. Продължаваш ли?')) return;
+    pages.splice(currentPageIndex,1);
+    if(currentPageIndex>=pages.length) currentPageIndex = pages.length-1;
+    applyPageRecord(pages[currentPageIndex]);
+    updatePageBar();
+  }
+
   let currentTool = 'point';
   let pending = [];        // array of point ids, used by point-collecting tools
   let pendingBase = null;  // line-like object id, used by perpendicular tool
@@ -1228,6 +1427,18 @@
   let draggingImageId = null;
   let dragImageStart = null;
   let draggingImageResizeId = null;
+  let draggingTextId = null;
+  let dragTextStart = null;
+  // Cropping an inserted photo: cropMode is entered from the colour panel's
+  // "Изрежи" button (see updateColorPanel/imageCropBtn) while an image is
+  // selected, then the very next drag on the board is read as the crop
+  // rectangle instead of whatever the current tool would normally do with it
+  // (see the pointerdown/pointermove guards above) — finished in
+  // finishImageCrop(), called from endPointerInteraction.
+  let cropMode = false;
+  let cropTargetId = null;
+  let cropRectStart = null;
+  let cropRectCurrent = null;
   let isPanning = false;
   let panStart = null;
 
@@ -2059,6 +2270,29 @@
     return (Math.hypot(sx-r.x1, sy-r.y1) < 10) ? o.id : null;
   }
 
+  function textFont(o){ return '600 '+(o.fontSize||18)+'px "Manrope", sans-serif'; }
+  // Screen-space bounding box of a text object, used both to draw its selection
+  // outline and to hit-test it (text has no fixed shape like a polygon/circle, so
+  // pickText below measures it the same way drawTextObj does, to stay in sync).
+  function textScreenRect(o){
+    ctx.save();
+    ctx.font = textFont(o);
+    const s = worldToScreen(o.x,o.y);
+    const w = Math.max(6, ctx.measureText(o.text||'').width);
+    const h = (o.fontSize||18);
+    ctx.restore();
+    return { x0:s.x, y0:s.y-h, x1:s.x+w, y1:s.y, sx:s.x, sy:s.y };
+  }
+  function pickText(sx,sy){
+    for(let i=objects.length-1;i>=0;i--){
+      const o = objects[i];
+      if(o.type!=='text' || o.hidden) continue;
+      const r = textScreenRect(o);
+      if(sx>=r.x0-4 && sx<=r.x1+4 && sy>=r.y0-4 && sy<=r.y1+4) return o.id;
+    }
+    return null;
+  }
+
   function pickVector(sx,sy){
     let best=null, bestD=9;
     for(const o of objects){
@@ -2148,6 +2382,7 @@
       || pickRightAngle(sx,sy)
       || pickAngleMarker(sx,sy)
       || pickImage(sx,sy)
+      || pickText(sx,sy)
       || pickInk(sx,sy)
       || null;
   }
@@ -2184,6 +2419,7 @@
     pen: 'Пиши или рисувай свободно с мишка, пръст или писалка на екрана.',
     smartpen: 'Начертай на ръка права, окръжност или многоъгълник — при пускане ще стане точна геометрична фигура.',
     delete: 'Кликни обект (или бележка), за да го изтриеш завинаги — заедно със зависимите от него построения.',
+    text: 'Кликни върху дъската, за да напишеш заглавие или условие на задача. С инструмента Избери провлачи текста, за да го местиш, или кликни го два пъти, за да го редактираш.',
     tri_equilateral: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка — равностранният триъгълник се построява автоматично.'],
     tri_isosceles: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка от основата.', 'Кликни, за да зададеш височината на връхния ъгъл.'],
     tri_right: ['Избери или постави първата точка от хипотенузата (A).', 'Избери или постави втората точка от хипотенузата (B).', 'Кликни, за да зададеш третия връх C — правият ъгъл винаги е при него.'],
@@ -2224,6 +2460,7 @@
 
   /* ================= tool actions ================= */
   function setTool(tool){
+    if(cropMode){ cropMode=false; cropTargetId=null; cropRectStart=null; cropRectCurrent=null; }
     currentTool = tool;
     selectedId = null;
     hoverId = null;
@@ -2258,6 +2495,36 @@
     saveHistory();
     const w = screenToWorld(sx,sy);
     createFreePoint(w.x, w.y);
+    render();
+  }
+
+  function handleTextClick(sx,sy){
+    const content = prompt('Въведи текст:','');
+    if(content===null || content.trim()==='') return;
+    saveHistory();
+    const w = screenToWorld(sx,sy);
+    const obj = { id:uid(), type:'text', x:w.x, y:w.y, text:content, tint:'white', fontSize:18 };
+    objects.push(obj);
+    setTool('move');
+    selectedId = obj.id;
+    updateHint();
+    render();
+  }
+
+  // Placing a symbol from the "Символи" menu works exactly like the text tool
+  // (same object type, same drag/edit/delete behaviour) except the content is
+  // fixed and there is no typing prompt — it goes straight onto the board so a
+  // whole row of symbols can be dropped in quick succession while writing out a
+  // solution. It appears centred where the user last clicked/viewed the board.
+  function placeSymbolAtCenter(sym){
+    saveHistory();
+    const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
+    const worldCenter = screenToWorld(w/2, h/2);
+    const obj = { id:uid(), type:'text', x:worldCenter.x, y:worldCenter.y, text:sym, tint:'white', fontSize:22 };
+    objects.push(obj);
+    setTool('move');
+    selectedId = obj.id;
+    updateHint();
     render();
   }
 
@@ -3266,6 +3533,24 @@
     ctx.stroke();
   }
 
+  function drawTextObj(o, isHot, pal){
+    const s = worldToScreen(o.x,o.y);
+    ctx.save();
+    ctx.font = textFont(o);
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = isHot ? pal.hot : (o.tint ? tintColor(pal,o.tint) : pal.primary);
+    ctx.fillText(o.text||'', s.x, s.y);
+    if(isHot){
+      const r = textScreenRect(o);
+      ctx.strokeStyle = pal.hot;
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([5,4]);
+      ctx.strokeRect(r.x0-3, r.y0-3, (r.x1-r.x0)+6, (r.y1-r.y0)+6);
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+
   function drawInkStroke(s, isHot, pal){
     if(!s.points.length) return;
     ctx.lineJoin = 'round';
@@ -3343,6 +3628,11 @@
         drawPointObj(o, o.id===hoverId||o.id===selectedId, pending.includes(o.id), pal);
       }
     }
+    for(const o of objects){
+      if(o.type==='text' && !o.hidden){
+        drawTextObj(o, o.id===hoverId||o.id===selectedId, pal);
+      }
+    }
     for(const s of inkStrokes){
       if(!s.hidden) drawInkStroke(s, s.id===hoverId||s.id===selectedId, pal);
     }
@@ -3350,6 +3640,18 @@
     if(selectedId!==null){
       const selObj = getObj(selectedId);
       if(selObj && selObj.type==='image' && !selObj.hidden) drawImageResizeHandle(selObj, pal);
+    }
+    if(cropMode && cropRectStart && cropRectCurrent){
+      const x0 = Math.min(cropRectStart.sx, cropRectCurrent.sx), y0 = Math.min(cropRectStart.sy, cropRectCurrent.sy);
+      const rw = Math.abs(cropRectCurrent.sx-cropRectStart.sx), rh = Math.abs(cropRectCurrent.sy-cropRectStart.sy);
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(x0,y0,rw,rh);
+      ctx.strokeStyle = pal.hot;
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([6,4]);
+      ctx.strokeRect(x0,y0,rw,rh);
+      ctx.restore();
     }
 
     let countMsg = objects.length===1 ? '1 обект' : objects.length+' обекта';
@@ -3372,6 +3674,8 @@
     if(!target) return;
 
     const isImage = target.type === 'image';
+    document.getElementById('imageCropBtn').hidden = !isImage;
+    setPressed(document.getElementById('imageCropBtn'), cropMode && cropTargetId===target.id);
     swatchGroup.style.display = isImage ? 'none' : '';
     swatchDivider.style.display = isImage ? 'none' : '';
     document.getElementById('colorReset').style.display = isImage ? 'none' : '';
@@ -3389,7 +3693,7 @@
     visibilityToggle.setAttribute('data-tooltip', visibilityLabel);
     setPressed(visibilityToggle, !!target.hidden);
 
-    const showStroke = !!target.type && target.type!=='point' && target.type!=='image';
+    const showStroke = !!target.type && target.type!=='point' && target.type!=='image' && target.type!=='text';
     strokeDivider.style.display = showStroke ? '' : 'none';
     widthGroup.style.display = showStroke ? '' : 'none';
     dashGroup.style.display = showStroke ? '' : 'none';
@@ -3445,6 +3749,14 @@
   canvas.addEventListener('pointerdown', function(e){
     const {x:sx,y:sy} = canvasCoords(e);
 
+    if(cropMode){
+      cropRectStart = {sx,sy};
+      cropRectCurrent = {sx,sy};
+      canvas.setPointerCapture(e.pointerId);
+      render();
+      return;
+    }
+
     if(currentTool==='move'){
       const pid = pickPoint(sx,sy);
       if(pid && DRAGGABLE_SUBS.has(getObj(pid).sub)){
@@ -3489,6 +3801,18 @@
         render();
         return;
       }
+      const txtId = pickText(sx,sy);
+      if(txtId){
+        selectedId = txtId;
+        armHistory();
+        draggingTextId = txtId;
+        const txtObj = getObj(txtId);
+        dragTextStart = { sx, sy, ox:txtObj.x, oy:txtObj.y };
+        canvas.setPointerCapture(e.pointerId);
+        updateHint();
+        render();
+        return;
+      }
       const oid = pickAny(sx,sy);
       selectedId = oid;
       if(!oid){
@@ -3501,6 +3825,7 @@
       return;
     }
 
+    if(currentTool==='text'){ handleTextClick(sx,sy); return; }
     if(currentTool==='point'){ handlePointClick(sx,sy); return; }
     if(currentTool==='segment'){ handleTwoPointTool(sx,sy,'segment'); return; }
     if(currentTool==='line'){ handleTwoPointTool(sx,sy,'line'); return; }
@@ -3539,6 +3864,12 @@
     const {x:sx,y:sy} = canvasCoords(e);
     const wpt = screenToWorld(sx,sy);
     readout.innerHTML = 'x: '+wpt.x.toFixed(2)+'&nbsp;&nbsp;y: '+wpt.y.toFixed(2);
+
+    if(cropMode && cropRectStart){
+      cropRectCurrent = {sx,sy};
+      render();
+      return;
+    }
 
     if(draggingPointId){
       commitArmedHistory();
@@ -3638,6 +3969,16 @@
       }
       return;
     }
+    if(draggingTextId){
+      commitArmedHistory();
+      const o = getObj(draggingTextId);
+      if(o && dragTextStart){
+        o.x = dragTextStart.ox + (sx-dragTextStart.sx)/view.scale;
+        o.y = dragTextStart.oy - (sy-dragTextStart.sy)/view.scale;
+        render();
+      }
+      return;
+    }
     if(isPanning){
       view.offsetX = panStart.ox + (sx-panStart.sx);
       view.offsetY = panStart.oy + (sy-panStart.sy);
@@ -3659,11 +4000,89 @@
     const newHover = currentTool==='point' ? pickPoint(sx,sy) : pickAny(sx,sy);
     if(newHover!==hoverId){ hoverId=newHover; render(); }
     canvas.style.cursor = (currentTool==='move')
-      ? (pickPoint(sx,sy) ? 'grab' : (pickLabel(sx,sy) ? 'grab' : (pickImageResizeHandle(sx,sy) ? 'nwse-resize' : (pickImage(sx,sy) ? 'grab' : (hoverId ? 'pointer':'default')))))
+      ? (pickPoint(sx,sy) ? 'grab' : (pickLabel(sx,sy) ? 'grab' : (pickImageResizeHandle(sx,sy) ? 'nwse-resize' : (pickImage(sx,sy) ? 'grab' : (pickText(sx,sy) ? 'grab' : (hoverId ? 'pointer':'default'))))))
       : (hoverId && currentTool!=='point' ? 'pointer' : 'crosshair');
   });
 
+  // Editing a text/symbol object's content: double-click it while the Select tool
+  // is active. There is no inline editor overlay (this app draws everything on a
+  // single canvas, so a real contenteditable box would need its own positioning
+  // layer) — reusing the same prompt() used to create it keeps the two consistent
+  // and is a much smaller, more robust change than building a text editor.
+  canvas.addEventListener('dblclick', function(e){
+    if(currentTool!=='move') return;
+    const {x:sx,y:sy} = canvasCoords(e);
+    const tid = pickText(sx,sy);
+    if(!tid) return;
+    const o = getObj(tid);
+    if(!o) return;
+    const next = prompt('Редактирай текста:', o.text||'');
+    if(next===null) return;
+    if(next.trim()===''){
+      saveHistory();
+      deleteAnyById(tid);
+      render();
+      return;
+    }
+    saveHistory();
+    o.text = next;
+    render();
+  });
+
+  // Applies the drag rectangle drawn since cropMode was entered: clips it to the
+  // image's own on-screen bounds, re-draws just that sub-region of the ORIGINAL
+  // image (never the already-cropped one — o._img is only ever swapped for a new
+  // Image once, right at the end here) into a small offscreen canvas, and makes
+  // that the object's new picture. Too small / no-overlap drags are treated as a
+  // cancelled crop rather than a crop to nothing.
+  function finishImageCrop(){
+    const o = getObj(cropTargetId);
+    cropMode = false; cropTargetId = null;
+    const start = cropRectStart, cur = cropRectCurrent;
+    cropRectStart = null; cropRectCurrent = null;
+    if(!o || o.type!=='image' || !o._img || !start || !cur){ updateHint(); render(); return; }
+    const r = imageScreenRect(o);
+    const cx0 = Math.min(start.sx,cur.sx), cy0 = Math.min(start.sy,cur.sy);
+    const cx1 = Math.max(start.sx,cur.sx), cy1 = Math.max(start.sy,cur.sy);
+    const clx0 = Math.max(r.x0,cx0), cly0 = Math.max(r.y0,cy0);
+    const clx1 = Math.min(r.x1,cx1), cly1 = Math.min(r.y1,cy1);
+    if((clx1-clx0) < 6 || (cly1-cly0) < 6){
+      hintText.textContent = 'Изрязването е отменено — правоъгълникът трябва да е върху снимката.';
+      render();
+      return;
+    }
+    const rw = r.x1-r.x0, rh = r.y1-r.y0;
+    const nw = o._img.naturalWidth, nh = o._img.naturalHeight;
+    const sx = (clx0-r.x0)/rw*nw, sy = (cly0-r.y0)/rh*nh;
+    const sw = (clx1-clx0)/rw*nw, sh = (cly1-cly0)/rh*nh;
+    const off = document.createElement('canvas');
+    off.width = Math.max(1, Math.round(sw));
+    off.height = Math.max(1, Math.round(sh));
+    off.getContext('2d').drawImage(o._img, sx, sy, sw, sh, 0, 0, off.width, off.height);
+    const newSrc = off.toDataURL('image/png');
+
+    saveHistory();
+    const centerScreen = { x:(clx0+clx1)/2, y:(cly0+cly1)/2 };
+    const centerWorld = screenToWorld(centerScreen.x, centerScreen.y);
+    o.x = centerWorld.x; o.y = centerWorld.y;
+    o.width = (clx1-clx0)/view.scale;
+    o.height = (cly1-cly0)/view.scale;
+    imageCache.set(o.id, newSrc);
+    const img = new Image();
+    img.onload = render;
+    img.src = newSrc;
+    o._img = img;
+    selectedId = o.id;
+    hintText.textContent = 'Снимката е изрязана.';
+    render();
+  }
+
   function endPointerInteraction(e){
+    if(cropMode){
+      if(cropRectStart) finishImageCrop();
+      if(canvas.hasPointerCapture && e && canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+      return;
+    }
     // If a drag was armed (pointerdown) but never actually moved anything
     // (pointermove never committed it), drop it rather than leaving a stray
     // no-op entry on the undo stack.
@@ -3673,6 +4092,8 @@
     draggingImageId = null;
     dragImageStart = null;
     draggingImageResizeId = null;
+    draggingTextId = null;
+    dragTextStart = null;
     isPanning = false;
     const wasDrawingInk = isDrawingInk;
     const finishedStroke = currentStroke;
@@ -3718,7 +4139,11 @@
       if(e.key==='Escape') e.target.blur();
       return;
     }
-    if(e.key==='Escape'){ resetPending(); render(); }
+    if(e.key==='Escape'){
+      if(cropMode){ cropMode=false; cropTargetId=null; cropRectStart=null; cropRectCurrent=null; updateHint(); }
+      resetPending();
+      render();
+    }
     else if(e.key==='Enter' && currentTool==='polygon'){ finalizePolygon(); render(); }
     else if((e.key==='Delete' || e.key==='Backspace') && selectedId!==null){
       e.preventDefault();
@@ -3793,6 +4218,19 @@
   setupToolMenu('quadMenuBtn', 'quadSubmenu');
   setupToolMenu('linesMenuBtn', 'linesSubmenu');
   setupToolMenu('pointsMenuBtn', 'pointsSubmenu');
+  // The Symbols menu reuses setupToolMenu purely for its open/close/position/
+  // outside-click behaviour (its items carry data-symbol, not data-tool, so the
+  // generic [data-tool] wiring inside setupToolMenu simply finds nothing to bind
+  // there) — placing a symbol is a one-shot action, not a persistent tool mode.
+  setupToolMenu('symbolsMenuBtn', 'symbolsSubmenu');
+  document.querySelectorAll('#symbolsSubmenu .symbol-item').forEach(item=>{
+    item.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      placeSymbolAtCenter(item.dataset.symbol);
+      document.getElementById('symbolsSubmenu').hidden = true;
+      document.getElementById('symbolsMenuBtn').setAttribute('aria-expanded','false');
+    });
+  });
 
   // Toggle-chip buttons carry their on/off state visually via the ".on" class;
   // aria-pressed must mirror it at all times (task 2), both at boot and on every click.
@@ -3856,6 +4294,39 @@
       setTimeout(()=>URL.revokeObjectURL(url), 1000);
     }, 'image/png');
     render();
+  });
+
+  // Print / "Save as PDF": every page becomes one PNG snapshot (opaque, in the
+  // current theme's colours — switch to the light theme first for a whiter
+  // printout), placed into #printPages as one <img> per page, then the browser's
+  // own print dialog opens; "Save as PDF" there is what actually produces a PDF —
+  // there is no separate PDF-generating library involved, which keeps this fully
+  // offline like the rest of the app.
+  function collectAllPagePNGs(){
+    pages[currentPageIndex] = capturePageRecord();
+    const activeIndex = currentPageIndex;
+    const dataUrls = [];
+    for(let i=0;i<pages.length;i++){
+      const rec = pages[i];
+      objects = rec.objects; inkStrokes = rec.inkStrokes;
+      view.offsetX = rec.view.offsetX; view.offsetY = rec.view.offsetY; view.scale = rec.view.scale;
+      hydrateImages(objects);
+      render();
+      dataUrls.push(canvas.toDataURL('image/png'));
+    }
+    applyPageRecord(pages[activeIndex]);
+    return dataUrls;
+  }
+  document.getElementById('pdfBtn').addEventListener('click', ()=>{
+    const dataUrls = collectAllPagePNGs();
+    const container = document.getElementById('printPages');
+    container.innerHTML = '';
+    dataUrls.forEach(url=>{
+      const img = document.createElement('img');
+      img.src = url;
+      container.appendChild(img);
+    });
+    window.print();
   });
 
   const imageFileInput = document.getElementById('imageFileInput');
@@ -3986,6 +4457,24 @@
     });
   });
 
+  document.getElementById('imageCropBtn').addEventListener('click', ()=>{
+    if(selectedId===null) return;
+    const o = getObj(selectedId);
+    if(!o || o.type!=='image') return;
+    if(cropMode && cropTargetId===o.id){
+      cropMode = false; cropTargetId = null; cropRectStart = null; cropRectCurrent = null;
+      updateHint();
+      render();
+      return;
+    }
+    cropMode = true;
+    cropTargetId = o.id;
+    cropRectStart = null;
+    cropRectCurrent = null;
+    hintText.textContent = 'Провлачи правоъгълник върху частта от снимката, която искаш да запазиш (Escape отменя).';
+    render();
+  });
+
   visibilityToggle.addEventListener('click', ()=>{
     const target = getSelectedTintable();
     if(!target) return;
@@ -4049,6 +4538,12 @@
   document.getElementById('undoBtn').addEventListener('click', undo);
   document.getElementById('redoBtn').addEventListener('click', redo);
   updateUndoRedoUI();
+
+  document.getElementById('pagePrevBtn').addEventListener('click', ()=> switchToPage(currentPageIndex-1));
+  document.getElementById('pageNextBtn').addEventListener('click', ()=> switchToPage(currentPageIndex+1));
+  document.getElementById('pageAddBtn').addEventListener('click', addPage);
+  document.getElementById('pageDupBtn').addEventListener('click', duplicateCurrentPage);
+  document.getElementById('pageDeleteBtn').addEventListener('click', deleteCurrentPage);
 
   /* ---------- welcome overlay: Гео представя възможностите на приложението ---------- */
   const welcomeOverlay = document.getElementById('welcomeOverlay');
@@ -4151,9 +4646,15 @@
 
   /* ---------- save / open (construction, including pen notes/sketches, together) ---------- */
   document.getElementById('saveBtn').addEventListener('click', ()=>{
+    pages[currentPageIndex] = capturePageRecord();
     const data = {
-      app: 'geoboard', version: 1,
-      objects: serializeObjectsWithImageData(objects), idCounter, inkStrokes,
+      app: 'geoboard', version: 2,
+      idCounter, currentPageIndex,
+      pages: pages.map(p => ({
+        objects: serializeObjectsWithImageData(p.objects),
+        inkStrokes: p.inkStrokes,
+        view: { offsetX:p.view.offsetX, offsetY:p.view.offsetY, scale:p.view.scale }
+      })),
       savedAt: new Date().toISOString()
     };
     const blob = new Blob([JSON.stringify(data)], { type:'application/json' });
@@ -4183,7 +4684,7 @@
       let data;
       try{
         data = JSON.parse(ev.target.result);
-        if(!data || typeof data !== 'object' || !Array.isArray(data.objects)){
+        if(!data || typeof data !== 'object' || !(Array.isArray(data.objects) || Array.isArray(data.pages))){
           throw new Error('not-a-geoboard-file');
         }
       }catch(err){
@@ -4194,23 +4695,51 @@
       // structurally valid JSON file with semantically broken content, e.g. an
       // object missing fields that render()/hydrateImages() need) can be rolled
       // back cleanly instead of leaving the live board half-replaced with bad data
-      // while telling the user the file "failed to open".
-      const prevObjects = objects, prevIdCounter = idCounter, prevInkStrokes = inkStrokes,
+      // while telling the user the file "failed to open". This now covers every
+      // page, not just the currently open one.
+      const prevPages = pages, prevCurrentPageIndex = currentPageIndex,
+            prevObjects = objects, prevIdCounter = idCounter, prevInkStrokes = inkStrokes,
+            prevHistory = history, prevRedoStack = redoStack,
+            prevView = { offsetX:view.offsetX, offsetY:view.offsetY, scale:view.scale },
             prevSelectedId = selectedId, prevHoverId = hoverId;
-      saveHistory();
       try{
-        objects = data.objects;
-        idCounter = data.idCounter || (objects.reduce((m,o)=>Math.max(m,o.id||0),0)+1);
-        inkStrokes = Array.isArray(data.inkStrokes) ? data.inkStrokes : [];
-        hydrateImages(objects);
-        selectedId = null; hoverId = null;
-        resetPending();
-        render();
+        // Files saved by this version carry data.pages (one or more pages, each
+        // with its own view); files saved before multi-page support only carry
+        // data.objects — load those as a single page, so old saved drawings still
+        // open normally.
+        let newPages;
+        if(Array.isArray(data.pages) && data.pages.length){
+          newPages = data.pages.map(p=>({
+            objects: Array.isArray(p.objects) ? p.objects : [],
+            inkStrokes: Array.isArray(p.inkStrokes) ? p.inkStrokes : [],
+            history: [], redoStack: [],
+            view: (p.view && typeof p.view.offsetX==='number' && typeof p.view.offsetY==='number' && typeof p.view.scale==='number')
+              ? { offsetX:p.view.offsetX, offsetY:p.view.offsetY, scale:p.view.scale }
+              : computeDefaultView()
+          }));
+        } else {
+          newPages = [{
+            objects: data.objects,
+            inkStrokes: Array.isArray(data.inkStrokes) ? data.inkStrokes : [],
+            history: [], redoStack: [],
+            view: computeDefaultView()
+          }];
+        }
+        newPages.forEach(p => hydrateImages(p.objects));
+        const maxId = newPages.reduce((m,p)=>p.objects.reduce((m2,o)=>Math.max(m2,o.id||0),m),0);
+        pages = newPages;
+        idCounter = data.idCounter || (maxId+1);
+        currentPageIndex = Math.min(Math.max(0, data.currentPageIndex|0), pages.length-1);
+        applyPageRecord(pages[currentPageIndex]);
+        updatePageBar();
         hintText.textContent = 'Файлът е отворен успешно.';
       }catch(err){
+        pages = prevPages; currentPageIndex = prevCurrentPageIndex;
         objects = prevObjects; idCounter = prevIdCounter; inkStrokes = prevInkStrokes;
+        history = prevHistory; redoStack = prevRedoStack;
+        view.offsetX = prevView.offsetX; view.offsetY = prevView.offsetY; view.scale = prevView.scale;
         selectedId = prevSelectedId; hoverId = prevHoverId;
-        history.pop();
+        updatePageBar();
         updateUndoRedoUI();
         render();
         hintText.textContent = FAIL_MSG;
@@ -4322,6 +4851,9 @@
   })();
 
   resetView();
+  pages = [ capturePageRecord() ];
+  currentPageIndex = 0;
+  updatePageBar();
   setTool('point');
   initTheme();
   initWelcome();
@@ -4330,10 +4862,17 @@
      window.__TEST__ = true via an init script BEFORE the page loads. Never
      true for real users, so this has no effect on normal use of the app. */
   if(window.__TEST__){
-    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj, worldToScreen, screenToWorld, getLineGeom, rightAngleRayDir, computeIntersections, render, get view(){ return view; }, get history(){ return history; }, get redoStack(){ return redoStack; }, undo, redo, get selectedId(){ return selectedId; }, get currentTool(){ return currentTool; }, get draggingPointId(){ return draggingPointId; } };
+    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj, worldToScreen, screenToWorld, getLineGeom, rightAngleRayDir, computeIntersections, render, get view(){ return view; }, get history(){ return history; }, get redoStack(){ return redoStack; }, undo, redo, get selectedId(){ return selectedId; }, get currentTool(){ return currentTool; }, get draggingPointId(){ return draggingPointId; }, get pages(){ return pages; }, get currentPageIndex(){ return currentPageIndex; } };
   }
 })();
 </script>
+
+<!-- Print/PDF export target: normally hidden (see the #printPages CSS rule near
+     .util-btn), filled with one image per page just before window.print() is
+     called (see exportPagesAsPDF), and shown exclusively for the print media —
+     everything else in <body> is hidden for that one media query so the printed
+     (or "Save as PDF") output shows only the worksheet pages, not the app UI. -->
+<div id="printPages" aria-hidden="true"></div>
 
 <script>
   if(location.protocol.indexOf('http')===0){
