@@ -3433,9 +3433,24 @@
   // will produce, and it grows automatically as you add more to the page.
   function computeLivePageWorldRect(){
     const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
+    const box = pageContentWorldBBox(objects, inkStrokes);
+    if(!box){
+      // Nothing drawn yet: there is no real content to fit a page around, so
+      // rather than a fixed world-unit placeholder (which looks fine at one
+      // window size/zoom and tiny or huge at another, since its size in world
+      // units never changes while the visible area around it does), size the
+      // guide relative to what's CURRENTLY visible — a comfortably large
+      // A4-shaped rectangle centred wherever the user happens to be looking,
+      // so there's always plenty of room to start writing regardless of
+      // screen size or zoom level. Once real content exists, below, the guide
+      // switches to reflecting the actual export fit.
+      const visW = w/view.scale, visH = h/view.scale;
+      const center = screenToWorld(w/2, h/2);
+      let hh = visH*0.42, hw = hh*A4_RATIO;
+      if(hw*2 > visW*0.9){ hw = visW*0.45; hh = hw/A4_RATIO; }
+      return { minX:center.x-hw, maxX:center.x+hw, minY:center.y-hh, maxY:center.y+hh };
+    }
     const frame = getPageFrameRect(w,h);
-    let box = pageContentWorldBBox(objects, inkStrokes);
-    if(!box) box = EMPTY_PAGE_BOX;
     const fitScale = fitScaleForBox(box, frame);
     const centerX = (box.minX+box.maxX)/2, centerY = (box.minY+box.maxY)/2;
     const pageWorldW = frame.w/fitScale, pageWorldH = frame.h/fitScale;
