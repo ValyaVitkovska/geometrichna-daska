@@ -1072,10 +1072,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 17 4"/><path d="M4 17l2-2M7 14l2-2M10 11l2-2M13 8l2-2"/></svg>
         <span class="chip-label">Стойности</span>
       </button>
-      <button type="button" class="toggle-chip on" id="pageFrameToggle" title="Покажи/скрий рамката на листа за печат (A4) — показва точно какво ще излезе на хартия">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="1"/></svg>
-        <span class="chip-label">Лист A4</span>
-      </button>
     </div>
 
     <div class="tool-group">
@@ -1258,7 +1254,7 @@
       </section>
       <section class="welcome-section">
         <h3>Листове</h3>
-        <p>Работи с няколко листа наведнъж — нов, дублиран или изтрит лист горе вляво. Запазването във файл носи всички листове; „Печат/PDF“ подрежда всеки лист на отделна страница за разпечатване. Пунктираната рамка „Лист за печат (A4)“ показва точно какво ще излезе на хартия — превключва се от бутона „Лист A4“; вътре в нея остава всичко, което искаш да се разпечата.</p>
+        <p>Работи с няколко листа наведнъж — нов, дублиран или изтрит лист горе вляво. Запазването във файл носи всички листове. Строй и пиши свободно, без да мислиш за размера на листа — „Печат/PDF“ автоматично побира всичко построено на всеки лист в отделна страница A4, като намалява или увеличава изгледа според нуждата.</p>
       </section>
       <section class="welcome-section">
         <h3>Бележки, текст и изображения</h3>
@@ -1466,7 +1462,6 @@
   let snapEnabled = true;
   let gridEnabled = true;
   let axesEnabled = true;
-  let pageFrameEnabled = true;
   let axisNamesEnabled = true;
   let measurementsEnabled = false;
 
@@ -2312,7 +2307,19 @@
     return (Math.hypot(sx-r.x1, sy-r.y1) < 10) ? o.id : null;
   }
 
-  function textFont(o){ return '600 '+(o.fontSize||18)+'px "Manrope", sans-serif'; }
+  // Text's fontSize is stored in WORLD units (like every other object's
+  // coordinates), not pixels — so it naturally scales with zoom exactly like a
+  // segment or circle does, instead of staying a fixed on-screen size while
+  // everything else shrinks/grows. DEFAULT_TEXT_FONT_WORLD is chosen so that at
+  // the app's default view.scale (42) it renders at the same 18px it always used
+  // to. textPixelSize converts a text object's world-unit size to the actual
+  // pixel size to draw it at, given the CURRENT view.scale.
+  const DEFAULT_TEXT_FONT_WORLD = 18/42;
+  function textPixelSize(o){
+    const worldSize = (typeof o.fontSize==='number') ? o.fontSize : DEFAULT_TEXT_FONT_WORLD;
+    return Math.max(6, worldSize*view.scale);
+  }
+  function textFont(o){ return '600 '+textPixelSize(o)+'px "Manrope", sans-serif'; }
   // Screen-space bounding box of a text object, used both to draw its selection
   // outline and to hit-test it (text has no fixed shape like a polygon/circle, so
   // pickText below measures it the same way drawTextObj does, to stay in sync).
@@ -2321,7 +2328,7 @@
     ctx.font = textFont(o);
     const s = worldToScreen(o.x,o.y);
     const w = Math.max(6, ctx.measureText(o.text||'').width);
-    const h = (o.fontSize||18);
+    const h = textPixelSize(o);
     ctx.restore();
     return { x0:s.x, y0:s.y-h, x1:s.x+w, y1:s.y, sx:s.x, sy:s.y };
   }
@@ -2547,7 +2554,7 @@
     if(content===null || content.trim()==='') return;
     saveHistory();
     const w = screenToWorld(sx,sy);
-    const obj = { id:uid(), type:'text', x:w.x, y:w.y, text:content, tint:'white', fontSize:18 };
+    const obj = { id:uid(), type:'text', x:w.x, y:w.y, text:content, tint:'white', fontSize:18/view.scale };
     objects.push(obj);
     setTool('move');
     selectedId = obj.id;
@@ -2564,7 +2571,7 @@
     saveHistory();
     const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
     const worldCenter = screenToWorld(w/2, h/2);
-    const obj = { id:uid(), type:'text', x:worldCenter.x, y:worldCenter.y, text:sym, tint:'white', fontSize:22 };
+    const obj = { id:uid(), type:'text', x:worldCenter.x, y:worldCenter.y, text:sym, tint:'white', fontSize:22/view.scale };
     objects.push(obj);
     setTool('move');
     selectedId = obj.id;
@@ -3316,12 +3323,14 @@
     }
   }
 
-  // The A4-page guide: a dashed rectangle showing exactly what area will land on
-  // one printed/exported sheet. It always occupies the largest A4-portrait-ratio
-  // rectangle that fits (centered, with a small margin) inside the current board
-  // view — so it moves and resizes live as the user pans/zooms, and Печат/PDF
-  // (collectAllPagePNGs, below) crops precisely to this same rectangle, so what's
-  // inside the dashed border on screen is exactly what comes out on paper.
+  // getPageFrameRect is used only during Печат/PDF export now (collectAllPagePNGs,
+  // below): it is the largest A4-portrait-ratio rectangle that fits inside the
+  // current board window, used purely as the target shape each page's content is
+  // scaled into before being cropped to the fixed-size print bitmap — there is no
+  // on-screen guide tied to it any more (see pageContentWorldBBox below for why:
+  // the whole point of the redesign is that the user is free to work at whatever
+  // pan/zoom/size is comfortable, and export auto-fits whatever they drew to one
+  // A4 sheet, rather than only exporting whatever the live on-screen view crops).
   const A4_RATIO = 210/297; // width/height, portrait
   function getPageFrameRect(w,h){
     const margin = 14;
@@ -3331,41 +3340,78 @@
     else { rw = availW; rh = rw/A4_RATIO; }
     return { x:(w-rw)/2, y:(h-rh)/2, w:rw, h:rh };
   }
-  // Drawn in two separate passes (see render() below), like the existing photo-crop
-  // overlay elsewhere in this file: the dim goes down early, right after the grid/
-  // axes so it fades the background grid "squares" outside the sheet toward the
-  // board colour (an evenodd fill with a hole punched out for the frame — the same
-  // trick the crop tool uses for its own darken-outside-the-selection overlay) —
-  // that happens BEFORE any geometry is drawn, so points/lines/circles the user
-  // built stay fully visible whether they land inside or outside the sheet. The
-  // dashed border + label are drawn again at the very end of render(), on top of
-  // everything, so the sheet's edge always reads clearly no matter what's under it.
-  function drawPageFrameDim(w,h,pal){
-    const r = getPageFrameRect(w,h);
+
+  // Text's fontSize is a world-unit size (see textPixelSize), so its footprint
+  // in world units is the same no matter what scale we measure it at — unlike
+  // the old fixed-pixel-size text, there's no circular dependency on the export
+  // scale we're trying to compute. We still have to go through ctx.measureText
+  // (there's no way to know a string's rendered width without asking the
+  // canvas), so we measure at a fixed arbitrary reference pixel scale and
+  // convert back to world units with that same reference — the result is
+  // independent of that choice.
+  function textWorldFootprint(o){
+    const TEXT_MEASURE_REF_SCALE = 100; // arbitrary px-per-world-unit, used only for measuring
+    const worldSize = (typeof o.fontSize==='number') ? o.fontSize : DEFAULT_TEXT_FONT_WORLD;
+    const px = Math.max(6, worldSize*TEXT_MEASURE_REF_SCALE);
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(0,0,w,h);
-    ctx.rect(r.x, r.y, r.w, r.h);
-    ctx.closePath();
-    ctx.fillStyle = pal.board;
-    ctx.globalAlpha = 0.72;
-    ctx.fill('evenodd');
+    ctx.font = '600 '+px+'px "Manrope", sans-serif';
+    const wPx = Math.max(6, ctx.measureText(o.text||'').width);
     ctx.restore();
+    return { w: wPx/TEXT_MEASURE_REF_SCALE, h: px/TEXT_MEASURE_REF_SCALE };
   }
-  function drawPageFrameBorder(w,h,pal){
-    const r = getPageFrameRect(w,h);
-    ctx.save();
-    ctx.strokeStyle = pal.blue;
-    ctx.lineWidth = 1.8;
-    ctx.setLineDash([9,6]);
-    ctx.strokeRect(r.x+0.5, r.y+0.5, r.w, r.h);
-    ctx.setLineDash([]);
-    ctx.font = '600 11px Manrope, sans-serif';
-    ctx.fillStyle = pal.blue;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('Лист за печат (A4)', r.x+4, r.y-4>=10 ? r.y-4 : r.y+16);
-    ctx.restore();
+
+  // The world-space bounding box of everything actually drawn on a page (points,
+  // lines/segments/rays via their defining parent points — never their on-screen
+  // extended-to-the-viewport-edge visual endpoints, which would make any
+  // perpendicular/parallel/tangent/"Прави"-bisector construction blow the box up
+  // to "however wide the window happened to be" — circles via center+radius,
+  // images via their world rect, ink strokes via their sampled points, text via
+  // its actual rendered footprint in world units (see textWorldFootprint above),
+  // and polygon/angle/vector objects via their own parent points). Used by
+  // Печат/PDF to zoom each page so its content fills the sheet, instead of the
+  // sheet only ever showing whatever fraction of it the user's current on-screen
+  // pan/zoom happened to crop.
+  function pageContentWorldBBox(objs, strokes){
+    let box = null;
+    function grow(x,y){
+      if(!box){ box = { minX:x, maxX:x, minY:y, maxY:y }; return; }
+      if(x<box.minX) box.minX=x; if(x>box.maxX) box.maxX=x;
+      if(y<box.minY) box.minY=y; if(y>box.maxY) box.maxY=y;
+    }
+    for(const o of objs||[]){
+      if(o.hidden) continue;
+      if(o.type==='point'){
+        const p = getPointXY(o.id);
+        if(p) grow(p.x,p.y);
+      } else if(o.type==='image'){
+        const hw=(o.width||0)/2, hh=(o.height||0)/2;
+        grow(o.x-hw,o.y-hh); grow(o.x+hw,o.y+hh);
+      } else if(o.type==='text'){
+        const fp = textWorldFootprint(o);
+        // anchor (o.x,o.y) is the box's bottom-left (see textScreenRect): the
+        // text extends right and upward from it.
+        grow(o.x,o.y); grow(o.x+fp.w, o.y+fp.h);
+      } else if(o.type==='circle'){
+        const parents = o.parents||[];
+        if(parents.length>=2){
+          const c = getPointXY(parents[0]), e = getPointXY(parents[1]);
+          if(c && e){
+            const r = Math.hypot(e.x-c.x, e.y-c.y);
+            grow(c.x-r,c.y-r); grow(c.x+r,c.y+r);
+          }
+        }
+      } else if(Array.isArray(o.parents)){
+        for(const pid of o.parents){
+          const p = getPointXY(pid);
+          if(p) grow(p.x,p.y);
+        }
+      }
+    }
+    for(const s of strokes||[]){
+      if(s.hidden) continue;
+      for(const pt of s.points||[]) grow(pt.x,pt.y);
+    }
+    return box;
   }
 
   function extendedLinePoints(anchor, dir, ray, w, h){
@@ -3762,8 +3808,6 @@
     if(gridEnabled) drawGridLines(w,h,pal);
     if(axesEnabled) drawAxesAndTicks(w,h,pal);
     if(axesEnabled && axisNamesEnabled) drawAxisNames(w,h,pal);
-    const showPageFrame = pageFrameEnabled && !(opts && opts.hidePageFrame);
-    if(showPageFrame) drawPageFrameDim(w,h,pal);
 
     for(const o of objects){ if(o.type==='image' && !o.hidden) drawImageObj(o, o.id===hoverId||o.id===selectedId, pal); }
     for(const o of objects){ if(o.type==='polygon' && !o.hidden) drawPolygonObj(o, o.id===hoverId||o.id===selectedId, pal); }
@@ -3802,7 +3846,6 @@
       if(!s.hidden) drawInkStroke(s, s.id===hoverId||s.id===selectedId, pal);
     }
     if(measurementsEnabled) drawMeasurements(pal);
-    if(showPageFrame) drawPageFrameBorder(w,h,pal);
     if(selectedId!==null){
       const selObj = getObj(selectedId);
       if(selObj && selObj.type==='image' && !selObj.hidden) drawImageResizeHandle(selObj, pal);
@@ -4431,14 +4474,6 @@
     render();
   });
 
-  const pageFrameToggle = document.getElementById('pageFrameToggle');
-  pageFrameToggle.addEventListener('click', ()=>{
-    pageFrameEnabled = !pageFrameEnabled;
-    pageFrameToggle.classList.toggle('on', pageFrameEnabled);
-    pageFrameToggle.setAttribute('aria-pressed', pageFrameEnabled ? 'true' : 'false');
-    render();
-  });
-
   const axisNameToggle = document.getElementById('axisNameToggle');
   axisNameToggle.addEventListener('click', ()=>{
     axisNamesEnabled = !axisNamesEnabled;
@@ -4460,7 +4495,7 @@
     // for this capture — toBlob snapshots the canvas synchronously, so it's safe
     // to immediately render the normal (opaque) view again right after, and the
     // on-screen board never visibly flashes.
-    render({ transparentBg:true, hidePageFrame:true });
+    render({ transparentBg:true });
     canvas.toBlob(function(blob){
       if(!blob) return;
       const url = URL.createObjectURL(blob);
@@ -4482,12 +4517,20 @@
   // there is no separate PDF-generating library involved, which keeps this fully
   // offline like the rest of the app.
   //
-  // Each snapshot is cropped to exactly the dashed "Лист за печат (A4)" guide
-  // rectangle (see getPageFrameRect/drawPageFrame above) instead of the whole,
-  // arbitrarily-shaped board window — so what's inside that guide on screen is
-  // exactly what ends up on the printed sheet, at a fixed A4-portrait pixel size
-  // (independent of the browser window's own size/aspect ratio).
+  // Each page is auto-fitted to the sheet: rather than exporting whatever
+  // fraction of the infinite board the user's current on-screen pan/zoom happens
+  // to show (which forced everything — figure, given/found text, several
+  // problems — into whatever was visible on screen at print time), we compute
+  // the world-space bounding box of that page's actual content
+  // (pageContentWorldBBox, above) and choose a view that zooms/pans so the WHOLE
+  // box fills the sheet with a small margin. The user is free to draw at
+  // whatever pan/zoom is comfortable to work at — export always fits it to A4.
   const PRINT_PAGE_W = 1240, PRINT_PAGE_H = 1754; // ~150dpi A4 portrait
+  function fitScaleForBox(box, frame){
+    const boxW = Math.max(0.0001, box.maxX-box.minX), boxH = Math.max(0.0001, box.maxY-box.minY);
+    const marginW = Math.max(boxW*0.08, 0.6), marginH = Math.max(boxH*0.08, 0.6);
+    return Math.min(frame.w/(boxW+marginW*2), frame.h/(boxH+marginH*2));
+  }
   function collectAllPagePNGs(){
     pages[currentPageIndex] = capturePageRecord();
     const activeIndex = currentPageIndex;
@@ -4495,14 +4538,23 @@
     const off = document.createElement('canvas');
     off.width = PRINT_PAGE_W; off.height = PRINT_PAGE_H;
     const octx = off.getContext('2d');
+    const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
+    const frame = getPageFrameRect(w,h); // target A4-ratio rect every page's content is scaled to fill
     for(let i=0;i<pages.length;i++){
       const rec = pages[i];
       objects = rec.objects; inkStrokes = rec.inkStrokes;
-      view.offsetX = rec.view.offsetX; view.offsetY = rec.view.offsetY; view.scale = rec.view.scale;
       hydrateImages(objects);
-      render({ hidePageFrame:true });
-      const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
-      const frame = getPageFrameRect(w,h);
+      // Text's world-unit footprint (see textWorldFootprint) no longer depends
+      // on the print scale we're solving for, so a single pass is enough — no
+      // more clipping, and no more circular estimation.
+      let box = pageContentWorldBBox(objects, inkStrokes);
+      if(!box) box = { minX:-8, maxX:8, minY:-6, maxY:6 }; // empty page: print a blank default-sized sheet
+      const fitScale = fitScaleForBox(box, frame);
+      const centerX = (box.minX+box.maxX)/2, centerY = (box.minY+box.maxY)/2;
+      view.scale = fitScale;
+      view.offsetX = (frame.x+frame.w/2) - centerX*fitScale;
+      view.offsetY = (frame.y+frame.h/2) + centerY*fitScale;
+      render();
       octx.fillStyle = getPalette().board;
       octx.fillRect(0,0,PRINT_PAGE_W,PRINT_PAGE_H);
       octx.drawImage(canvas, frame.x*dpr, frame.y*dpr, frame.w*dpr, frame.h*dpr, 0, 0, PRINT_PAGE_W, PRINT_PAGE_H);
@@ -4842,7 +4894,7 @@
   document.getElementById('saveBtn').addEventListener('click', ()=>{
     pages[currentPageIndex] = capturePageRecord();
     const data = {
-      app: 'geoboard', version: 2,
+      app: 'geoboard', version: 3,
       idCounter, currentPageIndex,
       pages: pages.map(p => ({
         objects: serializeObjectsWithImageData(p.objects),
@@ -4920,6 +4972,21 @@
           }];
         }
         newPages.forEach(p => hydrateImages(p.objects));
+        // Files saved before version 3 stored text fontSize in PIXELS (a fixed
+        // on-screen size, unrelated to zoom). From version 3 on, fontSize is in
+        // WORLD units, like every other coordinate, so text scales with zoom —
+        // this is what lets Печат/PDF fit a page's real content to A4 without
+        // text overlapping. Converting an old file's pixel sizes to world units
+        // using that page's own saved view.scale reproduces exactly how big the
+        // text used to look, so old saved lessons open unchanged.
+        if(!data.version || data.version < 3){
+          newPages.forEach(p => {
+            const sc = (p.view && p.view.scale) || 42;
+            (p.objects||[]).forEach(o => {
+              if(o.type==='text'){ o.fontSize = (typeof o.fontSize==='number' ? o.fontSize : 18) / sc; }
+            });
+          });
+        }
         const maxId = newPages.reduce((m,p)=>p.objects.reduce((m2,o)=>Math.max(m2,o.id||0),m),0);
         pages = newPages;
         idCounter = data.idCounter || (maxId+1);
@@ -5077,7 +5144,7 @@
      window.__TEST__ = true via an init script BEFORE the page loads. Never
      true for real users, so this has no effect on normal use of the app. */
   if(window.__TEST__){
-    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj, worldToScreen, screenToWorld, getLineGeom, rightAngleRayDir, computeIntersections, render, get view(){ return view; }, get history(){ return history; }, get redoStack(){ return redoStack; }, undo, redo, get selectedId(){ return selectedId; }, get currentTool(){ return currentTool; }, get draggingPointId(){ return draggingPointId; }, get pages(){ return pages; }, get currentPageIndex(){ return currentPageIndex; }, get pageFrameEnabled(){ return pageFrameEnabled; }, getPageFrameRect, collectAllPagePNGs };
+    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj, worldToScreen, screenToWorld, getLineGeom, rightAngleRayDir, computeIntersections, render, get view(){ return view; }, get history(){ return history; }, get redoStack(){ return redoStack; }, undo, redo, get selectedId(){ return selectedId; }, get currentTool(){ return currentTool; }, get draggingPointId(){ return draggingPointId; }, get pages(){ return pages; }, get currentPageIndex(){ return currentPageIndex; }, getPageFrameRect, pageContentWorldBBox, textWorldFootprint, collectAllPagePNGs };
   }
 })();
 </script>
