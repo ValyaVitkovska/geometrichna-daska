@@ -342,10 +342,10 @@
     filter:none;
   }
   #printPages{ display:none; }
-  @page{ size:A4; margin:0; }
+  @page{ size:A4 landscape; margin:0; }
   @media print{
     html, body{
-      width:210mm;
+      width:auto;
       height:auto;
       margin:0 !important;
       padding:0 !important;
@@ -356,14 +356,14 @@
     #printPages{
       display:block !important;
       position:static;
-      width:210mm;
+      width:var(--print-page-width, 297mm);
       margin:0 !important;
       padding:0 !important;
     }
     #printPages img{
       display:block;
-      width:210mm;
-      height:297mm;
+      width:var(--print-page-width, 297mm);
+      height:var(--print-page-height, 210mm);
       margin:0;
       object-fit:fill;
       -webkit-print-color-adjust:exact;
@@ -811,6 +811,7 @@
     .welcome-actions{ padding:12px 14px; }
   }
 </style>
+<style id="printPageOrientation">@page{size:A4 landscape;margin:0}</style>
 
 </head>
 <body>
@@ -1089,6 +1090,10 @@
       <button type="button" class="toggle-chip on" id="pageGuideToggle" title="Покажи/скрий контура на листа А4 (къде свършва страницата при печат)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 2.5"><rect x="5" y="2.5" width="14" height="19" rx="1"/></svg>
         <span class="chip-label">Лист А4</span>
+      </button>
+      <button type="button" class="toggle-chip on" id="pageOrientationBtn" title="Смени ориентацията на листа A4">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect id="pageOrientationIcon" x="2.5" y="5" width="19" height="14" rx="1"/><path d="M8 2.5h8M8 21.5h8"/></svg>
+        <span class="chip-label" id="pageOrientationLabel">A4: Хориз.</span>
       </button>
     </div>
 
@@ -1483,6 +1488,7 @@
   let axisNamesEnabled = true;
   let measurementsEnabled = false;
   let pageGuideEnabled = true;
+  let pageOrientation = 'landscape';
 
   let inkStrokes = [];
   let isDrawingInk = false;
@@ -3342,19 +3348,22 @@
     }
   }
 
-  // getPageFrameRect gives the largest A4-portrait-ratio rectangle that fits
+  // getPageFrameRect gives the largest A4 rectangle in the selected orientation
   // inside the current board window. It is the target shape each page's content
   // is scaled into during Печат/PDF export (collectAllPagePNGs, below) — and,
   // via computeLivePageWorldRect just below, it is also how the on-screen page
   // boundary guide is derived, so what you see while working matches exactly
   // what export produces.
-  const A4_RATIO = 210/297; // width/height, portrait
+  function getA4Ratio(){
+    return pageOrientation==='landscape' ? 297/210 : 210/297;
+  }
   function getPageFrameRect(w,h){
     const margin = 14;
     const availW = Math.max(1, w - margin*2), availH = Math.max(1, h - margin*2);
+    const ratio = getA4Ratio();
     let rw, rh;
-    if(availW/availH > A4_RATIO){ rh = availH; rw = rh*A4_RATIO; }
-    else { rw = availW; rh = rw/A4_RATIO; }
+    if(availW/availH > ratio){ rh = availH; rw = rh*ratio; }
+    else { rw = availW; rh = rw/ratio; }
     return { x:(w-rw)/2, y:(h-rh)/2, w:rw, h:rh };
   }
 
@@ -3441,8 +3450,9 @@
     const visW = w/v.scale, visH = h/v.scale;
     const centerX = (w/2-v.offsetX)/v.scale;
     const centerY = (v.offsetY-h/2)/v.scale;
-    let pageH = visH*0.88, pageW = pageH*A4_RATIO;
-    if(pageW > visW*0.94){ pageW = visW*0.94; pageH = pageW/A4_RATIO; }
+    const ratio = getA4Ratio();
+    let pageH = visH*0.94, pageW = pageH*ratio;
+    if(pageW > visW*0.96){ pageW = visW*0.96; pageH = pageW/ratio; }
     return {
       minX:centerX-pageW/2, maxX:centerX+pageW/2,
       minY:centerY-pageH/2, maxY:centerY+pageH/2
@@ -3464,11 +3474,12 @@
     let minY = Math.min(base.minY, box.minY-padY);
     let maxY = Math.max(base.maxY, box.maxY+padY);
 
-    // Expand (never crop) to the exact portrait A4 aspect ratio.
+    // Expand (never crop) to the currently selected A4 aspect ratio.
     let rw = maxX-minX, rh = maxY-minY;
     const cx = (minX+maxX)/2, cy = (minY+maxY)/2;
-    if(rw/rh > A4_RATIO){ rh = rw/A4_RATIO; }
-    else { rw = rh*A4_RATIO; }
+    const ratio = getA4Ratio();
+    if(rw/rh > ratio){ rh = rw/ratio; }
+    else { rw = rh*ratio; }
     return { minX:cx-rw/2, maxX:cx+rw/2, minY:cy-rh/2, maxY:cy+rh/2 };
   }
 
@@ -3495,7 +3506,8 @@
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
     ctx.fillStyle = pal.axisText;
-    ctx.fillText('A4 лист (при печат)', x0+4, y0-4>12 ? y0-4 : y0+14);
+    const orientationName = pageOrientation==='landscape' ? 'хоризонтален' : 'вертикален';
+    ctx.fillText('A4 лист — '+orientationName+' (при печат)', x0+4, y0-4>12 ? y0-4 : y0+14);
     ctx.restore();
   }
 
@@ -4584,6 +4596,32 @@
     render();
   });
 
+  const pageOrientationBtn = document.getElementById('pageOrientationBtn');
+  const pageOrientationLabel = document.getElementById('pageOrientationLabel');
+  const pageOrientationIcon = document.getElementById('pageOrientationIcon');
+  function updatePageOrientationUI(){
+    const landscape = pageOrientation==='landscape';
+    pageOrientationBtn.classList.toggle('on', landscape);
+    pageOrientationBtn.setAttribute('aria-pressed', landscape ? 'true' : 'false');
+    pageOrientationBtn.setAttribute('aria-label', landscape
+      ? 'Хоризонтален A4. Натисни за вертикален.'
+      : 'Вертикален A4. Натисни за хоризонтален.');
+    pageOrientationBtn.title = landscape
+      ? 'Листът е хоризонтален — натисни за вертикален'
+      : 'Листът е вертикален — натисни за хоризонтален';
+    pageOrientationLabel.textContent = landscape ? 'A4: Хориз.' : 'A4: Верт.';
+    pageOrientationIcon.setAttribute('x', landscape ? '2.5' : '5');
+    pageOrientationIcon.setAttribute('y', landscape ? '5' : '2.5');
+    pageOrientationIcon.setAttribute('width', landscape ? '19' : '14');
+    pageOrientationIcon.setAttribute('height', landscape ? '14' : '19');
+  }
+  pageOrientationBtn.addEventListener('click', ()=>{
+    pageOrientation = pageOrientation==='landscape' ? 'portrait' : 'landscape';
+    updatePageOrientationUI();
+    render();
+  });
+  updatePageOrientationUI();
+
   document.getElementById('exportBtn').addEventListener('click', ()=>{
     // Render once with a transparent background (no board-color rectangle) just
     // for this capture — toBlob snapshots the canvas synchronously, so it's safe
@@ -4615,13 +4653,18 @@
   // Content beyond that rectangle expands it automatically, so handwriting and
   // constructions are never cropped merely because they fall outside the
   // current screen. The user can draw at any comfortable pan/zoom level.
-  const PRINT_PAGE_W = 1240, PRINT_PAGE_H = 1754; // ~150dpi A4 portrait
+  function getPrintPageSize(){
+    return pageOrientation==='landscape'
+      ? { pxW:1754, pxH:1240, cssW:'297mm', cssH:'210mm' }
+      : { pxW:1240, pxH:1754, cssW:'210mm', cssH:'297mm' };
+  }
   function collectAllPagePNGs(){
     pages[currentPageIndex] = capturePageRecord();
     const activeIndex = currentPageIndex;
     const dataUrls = [];
     const off = document.createElement('canvas');
-    off.width = PRINT_PAGE_W; off.height = PRINT_PAGE_H;
+    const printSize = getPrintPageSize();
+    off.width = printSize.pxW; off.height = printSize.pxH;
     const octx = off.getContext('2d');
     const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
     const frame = getPageFrameRect(w,h); // target A4-ratio rect every page's content is scaled to fill
@@ -4644,8 +4687,8 @@
       view.offsetY = (frame.y+frame.h/2) + centerY*printScale;
       render({ hidePageGuide:true });
       octx.fillStyle = getPalette().board;
-      octx.fillRect(0,0,PRINT_PAGE_W,PRINT_PAGE_H);
-      octx.drawImage(canvas, frame.x*dpr, frame.y*dpr, frame.w*dpr, frame.h*dpr, 0, 0, PRINT_PAGE_W, PRINT_PAGE_H);
+      octx.fillRect(0,0,printSize.pxW,printSize.pxH);
+      octx.drawImage(canvas, frame.x*dpr, frame.y*dpr, frame.w*dpr, frame.h*dpr, 0, 0, printSize.pxW, printSize.pxH);
       dataUrls.push(off.toDataURL('image/png'));
     }
     applyPageRecord(pages[activeIndex]);
@@ -4654,6 +4697,11 @@
   document.getElementById('pdfBtn').addEventListener('click', async ()=>{
     const dataUrls = collectAllPagePNGs();
     const container = document.getElementById('printPages');
+    const printSize = getPrintPageSize();
+    container.style.setProperty('--print-page-width', printSize.cssW);
+    container.style.setProperty('--print-page-height', printSize.cssH);
+    document.getElementById('printPageOrientation').textContent =
+      '@page{size:A4 '+pageOrientation+';margin:0}';
     container.innerHTML = '';
     const printImages = dataUrls.map(url=>{
       const img = document.createElement('img');
@@ -4989,8 +5037,8 @@
   document.getElementById('saveBtn').addEventListener('click', ()=>{
     pages[currentPageIndex] = capturePageRecord();
     const data = {
-      app: 'geoboard', version: 3,
-      idCounter, currentPageIndex,
+      app: 'geoboard', version: 4,
+      idCounter, currentPageIndex, pageOrientation,
       pages: pages.map(p => ({
         objects: serializeObjectsWithImageData(p.objects),
         inkStrokes: p.inkStrokes,
@@ -5042,7 +5090,8 @@
             prevObjects = objects, prevIdCounter = idCounter, prevInkStrokes = inkStrokes,
             prevHistory = history, prevRedoStack = redoStack,
             prevView = { offsetX:view.offsetX, offsetY:view.offsetY, scale:view.scale },
-            prevSelectedId = selectedId, prevHoverId = hoverId;
+            prevSelectedId = selectedId, prevHoverId = hoverId,
+            prevPageOrientation = pageOrientation;
       try{
         // Files saved by this version carry data.pages (one or more pages, each
         // with its own view); files saved before multi-page support only carry
@@ -5085,8 +5134,10 @@
         const maxId = newPages.reduce((m,p)=>p.objects.reduce((m2,o)=>Math.max(m2,o.id||0),m),0);
         pages = newPages;
         idCounter = data.idCounter || (maxId+1);
+        pageOrientation = data.pageOrientation==='portrait' ? 'portrait' : 'landscape';
         currentPageIndex = Math.min(Math.max(0, data.currentPageIndex|0), pages.length-1);
         applyPageRecord(pages[currentPageIndex]);
+        updatePageOrientationUI();
         updatePageBar();
         hintText.textContent = 'Файлът е отворен успешно.';
       }catch(err){
@@ -5095,6 +5146,8 @@
         history = prevHistory; redoStack = prevRedoStack;
         view.offsetX = prevView.offsetX; view.offsetY = prevView.offsetY; view.scale = prevView.scale;
         selectedId = prevSelectedId; hoverId = prevHoverId;
+        pageOrientation = prevPageOrientation;
+        updatePageOrientationUI();
         updatePageBar();
         updateUndoRedoUI();
         render();
