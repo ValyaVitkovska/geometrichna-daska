@@ -344,16 +344,30 @@
   #printPages{ display:none; }
   @page{ size:A4; margin:0; }
   @media print{
+    html, body{
+      width:210mm;
+      height:auto;
+      margin:0 !important;
+      padding:0 !important;
+      overflow:visible !important;
+      background:#fff;
+    }
     body > *:not(#printPages){ display:none !important; }
     #printPages{
       display:block !important;
       position:static;
-      margin:0; padding:0;
+      width:210mm;
+      margin:0 !important;
+      padding:0 !important;
     }
     #printPages img{
       display:block;
-      width:100%;
-      height:auto;
+      width:210mm;
+      height:297mm;
+      margin:0;
+      object-fit:fill;
+      -webkit-print-color-adjust:exact;
+      print-color-adjust:exact;
       page-break-after:always;
       break-after:page;
     }
@@ -3335,12 +3349,6 @@
   // boundary guide is derived, so what you see while working matches exactly
   // what export produces.
   const A4_RATIO = 210/297; // width/height, portrait
-  // Used whenever a page has no content yet, both for the live on-screen guide
-  // and for Печат/PDF exporting a genuinely blank page. Sized (rather than some
-  // arbitrary larger box) so the resulting A4-shaped guide comfortably fits
-  // inside the app's default view on first load, instead of its top/bottom
-  // edges already running off-screen before the user has drawn anything.
-  const EMPTY_PAGE_BOX = { minX:-5, maxX:5, minY:-3, maxY:3 };
   function getPageFrameRect(w,h){
     const margin = 14;
     const availW = Math.max(1, w - margin*2), availH = Math.max(1, h - margin*2);
@@ -3423,38 +3431,53 @@
     return box;
   }
 
-  // The on-screen "where does the page start/end" guide. It is NOT a fixed
-  // screen-space crop (that was the old, confusing behaviour: it just cropped
-  // whatever happened to be visible, so more content meant everything got
-  // smaller). Instead it runs the exact same math Печат/PDF uses — the tight
-  // world-space box around everything drawn so far (pageContentWorldBBox),
-  // expanded to an A4-shaped rectangle the same way fitScaleForBox does — so
-  // the dashed rectangle you see while working is precisely the page export
-  // will produce, and it grows automatically as you add more to the page.
+  // Return a comfortably large A4 page around the current working view. This is
+  // deliberately a MINIMUM page size: the old guide collapsed tightly around
+  // the first short note/stroke, leaving what looked like an unusably small
+  // writing field. Content outside this base sheet expands the result below, so
+  // nothing is lost at print time.
+  function minimumPageWorldRect(w,h,pageView){
+    const v = pageView || view;
+    const visW = w/v.scale, visH = h/v.scale;
+    const centerX = (w/2-v.offsetX)/v.scale;
+    const centerY = (v.offsetY-h/2)/v.scale;
+    let pageH = visH*0.88, pageW = pageH*A4_RATIO;
+    if(pageW > visW*0.94){ pageW = visW*0.94; pageH = pageW/A4_RATIO; }
+    return {
+      minX:centerX-pageW/2, maxX:centerX+pageW/2,
+      minY:centerY-pageH/2, maxY:centerY+pageH/2
+    };
+  }
+
+  function printablePageWorldRect(box,w,h,pageView){
+    const base = minimumPageWorldRect(w,h,pageView);
+    if(!box) return base;
+
+    // Keep the whole generous base sheet and include all actual content with a
+    // safety margin for pen thickness, point labels and measurement text.
+    const contentW = Math.max(0.0001, box.maxX-box.minX);
+    const contentH = Math.max(0.0001, box.maxY-box.minY);
+    const padX = Math.max(contentW*0.06, 0.45);
+    const padY = Math.max(contentH*0.06, 0.45);
+    let minX = Math.min(base.minX, box.minX-padX);
+    let maxX = Math.max(base.maxX, box.maxX+padX);
+    let minY = Math.min(base.minY, box.minY-padY);
+    let maxY = Math.max(base.maxY, box.maxY+padY);
+
+    // Expand (never crop) to the exact portrait A4 aspect ratio.
+    let rw = maxX-minX, rh = maxY-minY;
+    const cx = (minX+maxX)/2, cy = (minY+maxY)/2;
+    if(rw/rh > A4_RATIO){ rh = rw/A4_RATIO; }
+    else { rw = rh*A4_RATIO; }
+    return { minX:cx-rw/2, maxX:cx+rw/2, minY:cy-rh/2, maxY:cy+rh/2 };
+  }
+
+  // The guide and print export use the same page rectangle. It stays large
+  // after the first mark and grows only when content reaches beyond it.
   function computeLivePageWorldRect(){
     const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
     const box = pageContentWorldBBox(objects, inkStrokes);
-    if(!box){
-      // Nothing drawn yet: there is no real content to fit a page around, so
-      // rather than a fixed world-unit placeholder (which looks fine at one
-      // window size/zoom and tiny or huge at another, since its size in world
-      // units never changes while the visible area around it does), size the
-      // guide relative to what's CURRENTLY visible — a comfortably large
-      // A4-shaped rectangle centred wherever the user happens to be looking,
-      // so there's always plenty of room to start writing regardless of
-      // screen size or zoom level. Once real content exists, below, the guide
-      // switches to reflecting the actual export fit.
-      const visW = w/view.scale, visH = h/view.scale;
-      const center = screenToWorld(w/2, h/2);
-      let hh = visH*0.42, hw = hh*A4_RATIO;
-      if(hw*2 > visW*0.9){ hw = visW*0.45; hh = hw/A4_RATIO; }
-      return { minX:center.x-hw, maxX:center.x+hw, minY:center.y-hh, maxY:center.y+hh };
-    }
-    const frame = getPageFrameRect(w,h);
-    const fitScale = fitScaleForBox(box, frame);
-    const centerX = (box.minX+box.maxX)/2, centerY = (box.minY+box.maxY)/2;
-    const pageWorldW = frame.w/fitScale, pageWorldH = frame.h/fitScale;
-    return { minX:centerX-pageWorldW/2, maxX:centerX+pageWorldW/2, minY:centerY-pageWorldH/2, maxY:centerY+pageWorldH/2 };
+    return printablePageWorldRect(box,w,h,view);
   }
   function drawPageBoundaryGuide(w,h,pal){
     const r = computeLivePageWorldRect();
@@ -4588,20 +4611,11 @@
   // there is no separate PDF-generating library involved, which keeps this fully
   // offline like the rest of the app.
   //
-  // Each page is auto-fitted to the sheet: rather than exporting whatever
-  // fraction of the infinite board the user's current on-screen pan/zoom happens
-  // to show (which forced everything — figure, given/found text, several
-  // problems — into whatever was visible on screen at print time), we compute
-  // the world-space bounding box of that page's actual content
-  // (pageContentWorldBBox, above) and choose a view that zooms/pans so the WHOLE
-  // box fills the sheet with a small margin. The user is free to draw at
-  // whatever pan/zoom is comfortable to work at — export always fits it to A4.
+  // Each page uses the same generous A4 rectangle shown by the live guide.
+  // Content beyond that rectangle expands it automatically, so handwriting and
+  // constructions are never cropped merely because they fall outside the
+  // current screen. The user can draw at any comfortable pan/zoom level.
   const PRINT_PAGE_W = 1240, PRINT_PAGE_H = 1754; // ~150dpi A4 portrait
-  function fitScaleForBox(box, frame){
-    const boxW = Math.max(0.0001, box.maxX-box.minX), boxH = Math.max(0.0001, box.maxY-box.minY);
-    const marginW = Math.max(boxW*0.08, 0.6), marginH = Math.max(boxH*0.08, 0.6);
-    return Math.min(frame.w/(boxW+marginW*2), frame.h/(boxH+marginH*2));
-  }
   function collectAllPagePNGs(){
     pages[currentPageIndex] = capturePageRecord();
     const activeIndex = currentPageIndex;
@@ -4618,13 +4632,16 @@
       // Text's world-unit footprint (see textWorldFootprint) no longer depends
       // on the print scale we're solving for, so a single pass is enough — no
       // more clipping, and no more circular estimation.
-      let box = pageContentWorldBBox(objects, inkStrokes);
-      if(!box) box = EMPTY_PAGE_BOX; // empty page: print a blank default-sized sheet
-      const fitScale = fitScaleForBox(box, frame);
-      const centerX = (box.minX+box.maxX)/2, centerY = (box.minY+box.maxY)/2;
-      view.scale = fitScale;
-      view.offsetX = (frame.x+frame.w/2) - centerX*fitScale;
-      view.offsetY = (frame.y+frame.h/2) + centerY*fitScale;
+      const box = pageContentWorldBBox(objects, inkStrokes);
+      const pageRect = printablePageWorldRect(box,w,h,rec.view);
+      const pageWorldW = pageRect.maxX-pageRect.minX;
+      const pageWorldH = pageRect.maxY-pageRect.minY;
+      const printScale = Math.min(frame.w/pageWorldW, frame.h/pageWorldH);
+      const centerX = (pageRect.minX+pageRect.maxX)/2;
+      const centerY = (pageRect.minY+pageRect.maxY)/2;
+      view.scale = printScale;
+      view.offsetX = (frame.x+frame.w/2) - centerX*printScale;
+      view.offsetY = (frame.y+frame.h/2) + centerY*printScale;
       render({ hidePageGuide:true });
       octx.fillStyle = getPalette().board;
       octx.fillRect(0,0,PRINT_PAGE_W,PRINT_PAGE_H);
@@ -4634,15 +4651,22 @@
     applyPageRecord(pages[activeIndex]);
     return dataUrls;
   }
-  document.getElementById('pdfBtn').addEventListener('click', ()=>{
+  document.getElementById('pdfBtn').addEventListener('click', async ()=>{
     const dataUrls = collectAllPagePNGs();
     const container = document.getElementById('printPages');
     container.innerHTML = '';
-    dataUrls.forEach(url=>{
+    const printImages = dataUrls.map(url=>{
       const img = document.createElement('img');
       img.src = url;
       container.appendChild(img);
+      return img;
     });
+
+    // Data-URL images still decode asynchronously in some browsers. Opening the
+    // print dialog immediately could therefore produce an occasional blank or
+    // incomplete sheet. Wait until every page is ready and has been laid out.
+    await Promise.all(printImages.map(img => img.decode ? img.decode().catch(()=>{}) : Promise.resolve()));
+    await new Promise(resolve => requestAnimationFrame(()=>requestAnimationFrame(resolve)));
     window.print();
   });
 
