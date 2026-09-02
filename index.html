@@ -1072,6 +1072,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 17 4"/><path d="M4 17l2-2M7 14l2-2M10 11l2-2M13 8l2-2"/></svg>
         <span class="chip-label">Стойности</span>
       </button>
+      <button type="button" class="toggle-chip on" id="pageGuideToggle" title="Покажи/скрий контура на листа А4 (къде свършва страницата при печат)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 2.5"><rect x="5" y="2.5" width="14" height="19" rx="1"/></svg>
+        <span class="chip-label">Лист А4</span>
+      </button>
     </div>
 
     <div class="tool-group">
@@ -1464,6 +1468,7 @@
   let axesEnabled = true;
   let axisNamesEnabled = true;
   let measurementsEnabled = false;
+  let pageGuideEnabled = true;
 
   let inkStrokes = [];
   let isDrawingInk = false;
@@ -3323,15 +3328,19 @@
     }
   }
 
-  // getPageFrameRect is used only during Печат/PDF export now (collectAllPagePNGs,
-  // below): it is the largest A4-portrait-ratio rectangle that fits inside the
-  // current board window, used purely as the target shape each page's content is
-  // scaled into before being cropped to the fixed-size print bitmap — there is no
-  // on-screen guide tied to it any more (see pageContentWorldBBox below for why:
-  // the whole point of the redesign is that the user is free to work at whatever
-  // pan/zoom/size is comfortable, and export auto-fits whatever they drew to one
-  // A4 sheet, rather than only exporting whatever the live on-screen view crops).
+  // getPageFrameRect gives the largest A4-portrait-ratio rectangle that fits
+  // inside the current board window. It is the target shape each page's content
+  // is scaled into during Печат/PDF export (collectAllPagePNGs, below) — and,
+  // via computeLivePageWorldRect just below, it is also how the on-screen page
+  // boundary guide is derived, so what you see while working matches exactly
+  // what export produces.
   const A4_RATIO = 210/297; // width/height, portrait
+  // Used whenever a page has no content yet, both for the live on-screen guide
+  // and for Печат/PDF exporting a genuinely blank page. Sized (rather than some
+  // arbitrary larger box) so the resulting A4-shaped guide comfortably fits
+  // inside the app's default view on first load, instead of its top/bottom
+  // edges already running off-screen before the user has drawn anything.
+  const EMPTY_PAGE_BOX = { minX:-5, maxX:5, minY:-3, maxY:3 };
   function getPageFrameRect(w,h){
     const margin = 14;
     const availW = Math.max(1, w - margin*2), availH = Math.max(1, h - margin*2);
@@ -3412,6 +3421,44 @@
       for(const pt of s.points||[]) grow(pt.x,pt.y);
     }
     return box;
+  }
+
+  // The on-screen "where does the page start/end" guide. It is NOT a fixed
+  // screen-space crop (that was the old, confusing behaviour: it just cropped
+  // whatever happened to be visible, so more content meant everything got
+  // smaller). Instead it runs the exact same math Печат/PDF uses — the tight
+  // world-space box around everything drawn so far (pageContentWorldBBox),
+  // expanded to an A4-shaped rectangle the same way fitScaleForBox does — so
+  // the dashed rectangle you see while working is precisely the page export
+  // will produce, and it grows automatically as you add more to the page.
+  function computeLivePageWorldRect(){
+    const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
+    const frame = getPageFrameRect(w,h);
+    let box = pageContentWorldBBox(objects, inkStrokes);
+    if(!box) box = EMPTY_PAGE_BOX;
+    const fitScale = fitScaleForBox(box, frame);
+    const centerX = (box.minX+box.maxX)/2, centerY = (box.minY+box.maxY)/2;
+    const pageWorldW = frame.w/fitScale, pageWorldH = frame.h/fitScale;
+    return { minX:centerX-pageWorldW/2, maxX:centerX+pageWorldW/2, minY:centerY-pageWorldH/2, maxY:centerY+pageWorldH/2 };
+  }
+  function drawPageBoundaryGuide(w,h,pal){
+    const r = computeLivePageWorldRect();
+    const p0 = worldToScreen(r.minX, r.maxY), p1 = worldToScreen(r.maxX, r.minY);
+    const x0 = p0.x, y0 = p0.y, rw = p1.x-p0.x, rh = p1.y-p0.y;
+    ctx.save();
+    ctx.strokeStyle = pal.axisText;
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([7,5]);
+    ctx.strokeRect(x0, y0, rw, rh);
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 0.85;
+    ctx.font = '600 12px "Manrope", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = pal.axisText;
+    ctx.fillText('A4 лист (при печат)', x0+4, y0-4>12 ? y0-4 : y0+14);
+    ctx.restore();
   }
 
   function extendedLinePoints(anchor, dir, ray, w, h){
@@ -3808,6 +3855,7 @@
     if(gridEnabled) drawGridLines(w,h,pal);
     if(axesEnabled) drawAxesAndTicks(w,h,pal);
     if(axesEnabled && axisNamesEnabled) drawAxisNames(w,h,pal);
+    if(pageGuideEnabled && !(opts && opts.hidePageGuide)) drawPageBoundaryGuide(w,h,pal);
 
     for(const o of objects){ if(o.type==='image' && !o.hidden) drawImageObj(o, o.id===hoverId||o.id===selectedId, pal); }
     for(const o of objects){ if(o.type==='polygon' && !o.hidden) drawPolygonObj(o, o.id===hoverId||o.id===selectedId, pal); }
@@ -4490,12 +4538,20 @@
     render();
   });
 
+  const pageGuideToggle = document.getElementById('pageGuideToggle');
+  pageGuideToggle.addEventListener('click', ()=>{
+    pageGuideEnabled = !pageGuideEnabled;
+    pageGuideToggle.classList.toggle('on', pageGuideEnabled);
+    pageGuideToggle.setAttribute('aria-pressed', pageGuideEnabled ? 'true' : 'false');
+    render();
+  });
+
   document.getElementById('exportBtn').addEventListener('click', ()=>{
     // Render once with a transparent background (no board-color rectangle) just
     // for this capture — toBlob snapshots the canvas synchronously, so it's safe
     // to immediately render the normal (opaque) view again right after, and the
     // on-screen board never visibly flashes.
-    render({ transparentBg:true });
+    render({ transparentBg:true, hidePageGuide:true });
     canvas.toBlob(function(blob){
       if(!blob) return;
       const url = URL.createObjectURL(blob);
@@ -4548,13 +4604,13 @@
       // on the print scale we're solving for, so a single pass is enough — no
       // more clipping, and no more circular estimation.
       let box = pageContentWorldBBox(objects, inkStrokes);
-      if(!box) box = { minX:-8, maxX:8, minY:-6, maxY:6 }; // empty page: print a blank default-sized sheet
+      if(!box) box = EMPTY_PAGE_BOX; // empty page: print a blank default-sized sheet
       const fitScale = fitScaleForBox(box, frame);
       const centerX = (box.minX+box.maxX)/2, centerY = (box.minY+box.maxY)/2;
       view.scale = fitScale;
       view.offsetX = (frame.x+frame.w/2) - centerX*fitScale;
       view.offsetY = (frame.y+frame.h/2) + centerY*fitScale;
-      render();
+      render({ hidePageGuide:true });
       octx.fillStyle = getPalette().board;
       octx.fillRect(0,0,PRINT_PAGE_W,PRINT_PAGE_H);
       octx.drawImage(canvas, frame.x*dpr, frame.y*dpr, frame.w*dpr, frame.h*dpr, 0, 0, PRINT_PAGE_W, PRINT_PAGE_H);
@@ -5144,7 +5200,7 @@
      window.__TEST__ = true via an init script BEFORE the page loads. Never
      true for real users, so this has no effect on normal use of the app. */
   if(window.__TEST__){
-    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj, worldToScreen, screenToWorld, getLineGeom, rightAngleRayDir, computeIntersections, render, get view(){ return view; }, get history(){ return history; }, get redoStack(){ return redoStack; }, undo, redo, get selectedId(){ return selectedId; }, get currentTool(){ return currentTool; }, get draggingPointId(){ return draggingPointId; }, get pages(){ return pages; }, get currentPageIndex(){ return currentPageIndex; }, getPageFrameRect, pageContentWorldBBox, textWorldFootprint, collectAllPagePNGs };
+    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj, worldToScreen, screenToWorld, getLineGeom, rightAngleRayDir, computeIntersections, render, get view(){ return view; }, get history(){ return history; }, get redoStack(){ return redoStack; }, undo, redo, get selectedId(){ return selectedId; }, get currentTool(){ return currentTool; }, get draggingPointId(){ return draggingPointId; }, get pages(){ return pages; }, get currentPageIndex(){ return currentPageIndex; }, getPageFrameRect, pageContentWorldBBox, textWorldFootprint, collectAllPagePNGs, computeLivePageWorldRect, get pageGuideEnabled(){ return pageGuideEnabled; } };
   }
 })();
 </script>
