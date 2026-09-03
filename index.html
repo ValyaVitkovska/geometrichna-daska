@@ -375,6 +375,8 @@
   }
 
   .page-bar-row{ display:flex; align-items:center; gap:3px; }
+  .page-title-label{ display:block; font-size:12px; margin:8px 0 4px; }
+  #pageTitleInput{ box-sizing:border-box; width:100%; padding:8px; border:1px solid #739797; border-radius:7px; background:#fff; color:#172f2b; font:inherit; font-size:13px; }
   .page-bar-row .util-btn{ flex:1 1 0; justify-content:center; }
   .page-nav-btn{ flex:0 0 auto !important; padding:6px 6px; }
   .page-nav-btn svg{ width:12px; height:12px; }
@@ -819,6 +821,8 @@
 <div class="app-shell">
   <aside class="toolbar" id="toolbar">
     <div class="tool-group page-bar">
+      <label class="page-title-label" for="pageTitleInput">Заглавие на листа</label>
+      <input id="pageTitleInput" type="text" maxlength="100" placeholder="Напр. Лице на триъгълник">
       <div class="tool-group-label">Листове</div>
       <div class="page-bar-row">
         <button type="button" class="util-btn page-nav-btn" id="pagePrevBtn" title="Предишен лист">
@@ -1427,15 +1431,18 @@
   // unique across every page and never need remapping when a page is duplicated.
   let pages = [];
   let currentPageIndex = 0;
+  let pageTitle = '';
 
   function computeDefaultView(){
     const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
     return { offsetX: w/2, offsetY: h/2, scale: 42 };
   }
   function capturePageRecord(){
-    return { objects, inkStrokes, history, redoStack, view: { offsetX:view.offsetX, offsetY:view.offsetY, scale:view.scale } };
+    return { title:pageTitle, objects, inkStrokes, history, redoStack, view: { offsetX:view.offsetX, offsetY:view.offsetY, scale:view.scale } };
   }
   function applyPageRecord(rec){
+    pageTitle = typeof rec.title==='string' ? rec.title.slice(0,100) : '';
+    document.getElementById('pageTitleInput').value = pageTitle;
     objects = rec.objects; inkStrokes = rec.inkStrokes; history = rec.history; redoStack = rec.redoStack;
     view.offsetX = rec.view.offsetX; view.offsetY = rec.view.offsetY; view.scale = rec.view.scale;
     selectedId = null; hoverId = null;
@@ -1480,6 +1487,7 @@
     const clonedObjects = JSON.parse(JSON.stringify(serializeObjects(src.objects)));
     hydrateImages(clonedObjects);
     const clone = {
+      title: src.title || '',
       objects: clonedObjects,
       inkStrokes: JSON.parse(JSON.stringify(src.inkStrokes)),
       history: [], redoStack: [],
@@ -3564,7 +3572,7 @@
     };
   }
 
-  function printablePageWorldRect(box,w,h,pageView){
+  function printablePageWorldRect(box,w,h,pageView,title=pageTitle){
     const base = minimumPageWorldRect(w,h,pageView);
     if(!box) return base;
 
@@ -3585,7 +3593,17 @@
     const ratio = getA4Ratio();
     if(rw/rh > ratio){ rh = rw/ratio; }
     else { rw = rh*ratio; }
-    return { minX:cx-rw/2, maxX:cx+rw/2, minY:cy-rh/2, maxY:cy+rh/2 };
+    const result = { minX:cx-rw/2, maxX:cx+rw/2, minY:cy-rh/2, maxY:cy+rh/2 };
+    if(title.trim()){
+      // Reserve the top 10% for the heading without covering existing notes.
+      const requiredH = (box.maxY+padY-result.minY)/0.9;
+      if(requiredH>rh){
+        rh = requiredH; rw = rh*ratio;
+        result.maxY = result.minY+rh;
+        result.minX = cx-rw/2; result.maxX = cx+rw/2;
+      }
+    }
+    return result;
   }
 
   // The guide and print export use the same page rectangle. It stays large
@@ -3601,8 +3619,8 @@
     const x0 = p0.x, y0 = p0.y, rw = p1.x-p0.x, rh = p1.y-p0.y;
     ctx.save();
     ctx.strokeStyle = pal.axisText;
-    ctx.globalAlpha = 0.55;
-    ctx.lineWidth = 1.4;
+    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = 2;
     ctx.setLineDash([7,5]);
     ctx.strokeRect(x0, y0, rw, rh);
     ctx.setLineDash([]);
@@ -3613,7 +3631,28 @@
     ctx.fillStyle = pal.axisText;
     const orientationName = pageOrientation==='landscape' ? 'хоризонтален' : 'вертикален';
     ctx.fillText('A4 лист — '+orientationName+' (при печат)', x0+4, y0-4>12 ? y0-4 : y0+14);
+    const startY = y0 + (pageTitle.trim() ? rh*0.1 : 26);
+    ctx.fillStyle = pal.board;
+    ctx.fillRect(x0+8, startY, Math.min(240,rw-16), 23);
+    ctx.fillStyle = pal.primary;
+    ctx.textBaseline = 'top';
+    ctx.fillText('↓ Начало за писане — горе вляво', x0+12, startY+4, rw-24);
     ctx.restore();
+  }
+
+  function drawPageTitle(target, title, rect){
+    if(!title.trim()) return;
+    target.save();
+    target.fillStyle = '#ffffff';
+    target.fillRect(rect.x,rect.y,rect.w,rect.h*0.09);
+    target.fillStyle = '#172f2b';
+    target.textAlign = 'center'; target.textBaseline = 'middle';
+    let size = rect.h*0.032;
+    target.font = '700 '+size+'px "Manrope", sans-serif';
+    const width = target.measureText(title).width;
+    if(width>rect.w*0.9){ size *= rect.w*0.9/width; target.font = '700 '+size+'px "Manrope", sans-serif'; }
+    target.fillText(title,rect.x+rect.w/2,rect.y+rect.h*0.045);
+    target.restore();
   }
 
   function extendedLinePoints(anchor, dir, ray, w, h){
@@ -4066,6 +4105,10 @@
       if(!s.hidden) drawInkStroke(s, s.id===hoverId||s.id===selectedId, pal);
     }
     if(measurementsEnabled) drawMeasurements(pal);
+    if(!printMode && pageTitle.trim()){
+      const r=computeLivePageWorldRect(), a=worldToScreen(r.minX,r.maxY), b=worldToScreen(r.maxX,r.minY);
+      drawPageTitle(ctx,pageTitle,{x:a.x,y:a.y,w:b.x-a.x,h:b.y-a.y});
+    }
     if(selectedId!==null){
       const selObj = getObj(selectedId);
       if(selObj && selObj.type==='image' && !selObj.hidden) drawImageResizeHandle(selObj, pal);
@@ -4837,7 +4880,7 @@
       // on the print scale we're solving for, so a single pass is enough — no
       // more clipping, and no more circular estimation.
       const box = pageContentWorldBBox(objects, inkStrokes);
-      const pageRect = printablePageWorldRect(box,w,h,rec.view);
+      const pageRect = printablePageWorldRect(box,w,h,rec.view,rec.title || '');
       const pageWorldW = pageRect.maxX-pageRect.minX;
       const pageWorldH = pageRect.maxY-pageRect.minY;
       const printScale = Math.min(frame.w/pageWorldW, frame.h/pageWorldH);
@@ -4850,6 +4893,7 @@
       octx.fillStyle = '#ffffff';
       octx.fillRect(0,0,printSize.pxW,printSize.pxH);
       octx.drawImage(canvas, frame.x*dpr, frame.y*dpr, frame.w*dpr, frame.h*dpr, 0, 0, printSize.pxW, printSize.pxH);
+      drawPageTitle(octx,rec.title || '',{x:0,y:0,w:printSize.pxW,h:printSize.pxH});
       dataUrls.push(off.toDataURL('image/png'));
     }
     return dataUrls;
@@ -5240,12 +5284,17 @@
   });
 
   /* ---------- save / open (construction, including pen notes/sketches, together) ---------- */
+  document.getElementById('pageTitleInput').addEventListener('input', (e)=>{
+    pageTitle = e.target.value.slice(0,100);
+    render();
+  });
   document.getElementById('saveBtn').addEventListener('click', ()=>{
     pages[currentPageIndex] = capturePageRecord();
     const data = {
-      app: 'geoboard', version: 4,
+      app: 'geoboard', version: 5,
       idCounter, currentPageIndex, pageOrientation,
       pages: pages.map(p => ({
+        title: p.title || '',
         objects: serializeObjectsWithImageData(p.objects),
         inkStrokes: p.inkStrokes,
         view: { offsetX:p.view.offsetX, offsetY:p.view.offsetY, scale:p.view.scale }
@@ -5297,7 +5346,7 @@
             prevHistory = history, prevRedoStack = redoStack,
             prevView = { offsetX:view.offsetX, offsetY:view.offsetY, scale:view.scale },
             prevSelectedId = selectedId, prevHoverId = hoverId,
-            prevPageOrientation = pageOrientation;
+            prevPageOrientation = pageOrientation, prevPageTitle = pageTitle;
       try{
         // Files saved by this version carry data.pages (one or more pages, each
         // with its own view); files saved before multi-page support only carry
@@ -5306,6 +5355,7 @@
         let newPages;
         if(Array.isArray(data.pages) && data.pages.length){
           newPages = data.pages.map(p=>({
+            title: typeof p.title==='string' ? p.title.slice(0,100) : '',
             objects: Array.isArray(p.objects) ? p.objects : [],
             inkStrokes: Array.isArray(p.inkStrokes) ? p.inkStrokes : [],
             history: [], redoStack: [],
@@ -5353,6 +5403,8 @@
         view.offsetX = prevView.offsetX; view.offsetY = prevView.offsetY; view.scale = prevView.scale;
         selectedId = prevSelectedId; hoverId = prevHoverId;
         pageOrientation = prevPageOrientation;
+        pageTitle = prevPageTitle;
+        document.getElementById('pageTitleInput').value = pageTitle;
         updatePageOrientationUI();
         updatePageBar();
         updateUndoRedoUI();
