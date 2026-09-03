@@ -4024,7 +4024,7 @@
       ctx.fillRect(0,0,w,h);
     }
 
-    if(gridEnabled) drawGridLines(w,h,pal);
+    if(gridEnabled && !printMode) drawGridLines(w,h,pal);
     if(axesEnabled) drawAxesAndTicks(w,h,pal);
     if(axesEnabled && axisNamesEnabled) drawAxisNames(w,h,pal);
     if(pageGuideEnabled && !(opts && opts.hidePageGuide)) drawPageBoundaryGuide(w,h,pal);
@@ -4054,7 +4054,7 @@
     }
     for(const o of objects){
       if(o.type==='point' && !o.hidden){
-        drawPointObj(o, o.id===hoverId||o.id===selectedId, pending.includes(o.id), pal);
+        drawPointObj(o, o.id===hoverId||o.id===selectedId, !printMode && pending.includes(o.id), pal);
       }
     }
     for(const o of objects){
@@ -4070,7 +4070,7 @@
       const selObj = getObj(selectedId);
       if(selObj && selObj.type==='image' && !selObj.hidden) drawImageResizeHandle(selObj, pal);
     }
-    if(cropMode && cropRectStart && cropRectCurrent){
+    if(!printMode && cropMode && cropRectStart && cropRectCurrent){
       const x0 = Math.min(cropRectStart.sx, cropRectCurrent.sx), y0 = Math.min(cropRectStart.sy, cropRectCurrent.sy);
       const rw = Math.abs(cropRectCurrent.sx-cropRectStart.sx), rh = Math.abs(cropRectCurrent.sy-cropRectStart.sy);
       ctx.save();
@@ -4828,6 +4828,7 @@
     renderDprOverride = Math.max(screenDpr, printSize.pxW/frame.w, printSize.pxH/frame.h);
     const previousSelectedId = selectedId, previousHoverId = hoverId;
     selectedId = null; hoverId = null;
+    try{
     for(let i=0;i<pages.length;i++){
       const rec = pages[i];
       objects = rec.objects; inkStrokes = rec.inkStrokes;
@@ -4851,14 +4852,35 @@
       octx.drawImage(canvas, frame.x*dpr, frame.y*dpr, frame.w*dpr, frame.h*dpr, 0, 0, printSize.pxW, printSize.pxH);
       dataUrls.push(off.toDataURL('image/png'));
     }
-    renderDprOverride = null;
-    applyPageRecord(pages[activeIndex]);
-    selectedId = previousSelectedId;
-    hoverId = previousHoverId;
-    render();
     return dataUrls;
+    } finally {
+      renderDprOverride = null;
+      const active = pages[activeIndex];
+      objects = active.objects; inkStrokes = active.inkStrokes;
+      Object.assign(view, active.view);
+      selectedId = previousSelectedId;
+      hoverId = previousHoverId;
+      render();
+    }
   }
   document.getElementById('pdfBtn').addEventListener('click', async ()=>{
+    const button = document.getElementById('pdfBtn');
+    if(button.disabled) return;
+    button.disabled = true;
+    try{
+    // Imported images may still be decoding when the user immediately prints.
+    pages[currentPageIndex] = capturePageRecord();
+    const sources = [];
+    for(const rec of pages){
+      hydrateImages(rec.objects);
+      for(const o of rec.objects){
+        if(o.type==='image' && !o.hidden){
+          if(!o._img) throw new Error('Missing image');
+          sources.push(o._img.decode());
+        }
+      }
+    }
+    await Promise.all(sources);
     const dataUrls = collectAllPagePNGs();
     const container = document.getElementById('printPages');
     const printSize = getPrintPageSize();
@@ -4877,9 +4899,14 @@
     // Data-URL images still decode asynchronously in some browsers. Opening the
     // print dialog immediately could therefore produce an occasional blank or
     // incomplete sheet. Wait until every page is ready and has been laid out.
-    await Promise.all(printImages.map(img => img.decode ? img.decode().catch(()=>{}) : Promise.resolve()));
+    await Promise.all(printImages.map(img => img.decode()));
     await new Promise(resolve => requestAnimationFrame(()=>requestAnimationFrame(resolve)));
     window.print();
+    } catch(err){
+      hintText.textContent = 'Печатът не можа да се подготви. Проверете добавените изображения и опитайте отново.';
+    } finally {
+      button.disabled = false;
+    }
   });
 
   const imageFileInput = document.getElementById('imageFileInput');
