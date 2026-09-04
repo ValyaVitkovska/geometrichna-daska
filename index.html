@@ -375,6 +375,11 @@
   }
 
   .page-bar-row{ display:flex; align-items:center; gap:3px; }
+  .board-actions{position:absolute;top:6px;right:44px;z-index:8;display:flex;gap:6px;flex-wrap:wrap;max-width:90%;}
+  .board-actions button{padding:8px;border:1px solid #739797;border-radius:6px;background:white;color:#172f2b;cursor:pointer;}
+  #textDialog{max-width:90vw;width:440px;border:1px solid #739797;border-radius:12px;padding:20px;}
+  #textDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:12px 0;font-size:18px;}
+  #textDialog::backdrop{background:#0007;}
   .page-title-label{ display:block; font-size:12px; margin:8px 0 4px; }
   #pageTitleInput{ box-sizing:border-box; width:100%; padding:8px; border:1px solid #739797; border-radius:7px; background:#fff; color:#172f2b; font:inherit; font-size:13px; }
   .page-bar-row .util-btn{ flex:1 1 0; justify-content:center; }
@@ -1234,6 +1239,7 @@
       <div class="watermark" id="watermark" aria-hidden="true"></div>
       <div class="readout" id="readout">x: 0.00&nbsp;&nbsp;y: 0.00</div>
       <div class="zoomctl">
+        <div class="sr-only">Увеличаването променя изгледа, не размера на чертежа при печат.</div>
         <button id="zoomOut" title="Намали">−</button>
         <span id="zoomPct">100%</span>
         <button id="zoomIn" title="Увеличи">+</button>
@@ -1432,15 +1438,18 @@
   let pages = [];
   let currentPageIndex = 0;
   let pageTitle = '';
+  let paperBounds = null;
 
   function computeDefaultView(){
     const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
     return { offsetX: w/2, offsetY: h/2, scale: 42 };
   }
   function capturePageRecord(){
-    return { title:pageTitle, objects, inkStrokes, history, redoStack, view: { offsetX:view.offsetX, offsetY:view.offsetY, scale:view.scale } };
+    if(!paperBounds) paperBounds = minimumPageWorldRect(boardWrap.clientWidth,boardWrap.clientHeight,view);
+    return { paperBounds:{...paperBounds}, title:pageTitle, objects, inkStrokes, history, redoStack, view: { offsetX:view.offsetX, offsetY:view.offsetY, scale:view.scale } };
   }
   function applyPageRecord(rec){
+    paperBounds = rec.paperBounds ? {...rec.paperBounds} : null;
     pageTitle = typeof rec.title==='string' ? rec.title.slice(0,100) : '';
     document.getElementById('pageTitleInput').value = pageTitle;
     objects = rec.objects; inkStrokes = rec.inkStrokes; history = rec.history; redoStack = rec.redoStack;
@@ -1487,6 +1496,7 @@
     const clonedObjects = JSON.parse(JSON.stringify(serializeObjects(src.objects)));
     hydrateImages(clonedObjects);
     const clone = {
+      paperBounds: {...src.paperBounds},
       title: src.title || '',
       objects: clonedObjects,
       inkStrokes: JSON.parse(JSON.stringify(src.inkStrokes)),
@@ -1543,6 +1553,8 @@
   let inkStrokes = [];
   let isDrawingInk = false;
   let currentStroke = null;
+  let penOnly = true;
+  let activePointerId = null;
   let currentInkTint = 'yellow';
   let inkWidth = 3.5;
 
@@ -1628,7 +1640,7 @@
       return { x:0, y:0 };
     }
     if(p.sub === 'incenter' || p.sub === 'incircletouch'){
-      const tri = triangleVertices(getObj(p.parents[0]));
+      const tri = p.parents.length===3 ? p.parents.map(getPointXY) : triangleVertices(getObj(p.parents[0]));
       if(tri){
         const [A,B,C] = tri;
         const a = dist(B,C), b = dist(C,A), c = dist(A,B);
@@ -1650,7 +1662,7 @@
       return { x:0, y:0 };
     }
     if(p.sub === 'circumcenter'){
-      const tri = triangleVertices(getObj(p.parents[0]));
+      const tri = p.parents.length===3 ? p.parents.map(getPointXY) : triangleVertices(getObj(p.parents[0]));
       if(tri){
         const [A,B,C] = tri;
         const d = 2*(A.x*(B.y-C.y) + B.x*(C.y-A.y) + C.x*(A.y-B.y));
@@ -2540,8 +2552,8 @@
     altitude: ['Избери страната (права, отсечка или страна на построен триъгълник/многоъгълник), към която ще спуснеш височината.', 'Избери или постави върха, от който тръгва височината — стъпалото и отсечката на височината се построяват автоматично, с отбелязан прав ъгъл.'],
     median: ['Избери страната, срещу която е върхът, от който ще построиш медианата.', 'Избери или постави срещуположния връх — медианата се построява автоматично до средата на страната.'],
     bisectorSeg: ['Избери страната, срещу която е върхът, от който ще построиш ъглополовящата.', 'Избери или постави срещуположния връх — ъглополовящата се построява автоматично до пресечната точка със страната.'],
-    incircle: 'Кликни триъгълник (многоъгълник с 3 върха), за да построиш вписаната му окръжност.',
-    circumcircle: 'Кликни триъгълник (многоъгълник с 3 върха), за да построиш описаната около него окръжност.',
+    incircle: ['Вписана окръжност: избери първия връх на желания триъгълник.', 'Избери втория връх.', 'Избери третия връх — може и точка върху страна.'],
+    circumcircle: ['Описана окръжност: избери първия връх на желания триъгълник.', 'Избери втория връх.', 'Избери третия връх — може и точка върху страна.'],
     pen: 'Пиши или рисувай свободно с мишка, пръст или писалка на екрана.',
     smartpen: 'Начертай на ръка права, окръжност или многоъгълник — при пускане ще стане точна геометрична фигура.',
     delete: 'Кликни обект (или бележка), за да го изтриеш завинаги — заедно със зависимите от него построения.',
@@ -2625,16 +2637,24 @@
   }
 
   function handleTextClick(sx,sy){
-    const content = prompt('Въведи текст:','');
-    if(content===null || content.trim()==='') return;
-    saveHistory();
     const w = screenToWorld(sx,sy);
+    openTextEditor('', content=>{
+    if(content.trim()==='') return;
+    saveHistory();
     const obj = { id:uid(), type:'text', x:w.x, y:w.y, text:content, tint:'white', fontSize:18/view.scale };
     objects.push(obj);
     setTool('move');
     selectedId = obj.id;
     updateHint();
     render();
+    });
+  }
+
+  function openTextEditor(value, onSave){
+    const dialog=document.getElementById('textDialog'), input=document.getElementById('textDialogInput');
+    input.value=value;
+    dialog.onclose=()=>{ if(dialog.returnValue==='save') onSave(input.value); canvas.focus(); };
+    dialog.returnValue='cancel'; dialog.showModal(); input.focus();
   }
 
   // Placing a symbol from the "Символи" menu works exactly like the text tool
@@ -2947,36 +2967,48 @@
     render();
   }
 
+  function pickCircleTriangle(sx,sy){
+    const id = pickPoint(sx,sy);
+    if(!id){hintText.textContent='Посочи съществуващ връх, а не вътрешността на триъгълника.';return null;}
+    if(pending.includes(id)){hintText.textContent='Тази точка вече е избрана — посочи друг връх.';return null;}
+    pending.push(id);
+    if(pending.length<3){updateHint();render();return null;}
+    const ids=pending.slice(), [a,b,c]=ids.map(getPointXY);
+    const cross=(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+    const scale=Math.max(dist(a,b),dist(b,c),dist(c,a));
+    if(!Number.isFinite(cross) || Math.abs(cross)<=1e-9*Math.max(1,scale*scale)){
+      pending.pop();render();
+      hintText.textContent='Точките са на една права — избери друг трети връх.';
+      return null;
+    }
+    resetPending();
+    return ids;
+  }
+
   function handleIncircleClick(sx,sy){
-    const polyId = pickPolygon(sx,sy);
-    if(!polyId) return;
-    const poly = getObj(polyId);
-    if(!poly || poly.parents.length !== 3){
-      hintText.textContent = 'Вписаната окръжност изисква триъгълник — многоъгълник с точно 3 върха.';
+    const vertices = pickCircleTriangle(sx,sy);
+    if(!vertices){
       return;
     }
     saveHistory();
     const centerId = uid();
-    objects.push({ id:centerId, type:'point', sub:'incenter', parents:[polyId], label:nextLabel() });
+    objects.push({ id:centerId, type:'point', sub:'incenter', parents:vertices.slice(), label:nextLabel() });
     const touchId = uid();
-    objects.push({ id:touchId, type:'point', sub:'incircletouch', parents:[polyId], label:nextLabel() });
+    objects.push({ id:touchId, type:'point', sub:'incircletouch', parents:vertices.slice(), label:nextLabel() });
     objects.push({ id:uid(), type:'circle', parents:[centerId, touchId] });
     hintText.textContent = 'Построена вписана окръжност.';
     render();
   }
 
   function handleCircumcircleClick(sx,sy){
-    const polyId = pickPolygon(sx,sy);
-    if(!polyId) return;
-    const poly = getObj(polyId);
-    if(!poly || poly.parents.length !== 3){
-      hintText.textContent = 'Описаната окръжност изисква триъгълник — многоъгълник с точно 3 върха.';
+    const vertices = pickCircleTriangle(sx,sy);
+    if(!vertices){
       return;
     }
     saveHistory();
     const centerId = uid();
-    objects.push({ id:centerId, type:'point', sub:'circumcenter', parents:[polyId], label:nextLabel() });
-    objects.push({ id:uid(), type:'circle', parents:[centerId, poly.parents[0]] });
+    objects.push({ id:centerId, type:'point', sub:'circumcenter', parents:vertices.slice(), label:nextLabel() });
+    objects.push({ id:uid(), type:'circle', parents:[centerId, vertices[0]] });
     hintText.textContent = 'Построена описана окръжност.';
     render();
   }
@@ -3572,8 +3604,10 @@
     };
   }
 
-  function printablePageWorldRect(box,w,h,pageView,title=pageTitle){
-    const base = minimumPageWorldRect(w,h,pageView);
+  function printablePageWorldRect(box,w,h,pageView,title=pageTitle,bounds=paperBounds){
+    const stored = bounds || minimumPageWorldRect(w,h,pageView);
+    const baseH=stored.maxY-stored.minY, baseW=baseH*getA4Ratio();
+    const base = {minX:stored.minX,maxX:stored.minX+baseW,minY:stored.minY,maxY:stored.maxY};
     if(!box) return base;
 
     // Keep the whole generous base sheet and include all actual content with a
@@ -3610,6 +3644,7 @@
   // after the first mark and grows only when content reaches beyond it.
   function computeLivePageWorldRect(){
     const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
+    if(!paperBounds) paperBounds=minimumPageWorldRect(w,h,view);
     const box = pageContentWorldBBox(objects, inkStrokes);
     return printablePageWorldRect(box,w,h,view);
   }
@@ -4219,6 +4254,8 @@
   }
 
   canvas.addEventListener('pointerdown', function(e){
+    if((penOnly && e.pointerType==='touch') || (activePointerId!==null && activePointerId!==e.pointerId)){ e.preventDefault(); return; }
+    activePointerId=e.pointerId;
     const {x:sx,y:sy} = canvasCoords(e);
 
     if(cropMode){
@@ -4340,6 +4377,7 @@
   // whole `objects` array multiple times plus rebuilds the color panel, so without
   // coalescing a busy construction can visibly lag on slower devices.
   canvas.addEventListener('pointermove', function(e){
+    if((penOnly && e.pointerType==='touch') || (activePointerId!==null && activePointerId!==e.pointerId)) return;
     const {x:sx,y:sy} = canvasCoords(e);
     const wpt = screenToWorld(sx,sy);
     readout.innerHTML = 'x: '+wpt.x.toFixed(2)+'&nbsp;&nbsp;y: '+wpt.y.toFixed(2);
@@ -4495,8 +4533,7 @@
     if(!tid) return;
     const o = getObj(tid);
     if(!o) return;
-    const next = prompt('Редактирай текста:', o.text||'');
-    if(next===null) return;
+    openTextEditor(o.text||'', next=>{
     if(next.trim()===''){
       saveHistory();
       deleteAnyById(tid);
@@ -4506,6 +4543,7 @@
     saveHistory();
     o.text = next;
     render();
+    });
   });
 
   // Applies the drag rectangle drawn since cropMode was entered: clips it to the
@@ -4557,6 +4595,8 @@
   }
 
   function endPointerInteraction(e){
+    if(e && e.pointerId!==activePointerId) return;
+    activePointerId=null;
     if(cropMode){
       if(cropRectStart) finishImageCrop();
       if(canvas.hasPointerCapture && e && canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
@@ -4605,6 +4645,8 @@
   }
   canvas.addEventListener('pointerup', endPointerInteraction);
   canvas.addEventListener('pointercancel', endPointerInteraction);
+  canvas.addEventListener('lostpointercapture', endPointerInteraction);
+  window.addEventListener('pointerup', e=>{if(e.pointerId===activePointerId) endPointerInteraction(e);});
   canvas.addEventListener('pointerleave', function(){ hoverId=null; render(); });
 
   canvas.addEventListener('contextmenu', function(e){ e.preventDefault(); });
@@ -4880,7 +4922,7 @@
       // on the print scale we're solving for, so a single pass is enough — no
       // more clipping, and no more circular estimation.
       const box = pageContentWorldBBox(objects, inkStrokes);
-      const pageRect = printablePageWorldRect(box,w,h,rec.view,rec.title || '');
+      const pageRect = printablePageWorldRect(box,w,h,rec.view,rec.title || '',rec.paperBounds);
       const pageWorldW = pageRect.maxX-pageRect.minX;
       const pageWorldH = pageRect.maxY-pageRect.minY;
       const printScale = Math.min(frame.w/pageWorldW, frame.h/pageWorldH);
@@ -5291,10 +5333,11 @@
   document.getElementById('saveBtn').addEventListener('click', ()=>{
     pages[currentPageIndex] = capturePageRecord();
     const data = {
-      app: 'geoboard', version: 5,
+      app: 'geoboard', version: 6,
       idCounter, currentPageIndex, pageOrientation,
       pages: pages.map(p => ({
         title: p.title || '',
+        paperBounds:p.paperBounds,
         objects: serializeObjectsWithImageData(p.objects),
         inkStrokes: p.inkStrokes,
         view: { offsetX:p.view.offsetX, offsetY:p.view.offsetY, scale:p.view.scale }
@@ -5346,7 +5389,7 @@
             prevHistory = history, prevRedoStack = redoStack,
             prevView = { offsetX:view.offsetX, offsetY:view.offsetY, scale:view.scale },
             prevSelectedId = selectedId, prevHoverId = hoverId,
-            prevPageOrientation = pageOrientation, prevPageTitle = pageTitle;
+            prevPageOrientation = pageOrientation, prevPageTitle = pageTitle, prevPaperBounds=paperBounds;
       try{
         // Files saved by this version carry data.pages (one or more pages, each
         // with its own view); files saved before multi-page support only carry
@@ -5356,6 +5399,7 @@
         if(Array.isArray(data.pages) && data.pages.length){
           newPages = data.pages.map(p=>({
             title: typeof p.title==='string' ? p.title.slice(0,100) : '',
+            paperBounds: p.paperBounds && ['minX','maxX','minY','maxY'].every(k=>Number.isFinite(p.paperBounds[k])) && p.paperBounds.maxX>p.paperBounds.minX && p.paperBounds.maxY>p.paperBounds.minY ? {...p.paperBounds} : null,
             objects: Array.isArray(p.objects) ? p.objects : [],
             inkStrokes: Array.isArray(p.inkStrokes) ? p.inkStrokes : [],
             history: [], redoStack: [],
@@ -5404,6 +5448,7 @@
         selectedId = prevSelectedId; hoverId = prevHoverId;
         pageOrientation = prevPageOrientation;
         pageTitle = prevPageTitle;
+        paperBounds=prevPaperBounds;
         document.getElementById('pageTitleInput').value = pageTitle;
         updatePageOrientationUI();
         updatePageBar();
@@ -5455,26 +5500,54 @@
   });
 
   document.getElementById('zoomIn').addEventListener('click', ()=>{
-    const w=boardWrap.clientWidth, h=boardWrap.clientHeight;
-    const before = screenToWorld(w/2,h/2);
-    view.scale = Math.min(500, view.scale*1.25);
-    view.offsetX = w/2 - before.x*view.scale;
-    view.offsetY = h/2 + before.y*view.scale;
-    updateZoomLabel();
-    render();
+    zoomFromPageStart(1.25);
   });
   document.getElementById('zoomOut').addEventListener('click', ()=>{
-    const w=boardWrap.clientWidth, h=boardWrap.clientHeight;
-    const before = screenToWorld(w/2,h/2);
-    view.scale = Math.max(10, view.scale/1.25);
-    view.offsetX = w/2 - before.x*view.scale;
-    view.offsetY = h/2 + before.y*view.scale;
-    updateZoomLabel();
-    render();
+    zoomFromPageStart(1/1.25);
   });
   document.getElementById('zoomReset').addEventListener('click', ()=>{
-    resetView();
-    render();
+    showWholePage();
+  });
+
+  function zoomFromPageStart(factor){
+    const r=computeLivePageWorldRect(), p=worldToScreen(r.minX,r.maxY);
+    view.scale=Math.max(10,Math.min(500,view.scale*factor));
+    view.offsetX=p.x-r.minX*view.scale;
+    view.offsetY=p.y+r.maxY*view.scale;
+    updateZoomLabel();render();
+  }
+  function showWholePage(){
+    const r=computeLivePageWorldRect(), w=boardWrap.clientWidth, h=boardWrap.clientHeight;
+    view.scale=Math.min((w-40)/(r.maxX-r.minX),(h-90)/(r.maxY-r.minY));
+    view.offsetX=(w-(r.maxX-r.minX)*view.scale)/2-r.minX*view.scale;
+    view.offsetY=60+r.maxY*view.scale;
+    pageGuideEnabled=true;
+    document.getElementById('pageGuideToggle').classList.add('on');
+    document.getElementById('pageGuideToggle').setAttribute('aria-pressed','true');
+    updateZoomLabel();render();
+  }
+
+  const boardActions=document.createElement('div');
+  boardActions.className='board-actions';
+  boardActions.innerHTML='<button id="quickTextBtn" type="button">Текст с клавиатура</button><button id="wholePageBtn" type="button">Целият лист</button><button id="penOnlyBtn" type="button" aria-pressed="true" title="Игнорира докосването с пръсти и длан; мишката остава достъпна">Само писалка: ВКЛ.</button>';
+  boardWrap.appendChild(boardActions);
+  document.getElementById('quickTextBtn').onclick=()=>{
+    const r=computeLivePageWorldRect();
+    const p=worldToScreen(r.minX+(r.maxX-r.minX)*0.04,r.maxY-(r.maxY-r.minY)*(pageTitle.trim()?0.16:0.09));
+    handleTextClick(p.x,p.y);
+  };
+  document.getElementById('wholePageBtn').onclick=showWholePage;
+  document.getElementById('penOnlyBtn').onclick=(e)=>{
+    penOnly=!penOnly;
+    e.currentTarget.textContent='Само писалка: '+(penOnly?'ВКЛ.':'ИЗКЛ.');
+    e.currentTarget.setAttribute('aria-pressed',String(penOnly));
+  };
+  const textDialog=document.createElement('dialog');
+  textDialog.id='textDialog';
+  textDialog.innerHTML='<form method="dialog"><label for="textDialogInput">Текст с клавиатура</label><input id="textDialogInput" type="text" maxlength="1000" autocomplete="off"><button value="cancel">Отказ</button> <button value="save">Постави текста</button></form>';
+  document.body.appendChild(textDialog);
+  textDialog.querySelector('form').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();textDialog.close('save');}
   });
 
   /* ================= boot ================= */
