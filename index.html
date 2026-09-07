@@ -1124,7 +1124,7 @@
         Отвори
         <input type="file" id="fileInput" accept="application/json,.json" style="display:none">
       </button>
-      <button class="util-btn" id="insertImageBtn" title="Вмъкни изображение в чертежа">
+      <button class="util-btn" id="insertImageBtn" title="Вмъкни изображение в чертежа (може и с Ctrl+V / Paste)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="1.6"/><circle cx="9" cy="10" r="1.7" fill="currentColor" stroke="none"/><path d="M4 17l5.5-5.5L13 15l3-3 4 4.5"/></svg>
         Изображение
         <input type="file" id="imageFileInput" accept="image/*" style="display:none">
@@ -5001,9 +5001,11 @@
     imageFileInput.click();
   });
   imageFileInput.addEventListener('click', e=>e.stopPropagation());
-  imageFileInput.addEventListener('change', (e)=>{
-    const file = e.target.files && e.target.files[0];
-    if(!file) return;
+  function insertImageFile(file, sourceLabel){
+    if(!file || !file.type || !file.type.startsWith('image/')){
+      hintText.textContent = 'Клипбордът не съдържа изображение.';
+      return;
+    }
     const reader = new FileReader();
     reader.onerror = function(){
       hintText.textContent = 'Файлът не можа да бъде прочетен.';
@@ -5034,12 +5036,34 @@
         setTool('move');
         selectedId = obj.id;
         updateHint();
+        hintText.textContent = sourceLabel==='clipboard'
+          ? 'Изображението е поставено от клипборда. Можеш да го преместиш или преоразмериш.'
+          : 'Изображението е вмъкнато. Можеш да го преместиш или преоразмериш.';
         render();
       };
       img.src = src;
     };
     reader.readAsDataURL(file);
+  }
+  imageFileInput.addEventListener('change', (e)=>{
+    const file = e.target.files && e.target.files[0];
+    if(file) insertImageFile(file, 'file');
     imageFileInput.value = '';
+  });
+
+  // Paste an image copied from Paint, Snipping Tool, a browser, Word, etc. The
+  // event-based Clipboard API works without asking for persistent clipboard
+  // permission: Windows/browser dispatches it only after the user's Paste action.
+  window.addEventListener('paste', (e)=>{
+    const target=e.target;
+    if(target && (target.matches('input,textarea') || target.isContentEditable)) return;
+    const items=Array.from((e.clipboardData && e.clipboardData.items) || []);
+    const imageItem=items.find(item=>item.kind==='file' && item.type.startsWith('image/'));
+    if(!imageItem) return; // keep ordinary text Paste available to the browser
+    const file=imageItem.getAsFile();
+    if(!file) return;
+    e.preventDefault();
+    insertImageFile(file, 'clipboard');
   });
 
   document.querySelectorAll('#penOptions .swatch').forEach(btn=>{
