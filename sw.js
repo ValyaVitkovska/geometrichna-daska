@@ -1,12 +1,10 @@
-const CACHE = 'geoboard3d-v6';
+const CACHE = 'geoboard-v33';
 const ASSETS = [
   './index.html',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/apple-touch-icon.png',
-  './vendor/three.min.js',
-  './vendor/OrbitControls.js'
+  './icons/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (event) => {
