@@ -308,6 +308,9 @@
 
   /* ---- neutral glass chips (toggles / undo / clear) ---- */
   .toggle-row{ display:flex; flex-direction:column; gap:6px; }
+  /* [hidden] must beat the unconditional display:flex below, or a hidden
+     .util-btn (e.g. "Пълен режим" before lesson mode is on) still renders. */
+  .toggle-chip[hidden], .util-btn[hidden]{ display:none !important; }
   .toggle-chip, .util-btn{
     display:flex;
     align-items:center;
@@ -820,6 +823,205 @@
     .welcome-body{ padding:12px 14px; gap:12px; }
     .welcome-actions{ padding:12px 14px; }
   }
+
+  /* ---------- Режим за час (lesson mode) ---------- */
+  .lesson-btn{
+    border-color:rgba(var(--accent-rgb),0.55);
+    background:linear-gradient(160deg, rgba(var(--accent-rgb),0.34), rgba(var(--accent-rgb),0.1));
+    font-weight:800;
+  }
+  .lesson-btn.on{
+    border-color:rgba(var(--accent-rgb),0.9);
+    box-shadow:0 0 0 2px rgba(var(--accent-rgb),0.7), 0 0 12px rgba(var(--accent-rgb),0.5);
+  }
+  .toolbar.lesson-mode{ width:104px; }
+  .toolbar.lesson-mode .tool-group-label{ display:none; }
+  .toolbar.lesson-mode .tool-group,
+  .toolbar.lesson-mode .toggle-row,
+  .toolbar.lesson-mode .tool-menu,
+  .toolbar.lesson-mode .tool-btn,
+  .toolbar.lesson-mode .util-btn,
+  .toolbar.lesson-mode .toggle-chip{
+    display:none;
+  }
+  .toolbar.lesson-mode .lesson-keep-group{ display:flex !important; }
+  /* A "partial" group stays visible as a container, but only its own
+     .lesson-keep children show — used for "Чертане", which keeps some tools
+     (Избери, Точки, Отсечка, Права, Окръжност, Триъгълник, Четириъгълник) and
+     drops others (Многоъгълник, Вектори). A "keep" group instead shows every
+     child unconditionally — see the descendant rules below. */
+  .toolbar.lesson-mode .lesson-partial-group{ display:flex !important; }
+  .toolbar.lesson-mode .tool-menu.lesson-keep,
+  .toolbar.lesson-mode .lesson-keep-group .tool-menu{ display:block !important; }
+  .toolbar.lesson-mode .tool-btn.lesson-keep,
+  .toolbar.lesson-mode .lesson-keep-group .tool-btn,
+  .toolbar.lesson-mode .tool-menu.lesson-keep .tool-btn{ display:flex !important; }
+  .toolbar.lesson-mode .toggle-chip.lesson-keep,
+  .toolbar.lesson-mode .lesson-keep-group .toggle-chip{ display:flex !important; }
+  .toolbar.lesson-mode .util-btn.lesson-keep,
+  .toolbar.lesson-mode .lesson-keep-group .util-btn{ display:flex !important; }
+  body.lesson-active .site-footer{ display:none; }
+  body.lesson-active .board-wrap{ padding:0; }
+
+  /* ---------- по-ясно открояване на активния инструмент (учителят го вижда отдалеч) ---------- */
+  .tool-btn.active{
+    outline:3px solid rgba(var(--tint-rgb),0.95);
+    outline-offset:1px;
+  }
+  /* Every .tool-btn also carries [data-tooltip] (see the tooltip-migration script
+     near the end of the page), which claims this same ::after pseudo-element for
+     its hover bubble (positioned with left/transform/margin-left). Reset all of
+     that explicitly — this checkmark and the tooltip must never fight over the
+     one ::after an element can have. */
+  .tool-btn.active::after{
+    content:'✓' !important;
+    position:absolute !important;
+    top:3px !important; right:3px !important; left:auto !important; bottom:auto !important;
+    margin:0 !important;
+    transform:none !important;
+    width:15px; height:15px;
+    border-radius:50%;
+    background:rgb(var(--tint-rgb));
+    color:#fff;
+    font-size:10px;
+    font-weight:900;
+    display:flex !important;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 1px 3px rgba(0,0,0,0.6), 0 0 0 1.5px rgba(255,255,255,0.85);
+    z-index:2;
+    pointer-events:none;
+  }
+  .tool-btn{ position:relative; }
+
+  /* ---------- измервания: панел за избор какво да се показва ---------- */
+  /* [hidden] must win over our own display — otherwise "hidden" only ever
+     toggles a DOM property while the panel keeps rendering on top of the
+     board, which is the "измерванията не се скриват" bug this fixes. */
+  .measure-panel[hidden]{ display:none !important; }
+  .measure-panel{
+    position:fixed;
+    z-index:60;
+    background:var(--tb-1, #22303a);
+    border:1px solid rgba(255,255,255,0.25);
+    border-radius:10px;
+    padding:10px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.4);
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    min-width:190px;
+  }
+  .measure-panel label{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:var(--font-ui);
+    font-size:13px;
+    font-weight:600;
+    color:var(--tb-text, #fff);
+    cursor:pointer;
+  }
+  .measure-panel .precision-row{
+    display:flex;
+    gap:4px;
+    margin-top:4px;
+    padding-top:8px;
+    border-top:1px solid rgba(255,255,255,0.18);
+  }
+  .measure-panel .precision-row span{ font-size:11px; color:var(--tb-text-dim,#9ab); align-self:center; margin-right:2px; }
+  .measure-panel .precision-btn{
+    flex:1 1 auto;
+    padding:4px 0;
+    font-size:12px;
+    font-weight:700;
+    border-radius:6px;
+    border:1px solid rgba(255,255,255,0.25);
+    background:rgba(255,255,255,0.08);
+    color:var(--tb-text,#fff);
+    cursor:pointer;
+  }
+  .measure-panel .precision-btn.active{
+    background:rgba(var(--accent-rgb),0.55);
+    border-color:rgba(var(--accent-rgb),0.9);
+  }
+
+  /* ---------- автоматично възстановяване: банер при стартиране ---------- */
+  .restore-banner{
+    position:fixed;
+    left:50%;
+    top:14px;
+    transform:translateX(-50%);
+    z-index:70;
+    background:var(--tb-1,#22303a);
+    color:var(--tb-text,#fff);
+    border:1px solid rgba(255,255,255,0.25);
+    border-radius:10px;
+    padding:12px 16px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.4);
+    display:flex;
+    align-items:center;
+    gap:12px;
+    font-family:var(--font-ui);
+    font-size:13px;
+    max-width:92vw;
+  }
+  .restore-banner button{
+    padding:6px 12px;
+    border-radius:7px;
+    border:1px solid rgba(255,255,255,0.3);
+    font-weight:700;
+    cursor:pointer;
+    font-size:12.5px;
+  }
+  .restore-banner .restore-yes{ background:rgba(var(--accent-rgb),0.55); color:#fff; }
+  .restore-banner .restore-no{ background:rgba(255,255,255,0.1); color:var(--tb-text,#fff); }
+
+  /* ---------- потвърждение за изчистване на лист ---------- */
+  .confirm-overlay{
+    position:fixed; inset:0; z-index:80;
+    background:rgba(0,0,0,0.45);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .confirm-card{
+    background:var(--tb-1,#22303a);
+    color:var(--tb-text,#fff);
+    border:1px solid rgba(255,255,255,0.25);
+    border-radius:12px;
+    padding:18px 20px;
+    max-width:340px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.5);
+    font-family:var(--font-ui);
+  }
+  .confirm-card p{ margin:0 0 14px; font-size:14px; font-weight:600; }
+  .confirm-card .confirm-actions{ display:flex; gap:10px; justify-content:flex-end; }
+  .confirm-card button{
+    padding:7px 14px;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,0.3);
+    font-weight:700;
+    cursor:pointer;
+    font-size:13px;
+  }
+  .confirm-card .confirm-ok{ background:#c0392b; color:#fff; }
+  .confirm-card .confirm-cancel{ background:rgba(255,255,255,0.1); color:var(--tb-text,#fff); }
+
+  /* ---------- преименуване на лист (двойно щракване) ---------- */
+  .page-indicator{ cursor:text; }
+  .page-indicator.editing{ outline:2px solid var(--accent); border-radius:4px; padding:0 3px; }
+
+  #radiusDialog{max-width:90vw;width:280px;border:1px solid #739797;border-radius:12px;padding:20px;}
+  #radiusDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:12px 0;font-size:18px;}
+  #radiusDialog::backdrop{background:#0007;}
+
+  .welcome-remember-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:0 14px 12px;
+    font-size:13px;
+    font-weight:600;
+  }
 </style>
 <style id="printPageOrientation">@page{size:A4 landscape;margin:0}</style>
 
@@ -854,10 +1056,19 @@
       </div>
     </div>
 
-    <div class="tool-group">
+    <div class="tool-group lesson-keep-group">
+      <button type="button" class="util-btn lesson-btn" id="lessonModeBtn" title="Опростен изглед за работа пред клас — само най-нужните инструменти">
+        🎓 <span>Режим за час</span>
+      </button>
+      <button type="button" class="util-btn lesson-btn" id="fullModeBtn" title="Върни целия интерфейс" hidden>
+        ⚙ <span>Пълен режим</span>
+      </button>
+    </div>
+
+    <div class="tool-group lesson-partial-group">
       <div class="tool-group-label">Чертане</div>
 
-      <button class="tool-btn" data-tool="move" data-tint="white" title="Избери / Премести">
+      <button class="tool-btn lesson-keep" data-tool="move" data-tint="white" title="Избери / Премести">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 3v18M3 12h18"/>
           <path d="M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l3 3"/>
@@ -865,7 +1076,7 @@
         <span class="tool-label">Избери</span>
       </button>
 
-      <div class="tool-menu" id="pointMenu">
+      <div class="tool-menu lesson-keep" id="pointMenu">
         <button type="button" class="tool-btn menu-trigger" id="pointMenuBtn" data-tint="white" title="Точки" aria-haspopup="true" aria-expanded="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>
@@ -882,7 +1093,7 @@
       </div>
 
 
-      <button class="tool-btn" data-tool="segment" data-tint="white" title="Отсечка">
+      <button class="tool-btn lesson-keep" data-tool="segment" data-tint="white" title="Отсечка">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <line x1="5" y1="19" x2="19" y2="5"/>
           <circle cx="5" cy="19" r="2" fill="currentColor" stroke="none"/>
@@ -891,7 +1102,7 @@
         <span class="tool-label">Отсечка</span>
       </button>
 
-      <button class="tool-btn" data-tool="line" data-tint="white" title="Права">
+      <button class="tool-btn lesson-keep" data-tool="line" data-tint="white" title="Права">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <line x1="4" y1="20" x2="20" y2="4"/>
           <polyline points="14,4 20,4 20,10"/>
@@ -900,14 +1111,20 @@
         <span class="tool-label">Права</span>
       </button>
 
-      <button class="tool-btn" data-tool="circle" data-tint="blue" title="Окръжност">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="8"/>
-          <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
-          <line x1="12" y1="12" x2="18.5" y2="12" stroke-dasharray="2,2.4"/>
-        </svg>
-        <span class="tool-label">Окръжност</span>
-      </button>
+      <div class="tool-menu lesson-keep" id="circleMenu">
+        <button type="button" class="tool-btn menu-trigger" id="circleMenuBtn" data-tint="blue" title="Окръжност" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="8"/>
+            <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+            <line x1="12" y1="12" x2="18.5" y2="12" stroke-dasharray="2,2.4"/>
+          </svg>
+          <span class="tool-label">Окръжност</span>
+        </button>
+        <div class="tool-submenu" id="circleSubmenu" role="menu" aria-label="Вид окръжност" hidden>
+          <button type="button" class="submenu-item" data-tool="circle" role="menuitem">Окръжност (център + точка)</button>
+          <button type="button" class="submenu-item" data-tool="circleRadius" role="menuitem">Окръжност с център и радиус</button>
+        </div>
+      </div>
 
       <button class="tool-btn" data-tool="polygon" data-tint="white" title="Многоъгълник">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
@@ -916,7 +1133,7 @@
         <span class="tool-label">Многоъгълник</span>
       </button>
 
-      <div class="tool-menu" id="triangleMenu">
+      <div class="tool-menu lesson-keep" id="triangleMenu">
         <button type="button" class="tool-btn menu-trigger" id="triangleMenuBtn" data-tint="white" title="Триъгълник" aria-haspopup="true" aria-expanded="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,4 21,20 3,20"/></svg>
           <span class="tool-label">Триъгълник</span>
@@ -929,7 +1146,7 @@
         </div>
       </div>
 
-      <div class="tool-menu" id="quadMenu">
+      <div class="tool-menu lesson-keep" id="quadMenu">
         <button type="button" class="tool-btn menu-trigger" id="quadMenuBtn" data-tint="white" title="Четириъгълник" aria-haspopup="true" aria-expanded="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="4,8 20,5 20,16 4,19"/></svg>
           <span class="tool-label">Четириъгълник</span>
@@ -960,7 +1177,7 @@
       </div>
     </div>
 
-    <div class="tool-group">
+    <div class="tool-group lesson-keep-group">
       <div class="tool-group-label">Построения</div>
 
       <div class="tool-menu" id="linesMenu">
@@ -971,6 +1188,7 @@
         <div class="tool-submenu" id="linesSubmenu" role="menu" aria-label="Вид права" hidden>
           <button type="button" class="submenu-item" data-tool="perpendicular" role="menuitem">Перпендикуляр</button>
           <button type="button" class="submenu-item" data-tool="bisector" role="menuitem">Ъглополовяща</button>
+          <button type="button" class="submenu-item" data-tool="bisectorPerp" role="menuitem">Симетрала на отсечка</button>
           <button type="button" class="submenu-item" data-tool="tangent" role="menuitem">Допирателна към окръжност</button>
           <button type="button" class="submenu-item" data-tool="parallel" role="menuitem">Успоредна права</button>
         </div>
@@ -1014,7 +1232,7 @@
 
     <div class="tool-group">
       <div class="tool-group-label">Бележки</div>
-      <button class="tool-btn" data-tool="pen" data-tint="yellow" title="Писане на ръка">
+      <button class="tool-btn lesson-keep" data-tool="pen" data-tint="yellow" title="Писане на ръка">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 20l1.4-5.6L15.8 4 20 8.2 9.6 18.6 4 20Z"/>
           <path d="M13.2 5.8l5 5"/>
@@ -1068,7 +1286,7 @@
 
     <div class="toolbar-spacer"></div>
 
-    <div class="tool-group">
+    <div class="tool-group lesson-keep-group">
       <button class="tool-btn" data-tool="delete" data-tint="danger" title="Изтрий обект">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
           <line x1="6" y1="6" x2="18" y2="18"/>
@@ -1095,10 +1313,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="4"/><line x1="4" y1="20" x2="20" y2="20"/><path d="M4 4l-2.2 3M4 4l2.2 3"/><path d="M20 20l-3-2.2M20 20l-3 2.2"/></svg>
         <span class="chip-label">Имена на осите</span>
       </button>
-      <button type="button" class="toggle-chip" id="measureToggle" title="Покажи/скрий дължини, радиуси, лица и ъгли">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 17 4"/><path d="M4 17l2-2M7 14l2-2M10 11l2-2M13 8l2-2"/></svg>
-        <span class="chip-label">Стойности</span>
-      </button>
       <button type="button" class="toggle-chip on" id="pageGuideToggle" title="Покажи/скрий контура на листа А4 (къде свършва страницата при печат)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 2.5"><rect x="5" y="2.5" width="14" height="19" rx="1"/></svg>
         <span class="chip-label">Лист А4</span>
@@ -1109,12 +1323,32 @@
       </button>
     </div>
 
+    <div class="tool-group lesson-keep-group">
+      <button type="button" class="toggle-chip lesson-keep" id="measureToggle" title="Измервания — избери какво да се показва (дължини, ъгли, радиуси, лица, координати)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 17 4"/><path d="M4 17l2-2M7 14l2-2M10 11l2-2M13 8l2-2"/></svg>
+        <span class="chip-label">Измервания</span>
+      </button>
+      <div class="measure-panel" id="measurePanel" hidden>
+        <label><input type="checkbox" id="measShowLength" checked> Дължини</label>
+        <label><input type="checkbox" id="measShowAngle" checked> Ъгли</label>
+        <label><input type="checkbox" id="measShowRadius" checked> Радиуси</label>
+        <label><input type="checkbox" id="measShowArea" checked> Лица</label>
+        <label><input type="checkbox" id="measShowCoords"> Координати</label>
+        <div class="precision-row">
+          <span>Точност:</span>
+          <button type="button" class="precision-btn" data-precision="0">0</button>
+          <button type="button" class="precision-btn active" data-precision="1">0,0</button>
+          <button type="button" class="precision-btn" data-precision="2">0,00</button>
+        </div>
+      </div>
+    </div>
+
     <div class="tool-group">
-      <button class="util-btn" id="undoBtn" title="Отмени последното действие">
+      <button class="util-btn lesson-keep" id="undoBtn" title="Отмени последното действие">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7 3 11l4 4"/><path d="M3 11h12a6 6 0 0 1 0 12h-2"/></svg>
         Отмени
       </button>
-      <button class="util-btn" id="redoBtn" title="Повтори последното отменено действие">
+      <button class="util-btn lesson-keep" id="redoBtn" title="Повтори последното отменено действие">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transform:scaleX(-1)"><path d="M7 7 3 11l4 4"/><path d="M3 11h12a6 6 0 0 1 0 12h-2"/></svg>
         Повтори
       </button>
@@ -1304,6 +1538,10 @@
         <p>Отмени/повтори, запазване и отваряне на чертеж (с всички листове), изтегляне като PNG с прозрачен фон (удобно за поставяне в Word), печат/PDF, тъмна/светла тема и приближаване на изгледа. Бутонът „Инсталирай“ слага дъската като отделно приложение на устройството (компютър, телефон или таблет) — след инсталиране се отваря от собствена икона, без адресна лента. Ако браузърът не предложи директно инсталиране, бутонът показва как се прави ръчно на съответното устройство.</p>
       </section>
     </div>
+    <div class="welcome-remember-row">
+      <input type="checkbox" id="welcomeDontShowAgain">
+      <label for="welcomeDontShowAgain">Не показвай автоматично отново</label>
+    </div>
     <div class="welcome-actions">
       <button type="button" class="welcome-start-btn" id="welcomeStartBtn">Разбрах, да започваме!</button>
     </div>
@@ -1325,7 +1563,7 @@
   function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
   function rotateVec(v, ang){ const c=Math.cos(ang), s=Math.sin(ang); return { x:v.x*c-v.y*s, y:v.x*s+v.y*c }; }
 
-  const LINE_TYPES = ['segment','line','perpendicular','bisector','parallel','tangent'];
+  const LINE_TYPES = ['segment','line','perpendicular','bisector','parallel','tangent','bisectorPerp'];
   /* point subs that stay draggable after a shape construction finishes — each recomputes
      its own stored parameter (t / angle) from the drag position, see the pointermove handler */
   const DRAGGABLE_SUBS = new Set(['free','onobject','onPerpBisector','onPerpThrough','onCircleRadiusFrom','onParallelThrough','onThalesCircle']);
@@ -1337,7 +1575,8 @@
     ['quadMenuBtn', tool => tool.indexOf('quad_')===0],
     ['pointMenuBtn', tool => ['point','pointon','intersect','midpoint'].includes(tool)],
     ['vectorsMenuBtn', tool => ['vector','vectorEqual'].includes(tool)],
-    ['linesMenuBtn', tool => ['perpendicular','parallel','bisector','tangent'].includes(tool)],
+    ['linesMenuBtn', tool => ['perpendicular','parallel','bisector','tangent','bisectorPerp'].includes(tool)],
+    ['circleMenuBtn', tool => ['circle','circleRadius'].includes(tool)],
     ['cevianMenuBtn', tool => ['altitude','median','bisectorSeg'].includes(tool)],
     ['circlesMenuBtn', tool => ['incircle','circumcircle'].includes(tool)]
   ]);
@@ -1375,6 +1614,18 @@
     let r = Math.round(v*100)/100;
     if(Object.is(r,-0)) r = 0;
     return r.toString();
+  }
+
+  // Which measurement kinds "Измервания" shows, and at what precision — see the
+  // measure-panel wiring further down. Kept separate from formatNum (used for
+  // axis-tick labels, which must stay plain "5"/"1.5", never comma-decimal).
+  let measureTypes = { length:true, angle:true, radius:true, area:true, coords:false };
+  let measurePrecision = 1; // 0 -> "5", 1 -> "5,3" (default), 2 -> "5,27"
+  function formatMeasure(v){
+    const factor = Math.pow(10, measurePrecision);
+    let r = Math.round(v*factor)/factor;
+    if(Object.is(r,-0)) r = 0;
+    return r.toFixed(measurePrecision).replace('.', ',');
   }
 
   /* ================= state ================= */
@@ -1463,12 +1714,15 @@
   }
   function updatePageBar(){
     const ind = document.getElementById('pageIndicator');
-    if(ind) ind.textContent = (currentPageIndex+1)+'/'+pages.length;
+    // Shows the sheet's own name once it has one (double-click to set/change it —
+    // item 11), falling back to the plain "N/M" position otherwise.
+    if(ind) ind.textContent = pageTitle.trim() ? pageTitle.trim() : ((currentPageIndex+1)+'/'+pages.length);
     const prevBtn = document.getElementById('pagePrevBtn'), nextBtn = document.getElementById('pageNextBtn'),
           delBtn = document.getElementById('pageDeleteBtn');
     if(prevBtn) prevBtn.disabled = currentPageIndex===0;
     if(nextBtn) nextBtn.disabled = currentPageIndex===pages.length-1;
     if(delBtn) delBtn.disabled = pages.length<=1;
+    scheduleAutosave();
   }
   function switchToPage(idx){
     if(idx===currentPageIndex || idx<0 || idx>=pages.length) return;
@@ -1520,6 +1774,7 @@
   let currentTool = 'point';
   let pending = [];        // array of point ids, used by point-collecting tools
   let pendingBase = null;  // line-like object id, used by perpendicular tool
+  let radiusCircleCenterId = null; // center point already chosen, waiting on the radius dialog (see handleCircleRadiusClick)
   let selectedId = null;
   let hoverId = null;
   let draggingPointId = null;
@@ -1930,6 +2185,16 @@
       const baseGeom = getLineGeom(base);
       return { anchor:through, dir:rot90(baseGeom.dir), ray:false };
     }
+    if(obj.type==='bisectorPerp'){
+      // Симетрала: the perpendicular bisector of a segment/line — recomputed live
+      // from the base object's current endpoints every time this is called, so it
+      // automatically follows the segment when its endpoints are dragged.
+      const base = getObj(obj.parents[0]);
+      if(!base) return { anchor:{x:0,y:0}, dir:{x:0,y:0}, ray:false };
+      const baseGeom = getLineGeom(base);
+      const mid = { x:(baseGeom.p1.x+baseGeom.p2.x)/2, y:(baseGeom.p1.y+baseGeom.p2.y)/2 };
+      return { anchor:mid, dir:rot90(baseGeom.dir), ray:false };
+    }
     if(obj.type==='parallel'){
       const through = getPointXY(obj.parents[0]);
       const base = getObj(obj.parents[1]);
@@ -2191,6 +2456,7 @@
     if(history.length > 60) history.shift();
     redoStack = [];
     updateUndoRedoUI();
+    scheduleAutosave();
   }
   function saveHistory(){
     pushHistoryEntry(snapshotState());
@@ -2224,6 +2490,7 @@
     if(redoStack.length > 60) redoStack.shift();
     restoreSnapshot(JSON.parse(history.pop()));
     updateUndoRedoUI();
+    scheduleAutosave();
     render();
   }
   function redo(){
@@ -2232,6 +2499,7 @@
     if(history.length > 60) history.shift();
     restoreSnapshot(JSON.parse(redoStack.pop()));
     updateUndoRedoUI();
+    scheduleAutosave();
     render();
   }
   function updateUndoRedoUI(){
@@ -2568,7 +2836,9 @@
     quad_square: ['Избери или постави първата точка.', 'Избери или постави втората точка — квадратът се построява автоматично.'],
     quad_trap_iso: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка от основата.', 'Кликни за горния ляв връх — десният се построява като огледален, така че бедрата остават равни.'],
     quad_trap_right: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка от основата.', 'Кликни за височината над втората точка — под прав ъгъл.', 'Кликни, за да зададеш дължината на горната страна.'],
-    quad_trap_free: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка от основата.', 'Избери или постави горния ляв връх.', 'Кликни, за да зададеш дължината на горната страна — успоредна на основата.']
+    quad_trap_free: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка от основата.', 'Избери или постави горния ляв връх.', 'Кликни, за да зададеш дължината на горната страна — успоредна на основата.'],
+    bisectorPerp: 'Избери отсечка — симетралата (перпендикулярната права през средата) ще се построи автоматично и ще се обновява, ако местиш краищата.',
+    circleRadius: 'Избери центъра на окръжността, после въведи радиуса в полето.'
   };
 
   function updateHint(){
@@ -2654,6 +2924,17 @@
     const dialog=document.getElementById('textDialog'), input=document.getElementById('textDialogInput');
     input.value=value;
     dialog.onclose=()=>{ if(dialog.returnValue==='save') onSave(input.value); canvas.focus(); };
+    dialog.returnValue='cancel'; dialog.showModal(); input.focus();
+  }
+
+  // Radius input for "Окръжност с център и радиус" (see handleCircleRadiusClick).
+  // onDone is called with the typed string on confirm, or null on cancel/close —
+  // never with a validated number, since the caller is the one that knows what a
+  // valid radius means for it.
+  function openRadiusDialog(onDone){
+    const dialog=document.getElementById('radiusDialog'), input=document.getElementById('radiusDialogInput');
+    input.value='';
+    dialog.onclose=()=>{ onDone(dialog.returnValue==='save' ? input.value : null); canvas.focus(); };
     dialog.returnValue='cancel'; dialog.showModal(); input.focus();
   }
 
@@ -2996,7 +3277,7 @@
     const touchId = uid();
     objects.push({ id:touchId, type:'point', sub:'incircletouch', parents:vertices.slice(), label:nextLabel() });
     objects.push({ id:uid(), type:'circle', parents:[centerId, touchId] });
-    hintText.textContent = 'Построена вписана окръжност.';
+    hintText.textContent = '✓ Построена вписана окръжност.';
     render();
   }
 
@@ -3009,8 +3290,66 @@
     const centerId = uid();
     objects.push({ id:centerId, type:'point', sub:'circumcenter', parents:vertices.slice(), label:nextLabel() });
     objects.push({ id:uid(), type:'circle', parents:[centerId, vertices[0]] });
-    hintText.textContent = 'Построена описана окръжност.';
+    hintText.textContent = '✓ Построена описана окръжност.';
     render();
+  }
+
+  /* Симетрала (perpendicular bisector of a segment) — a single click picks the
+     segment; the resulting object stores only that one parent id and recomputes
+     its midpoint/direction live from it every render (see getLineGeom's
+     'bisectorPerp' case), so dragging either endpoint of the segment updates the
+     bisector automatically — nothing here needs to react to that drag directly. */
+  function handleBisectorPerpClick(sx,sy){
+    let lineId = pickLineLike(sx,sy, ['segment','line']);
+    if(!lineId){
+      const edge = pickPolygonEdge(sx,sy);
+      if(edge){
+        armHistory();
+        const before = objects.length;
+        lineId = getOrCreateSegmentFor(edge[0], edge[1]);
+        if(objects.length !== before) commitArmedHistory(); else discardArmedHistory();
+      }
+    }
+    if(!lineId) return;
+    saveHistory();
+    objects.push({ id:uid(), type:'bisectorPerp', parents:[lineId] });
+    resetPending();
+    hintText.textContent = '✓ Построена симетралата.';
+    render();
+  }
+
+  /* Окръжност с център и радиус — first click picks/creates the center point,
+     then a small dialog asks for a numeric radius (accepting both "," and "."
+     as the decimal separator). Confirming creates an ordinary free point at that
+     distance from the center and a normal circle through it, so afterwards it
+     behaves exactly like any other two-point circle (draggable radius point). */
+  function handleCircleRadiusClick(sx,sy){
+    if(radiusCircleCenterId===null){
+      armHistory();
+      const before = objects.length;
+      const pid = getOrCreatePointAt(sx,sy);
+      if(objects.length!==before) commitArmedHistory(); else discardArmedHistory();
+      radiusCircleCenterId = pid;
+      hintText.textContent = 'Въведи радиуса в полето и натисни Enter.';
+      openRadiusDialog(function(value){
+        radiusCircleCenterId = null;
+        if(value===null){ updateHint(); render(); return; }
+        const r = parseFloat(String(value).trim().replace(',', '.'));
+        if(!isFinite(r) || r<=0){
+          hintText.textContent = 'Въведи положително число за радиус, напр. 2,5.';
+          render();
+          return;
+        }
+        const center = getPointXY(pid);
+        saveHistory();
+        const rp = { id:uid(), type:'point', sub:'free', x:center.x+r, y:center.y, label:nextLabel() };
+        objects.push(rp);
+        objects.push({ id:uid(), type:'circle', parents:[pid, rp.id] });
+        hintText.textContent = '✓ Построена окръжност с радиус '+formatMeasure(r)+'.';
+        render();
+      });
+      render();
+    }
   }
 
   function handleTangentClick(sx,sy){
@@ -3079,7 +3418,7 @@
     objects.push({ id:uid(), type:'rightangle', parents:[pendingBase, segId] });
     commitArmedHistory();
     resetPending();
-    hintText.textContent = 'Построена височина.';
+    hintText.textContent = '✓ Построена височина.';
     render();
   }
 
@@ -3112,7 +3451,7 @@
     objects.push({ id:uid(), type:'segment', parents:[vId, midId], tint:'green' });
     commitArmedHistory();
     resetPending();
-    hintText.textContent = 'Построена медиана.';
+    hintText.textContent = '✓ Построена медиана.';
     render();
   }
 
@@ -3146,7 +3485,7 @@
     objects.push({ id:uid(), type:'segment', parents:[vId, footId], tint:'orange' });
     commitArmedHistory();
     resetPending();
-    hintText.textContent = 'Построена ъглополовяща.';
+    hintText.textContent = '✓ Построена ъглополовящата.';
     render();
   }
 
@@ -3751,6 +4090,7 @@
     else if(o.type==='perpendicular'){ color=pal.rose; dash=[7,5]; }
     else if(o.type==='parallel'){ color=pal.green; dash=[11,4]; }
     else if(o.type==='tangent'){ color=pal.blue; dash=[5,3]; }
+    else if(o.type==='bisectorPerp'){ color=pal.orange; dash=[3,3]; }
     else { color=pal.yellow; dash=[9,3,2,3]; }
     if(o.tint) color = tintColor(pal, o.tint);
     if(o.dash) dash = DASH_PATTERNS[o.dash] || [];
@@ -3844,7 +4184,7 @@
     // the "Стойности" (measurements) toggle. When that toggle is on, drawMeasurements()
     // draws a combined "α = 60°" further out along the same bisector instead — so the
     // plain name here is skipped then, to avoid showing "α" twice.
-    if(o.label && !measurementsEnabled){
+    if(o.label && !(measurementsEnabled && measureTypes.angle)){
       const bis = angleBisectorDir(normalize(d1s), normalize(d2s));
       const labelWorldPos = screenToWorld(vs.x + bis.x*(R+13), vs.y + bis.y*(R+13));
       drawMeasurementLabel(labelWorldPos, o.label, pal, arcColor, 0);
@@ -3879,31 +4219,37 @@
     for(const o of objects){
       if(o.hidden) continue;
       if(o.type==='segment'){
+        if(!measureTypes.length) continue;
         const p1=getPointXY(o.parents[0]), p2=getPointXY(o.parents[1]);
         const mid = {x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2};
-        drawMeasurementLabel(mid, formatNum(dist(p1,p2)), pal);
+        drawMeasurementLabel(mid, formatMeasure(dist(p1,p2)), pal);
       } else if(o.type==='circle'){
+        if(!measureTypes.radius) continue;
         const c=getPointXY(o.parents[0]), rp=getPointXY(o.parents[1]);
         const r=dist(c,rp);
-        drawMeasurementLabel({x:c.x, y:c.y+r}, 'r='+formatNum(r), pal, pal.blue);
+        drawMeasurementLabel({x:c.x, y:c.y+r}, 'r='+formatMeasure(r), pal, pal.blue);
       } else if(o.type==='polygon' && o.parents.length>=3){
+        if(!measureTypes.area) continue;
         const pts=o.parents.map(getPointXY);
         const cx=pts.reduce((s,p)=>s+p.x,0)/pts.length, cy=pts.reduce((s,p)=>s+p.y,0)/pts.length;
-        drawMeasurementLabel({x:cx,y:cy}, 'S='+formatNum(computePolyArea(pts)), pal, pal.primary, 0);
+        drawMeasurementLabel({x:cx,y:cy}, 'S='+formatMeasure(computePolyArea(pts)), pal, pal.primary, 0);
       } else if(o.type==='bisector'){
+        if(!measureTypes.angle) continue;
         const p1=getPointXY(o.parents[0]), vertex=getPointXY(o.parents[1]), p2=getPointXY(o.parents[2]);
         const u1=normalize(sub(p1,vertex)), u2=normalize(sub(p2,vertex));
         if(len(u1)>1e-6 && len(u2)>1e-6){
           const ang = Math.acos(Math.max(-1,Math.min(1,dot(u1,u2)))) * 180/Math.PI;
-          drawMeasurementLabel(vertex, formatNum(ang)+'°', pal, pal.yellow, -14);
+          drawMeasurementLabel(vertex, formatMeasure(ang)+'°', pal, pal.yellow, -14);
         }
       } else if(o.type==='rightangle'){
+        if(!measureTypes.angle) continue;
         const A=getObj(o.parents[0]), B=getObj(o.parents[1]);
         if(A && B){
           const pts=computeIntersections(A,B);
           if(pts.length) drawMeasurementLabel(pts[0], '90°', pal, pal.primary, -22);
         }
       } else if(o.type==='angle'){
+        if(!measureTypes.angle) continue;
         const p1=getPointXY(o.parents[0]), vertex=getPointXY(o.parents[1]), p2=getPointXY(o.parents[2]);
         const u1=normalize(sub(p1,vertex)), u2=normalize(sub(p2,vertex));
         if(len(u1)>1e-6 && len(u2)>1e-6){
@@ -3913,9 +4259,13 @@
           const bisScreen = normalize({x:bis.x, y:-bis.y});
           const labelScreenPos = { x: vs.x + bisScreen.x*40, y: vs.y + bisScreen.y*40 };
           const labelWorldPos = screenToWorld(labelScreenPos.x, labelScreenPos.y);
-          const valueText = (o.label ? o.label+' = ' : '') + formatNum(ang)+'°';
+          const valueText = (o.label ? o.label+' = ' : '') + formatMeasure(ang)+'°';
           drawMeasurementLabel(labelWorldPos, valueText, pal, o.tint?tintColor(pal,o.tint):pal.yellow, 0);
         }
+      } else if(o.type==='point'){
+        if(!measureTypes.coords) continue;
+        const p = getPointXY(o.id);
+        drawMeasurementLabel(p, '('+formatMeasure(p.x)+'; '+formatMeasure(p.y)+')', pal, pal.axisText, -16);
       }
     }
   }
@@ -4362,6 +4712,8 @@
     if(currentTool==='pointon'){ handlePointOnObjectClick(sx,sy); return; }
     if(currentTool==='incircle'){ handleIncircleClick(sx,sy); return; }
     if(currentTool==='circumcircle'){ handleCircumcircleClick(sx,sy); return; }
+    if(currentTool==='bisectorPerp'){ handleBisectorPerpClick(sx,sy); return; }
+    if(currentTool==='circleRadius'){ handleCircleRadiusClick(sx,sy); return; }
     if(SHAPE_SPECS[currentTool]){ handleShapeClick(sx,sy); return; }
     if(currentTool==='delete'){ handleDeleteClick(sx,sy); return; }
     if(currentTool==='pen' || currentTool==='smartpen'){
@@ -4677,8 +5029,15 @@
       return;
     }
     if(e.key==='Escape'){
-      if(cropMode){ cropMode=false; cropTargetId=null; cropRectStart=null; cropRectCurrent=null; updateHint(); }
+      // Undo whatever unfinished construction is in progress — but never touch
+      // objects already committed to the board (see item 4 in the edit brief).
+      const wasMidConstruction = cropMode || pending.length>0 || pendingBase!==null;
+      if(cropMode){ cropMode=false; cropTargetId=null; cropRectStart=null; cropRectCurrent=null; }
       resetPending();
+      if(wasMidConstruction){
+        setTool('move');
+        hintText.textContent = 'Построението е отменено.';
+      }
       render();
     }
     else if(e.key==='Enter' && currentTool==='polygon'){ finalizePolygon(); render(); }
@@ -4695,6 +5054,10 @@
     else if((e.ctrlKey || e.metaKey) && (e.key.toLowerCase()==='y' || (e.shiftKey && e.key.toLowerCase()==='z'))){
       e.preventDefault();
       redo();
+    }
+    else if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='s'){
+      e.preventDefault();
+      document.getElementById('saveBtn').click();
     }
   });
 
@@ -4775,6 +5138,7 @@
   setupToolMenu('pointMenuBtn', 'pointSubmenu');
   setupToolMenu('vectorsMenuBtn', 'vectorsSubmenu');
   setupToolMenu('linesMenuBtn', 'linesSubmenu');
+  setupToolMenu('circleMenuBtn', 'circleSubmenu');
   setupToolMenu('cevianMenuBtn', 'cevianSubmenu');
   setupToolMenu('circlesMenuBtn', 'circlesSubmenu');
   // The Symbols menu reuses setupToolMenu purely for its open/close/position/
@@ -4827,13 +5191,59 @@
     render();
   });
 
+  // "Измервания": clicking the chip opens a small panel of checkboxes (item 5)
+  // instead of instantly toggling everything — each checkbox switches one kind
+  // of measurement on/off live, and the chip's own on/off look just reflects
+  // whether any kind is currently showing.
   const measureToggle = document.getElementById('measureToggle');
-  measureToggle.addEventListener('click', ()=>{
-    measurementsEnabled = !measurementsEnabled;
+  const measurePanel = document.getElementById('measurePanel');
+  function updateMeasureToggleUI(){
+    measurementsEnabled = !!(measureTypes.length || measureTypes.angle || measureTypes.radius || measureTypes.area || measureTypes.coords);
     measureToggle.classList.toggle('on', measurementsEnabled);
     measureToggle.setAttribute('aria-pressed', measurementsEnabled ? 'true' : 'false');
-    render();
+  }
+  function closeMeasurePanel(){ measurePanel.hidden = true; }
+  function positionMeasurePanel(){
+    const r = measureToggle.getBoundingClientRect();
+    measurePanel.style.left = '0px'; measurePanel.style.top = '0px';
+    const mw = measurePanel.offsetWidth, mh = measurePanel.offsetHeight;
+    let left = r.right + 6;
+    if(left + mw > window.innerWidth - 8) left = Math.max(8, r.left - mw - 6);
+    let top = Math.min(r.top, window.innerHeight - mh - 8);
+    top = Math.max(8, top);
+    measurePanel.style.left = left+'px';
+    measurePanel.style.top = top+'px';
+  }
+  measureToggle.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(measurePanel.hidden){ measurePanel.hidden = false; positionMeasurePanel(); }
+    else closeMeasurePanel();
   });
+  document.addEventListener('click', (e)=>{
+    if(!measurePanel.hidden && !measurePanel.contains(e.target) && e.target!==measureToggle) closeMeasurePanel();
+  });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape' && !measurePanel.hidden){ closeMeasurePanel(); measureToggle.focus(); }
+  });
+  window.addEventListener('resize', ()=>{ if(!measurePanel.hidden) positionMeasurePanel(); });
+  [['measShowLength','length'],['measShowAngle','angle'],['measShowRadius','radius'],['measShowArea','area'],['measShowCoords','coords']].forEach(([id,key])=>{
+    const cb = document.getElementById(id);
+    if(!cb) return;
+    cb.checked = measureTypes[key];
+    cb.addEventListener('change', ()=>{
+      measureTypes[key] = cb.checked;
+      updateMeasureToggleUI();
+      render();
+    });
+  });
+  document.querySelectorAll('.precision-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      measurePrecision = parseInt(btn.dataset.precision, 10);
+      document.querySelectorAll('.precision-btn').forEach(b=>b.classList.toggle('active', b===btn));
+      render();
+    });
+  });
+  updateMeasureToggleUI();
 
   const pageGuideToggle = document.getElementById('pageGuideToggle');
   pageGuideToggle.addEventListener('click', ()=>{
@@ -5256,6 +5666,17 @@
   document.getElementById('pageDupBtn').addEventListener('click', duplicateCurrentPage);
   document.getElementById('pageDeleteBtn').addEventListener('click', deleteCurrentPage);
 
+  // Item 11: double-click the sheet's name/position to rename it — e.g. "Лист 1" -> "Условие".
+  document.getElementById('pageIndicator').addEventListener('dblclick', ()=>{
+    const current = pageTitle.trim();
+    const val = window.prompt('Име на листа:', current || ('Лист '+(currentPageIndex+1)));
+    if(val===null) return;
+    pageTitle = val.slice(0,100);
+    document.getElementById('pageTitleInput').value = pageTitle;
+    updatePageBar();
+    render();
+  });
+
   /* ---------- welcome overlay: Гео представя възможностите на приложението ---------- */
   const welcomeOverlay = document.getElementById('welcomeOverlay');
   const welcomeCard = welcomeOverlay.querySelector('.welcome-card');
@@ -5298,6 +5719,10 @@
         welcomeGeoImg.appendChild(img);
       }
     }
+    let seenAlready = null;
+    try{ seenAlready = localStorage.getItem('geoboard-welcome-seen'); }catch(err){}
+    const dontShowCb = document.getElementById('welcomeDontShowAgain');
+    if(dontShowCb) dontShowCb.checked = !!seenAlready;
     welcomeReturnFocus = document.activeElement;
     welcomeOverlay.hidden = false;
     document.addEventListener('keydown', welcomeKeydown, true);
@@ -5309,7 +5734,13 @@
     if(welcomeOverlay.hidden) return;
     welcomeOverlay.hidden = true;
     document.removeEventListener('keydown', welcomeKeydown, true);
-    try{ localStorage.setItem('geoboard-welcome-seen', '1'); }catch(err){}
+    // Item 9: the checkbox — not just closing the dialog — decides whether it
+    // comes back next time the app starts.
+    const dontShowCb = document.getElementById('welcomeDontShowAgain');
+    try{
+      if(dontShowCb && dontShowCb.checked) localStorage.setItem('geoboard-welcome-seen', '1');
+      else localStorage.removeItem('geoboard-welcome-seen');
+    }catch(err){}
     if(welcomeReturnFocus && typeof welcomeReturnFocus.focus === 'function'){
       welcomeReturnFocus.focus({ preventScroll:true });
     }
@@ -5329,40 +5760,69 @@
     if(!seen) openWelcome();
   }
 
-  const clearBtn = document.getElementById('clearBtn');
-  let clearConfirming = false, clearTimer = null;
-  clearBtn.addEventListener('click', function(){
-    if(!clearConfirming){
-      clearConfirming = true;
-      clearBtn.classList.add('confirming');
-      clearBtn.lastChild.textContent = ' Сигурни ли сте?';
-      clearTimer = setTimeout(()=>{
-        clearConfirming = false;
-        clearBtn.classList.remove('confirming');
-        clearBtn.lastChild.textContent = ' Изчисти';
-      }, 3000);
-      return;
-    }
-    clearTimeout(clearTimer);
-    clearConfirming = false;
-    clearBtn.classList.remove('confirming');
-    clearBtn.lastChild.textContent = ' Изчисти';
-    saveHistory();
-    objects = [];
-    inkStrokes = [];
-    resetPending();
-    selectedId = null;
+  // Small reusable yes/cancel confirmation card (item 17's "Да изчистя ли..."
+  // dialog, but written generically since a modal confirm is useful elsewhere too).
+  function showConfirm(message, okLabel, onYes){
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    overlay.innerHTML = '<div class="confirm-card" role="alertdialog" aria-modal="true"><p></p><div class="confirm-actions"><button type="button" class="confirm-cancel">Отказ</button><button type="button" class="confirm-ok"></button></div></div>';
+    overlay.querySelector('p').textContent = message;
+    const okBtn = overlay.querySelector('.confirm-ok');
+    okBtn.textContent = okLabel;
+    const cancelBtn = overlay.querySelector('.confirm-cancel');
+    function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
+    function onKey(e){ if(e.key==='Escape'){ e.stopPropagation(); close(); } }
+    cancelBtn.addEventListener('click', close);
+    okBtn.addEventListener('click', ()=>{ close(); onYes(); });
+    overlay.addEventListener('mousedown', (e)=>{ if(e.target===overlay) close(); });
+    document.addEventListener('keydown', onKey, true);
+    document.body.appendChild(overlay);
+    okBtn.focus();
+  }
+
+  /* ---------- Режим за час (item 1): a stripped-down toolbar for teaching in
+     front of a class — only the most-used drawing tools stay visible (marked
+     with the .lesson-keep / .lesson-keep-group classes in the HTML), the board
+     gets the freed-up space, and "Пълен режим" brings the rest straight back. ---------- */
+  const lessonModeBtn = document.getElementById('lessonModeBtn');
+  const fullModeBtn = document.getElementById('fullModeBtn');
+  const lessonToolbarEl = document.getElementById('toolbar');
+  function setLessonMode(on){
+    lessonToolbarEl.classList.toggle('lesson-mode', on);
+    document.body.classList.toggle('lesson-active', on);
+    lessonModeBtn.hidden = on;
+    fullModeBtn.hidden = !on;
+    resizeCanvas();
     render();
+  }
+  lessonModeBtn.addEventListener('click', ()=>setLessonMode(true));
+  fullModeBtn.addEventListener('click', ()=>setLessonMode(false));
+
+  const clearBtn = document.getElementById('clearBtn');
+  clearBtn.addEventListener('click', function(){
+    showConfirm('Да изчистя ли всички обекти от този лист?', 'Изчисти', function(){
+      saveHistory();
+      objects = [];
+      inkStrokes = [];
+      resetPending();
+      selectedId = null;
+      render();
+    });
   });
 
   /* ---------- save / open (construction, including pen notes/sketches, together) ---------- */
   document.getElementById('pageTitleInput').addEventListener('input', (e)=>{
     pageTitle = e.target.value.slice(0,100);
+    updatePageBar();
     render();
   });
-  document.getElementById('saveBtn').addEventListener('click', ()=>{
+
+  // Shared by the manual "Запази" download and the автосейв below — same shape,
+  // same JSON, so opening an autosaved snapshot works exactly like opening a
+  // regularly saved file (through the same fileInput code path).
+  function buildSaveData(){
     pages[currentPageIndex] = capturePageRecord();
-    const data = {
+    return {
       app: 'geoboard', version: 6,
       idCounter, currentPageIndex, pageOrientation,
       pages: pages.map(p => ({
@@ -5374,6 +5834,9 @@
       })),
       savedAt: new Date().toISOString()
     };
+  }
+  document.getElementById('saveBtn').addEventListener('click', ()=>{
+    const data = buildSaveData();
     const blob = new Blob([JSON.stringify(data)], { type:'application/json' });
     const url = URL.createObjectURL(blob);
     const stamp = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
@@ -5384,7 +5847,76 @@
     a.click();
     a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    // A deliberate save means the autosave snapshot's job is done — clear it so
+    // the next launch doesn't offer to "recover" work that is already safely saved.
+    try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(err){}
   });
+
+  /* ---------- item 10: автоматично възстановяване (localStorage autosave) ---------- */
+  const AUTOSAVE_KEY = 'geoboard-autosave-v1';
+  let autosaveTimer = null;
+  let autosaveSuppressed = false; // true right after offering/declining recovery, so we don't instantly overwrite it
+  function scheduleAutosave(){
+    if(autosaveSuppressed) return;
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(()=>{
+      if(autosaveSuppressed) return;
+      try{
+        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(buildSaveData()));
+      }catch(err){ /* storage full/unavailable — autosave is best-effort only */ }
+    }, 1200);
+  }
+  function loadFromSaveData(data){
+    idCounter = data.idCounter || 1;
+    pageOrientation = data.pageOrientation || 'landscape';
+    pages = (data.pages || []).map(p => {
+      const objs = p.objects || [];
+      hydrateImages(objs);
+      return {
+        title: p.title || '',
+        paperBounds: p.paperBounds || null,
+        objects: objs,
+        inkStrokes: p.inkStrokes || [],
+        history: [], redoStack: [],
+        view: p.view ? { ...p.view } : computeDefaultView()
+      };
+    });
+    if(!pages.length) pages = [ capturePageRecord() ];
+    currentPageIndex = Math.min(data.currentPageIndex || 0, pages.length-1);
+    applyPageRecord(pages[currentPageIndex]);
+    updatePageBar();
+  }
+  function showRestoreBanner(data){
+    const banner = document.createElement('div');
+    banner.className = 'restore-banner';
+    banner.innerHTML = '<span>🤖 Гео: Открих незавършена работа от предишната сесия.</span><button type="button" class="restore-yes">Възстанови</button><button type="button" class="restore-no">Започни начисто</button>';
+    document.body.appendChild(banner);
+    autosaveSuppressed = true;
+    banner.querySelector('.restore-yes').addEventListener('click', ()=>{
+      loadFromSaveData(data);
+      autosaveSuppressed = false;
+      banner.remove();
+      hintText.textContent = '✓ Работата е възстановена.';
+      render();
+    });
+    banner.querySelector('.restore-no').addEventListener('click', ()=>{
+      try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(err){}
+      autosaveSuppressed = false;
+      banner.remove();
+    });
+  }
+  function initAutosaveRecovery(){
+    let raw = null;
+    try{ raw = localStorage.getItem(AUTOSAVE_KEY); }catch(err){ return; }
+    if(!raw) return;
+    let data = null;
+    try{ data = JSON.parse(raw); }catch(err){ return; }
+    if(!data || !Array.isArray(data.pages)) return;
+    // Nothing worth recovering if every page is empty.
+    const hasContent = data.pages.some(p => (p.objects&&p.objects.length) || (p.inkStrokes&&p.inkStrokes.length) || (p.title&&p.title.trim()));
+    if(!hasContent) return;
+    showRestoreBanner(data);
+  }
 
   const fileInput = document.getElementById('fileInput');
   document.getElementById('openBtn').addEventListener('click', (e)=>{
@@ -5580,6 +6112,14 @@
     if(e.key==='Enter'){e.preventDefault();textDialog.close('save');}
   });
 
+  const radiusDialog=document.createElement('dialog');
+  radiusDialog.id='radiusDialog';
+  radiusDialog.innerHTML='<form method="dialog"><label for="radiusDialogInput">Радиус</label><input id="radiusDialogInput" type="text" inputmode="decimal" maxlength="12" autocomplete="off" placeholder="напр. 2,5"><button value="cancel">Отказ</button> <button value="save">Построй</button></form>';
+  document.body.appendChild(radiusDialog);
+  radiusDialog.querySelector('form').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();radiusDialog.close('save');}
+  });
+
   /* ================= boot ================= */
   // ResizeObserver on boardWrap already catches every case a window 'resize' event
   // would (and more — e.g. layout shifts with no viewport change); registering both
@@ -5642,6 +6182,7 @@
   })();
 
   resetView();
+  initAutosaveRecovery(); // checked before the blank starting page can schedule an autosave that would overwrite it
   pages = [ capturePageRecord() ];
   currentPageIndex = 0;
   updatePageBar();
