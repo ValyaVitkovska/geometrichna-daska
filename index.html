@@ -1093,23 +1093,23 @@
       </div>
 
 
-      <button class="tool-btn lesson-keep" data-tool="segment" data-tint="white" title="Отсечка">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="5" y1="19" x2="19" y2="5"/>
-          <circle cx="5" cy="19" r="2" fill="currentColor" stroke="none"/>
-          <circle cx="19" cy="5" r="2" fill="currentColor" stroke="none"/>
-        </svg>
-        <span class="tool-label">Отсечка</span>
-      </button>
-
-      <button class="tool-btn lesson-keep" data-tool="line" data-tint="white" title="Права">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="4" y1="20" x2="20" y2="4"/>
-          <polyline points="14,4 20,4 20,10"/>
-          <polyline points="10,20 4,20 4,14"/>
-        </svg>
-        <span class="tool-label">Права</span>
-      </button>
+      <div class="tool-menu lesson-keep" id="lineMenu">
+        <button type="button" class="tool-btn menu-trigger lesson-keep" id="lineMenuBtn" data-tint="white" title="Отсечка, права, лъч, вектор" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="19" x2="19" y2="5"/>
+            <circle cx="5" cy="19" r="2" fill="currentColor" stroke="none"/>
+            <circle cx="19" cy="5" r="2" fill="currentColor" stroke="none"/>
+          </svg>
+          <span class="tool-label">Отсечка/Права</span>
+        </button>
+        <div class="tool-submenu" id="lineSubmenu" role="menu" aria-label="Вид отсечка, права или вектор" hidden>
+          <button type="button" class="submenu-item" data-tool="segment" role="menuitem">Отсечка</button>
+          <button type="button" class="submenu-item" data-tool="line" role="menuitem">Права</button>
+          <button type="button" class="submenu-item" data-tool="ray" role="menuitem">Лъч</button>
+          <button type="button" class="submenu-item" data-tool="vector" role="menuitem">Вектор</button>
+          <button type="button" class="submenu-item" data-tool="vectorEqual" role="menuitem">Равен вектор</button>
+        </div>
+      </div>
 
       <div class="tool-menu lesson-keep" id="circleMenu">
         <button type="button" class="tool-btn menu-trigger" id="circleMenuBtn" data-tint="blue" title="Окръжност" aria-haspopup="true" aria-expanded="false">
@@ -1162,19 +1162,6 @@
         </div>
       </div>
 
-      <div class="tool-menu" id="vectorsMenu">
-        <button type="button" class="tool-btn menu-trigger" id="vectorsMenuBtn" data-tint="orange" title="Вектори" aria-haspopup="true" aria-expanded="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="4" y1="20" x2="17" y2="7"/>
-            <path d="M11 7h6v6"/>
-          </svg>
-          <span class="tool-label">Вектори</span>
-        </button>
-        <div class="tool-submenu" id="vectorsSubmenu" role="menu" aria-label="Вид вектор" hidden>
-          <button type="button" class="submenu-item" data-tool="vector" role="menuitem">Вектор</button>
-          <button type="button" class="submenu-item" data-tool="vectorEqual" role="menuitem">Равен вектор</button>
-        </div>
-      </div>
     </div>
 
     <div class="tool-group lesson-keep-group">
@@ -1563,7 +1550,7 @@
   function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
   function rotateVec(v, ang){ const c=Math.cos(ang), s=Math.sin(ang); return { x:v.x*c-v.y*s, y:v.x*s+v.y*c }; }
 
-  const LINE_TYPES = ['segment','line','perpendicular','bisector','parallel','tangent','bisectorPerp'];
+  const LINE_TYPES = ['segment','line','ray','perpendicular','bisector','parallel','tangent','bisectorPerp'];
   /* point subs that stay draggable after a shape construction finishes — each recomputes
      its own stored parameter (t / angle) from the drag position, see the pointermove handler */
   const DRAGGABLE_SUBS = new Set(['free','onobject','onPerpBisector','onPerpThrough','onCircleRadiusFrom','onParallelThrough','onThalesCircle']);
@@ -1574,7 +1561,7 @@
     ['triangleMenuBtn', tool => tool.indexOf('tri_')===0],
     ['quadMenuBtn', tool => tool.indexOf('quad_')===0],
     ['pointMenuBtn', tool => ['point','pointon','intersect','midpoint'].includes(tool)],
-    ['vectorsMenuBtn', tool => ['vector','vectorEqual'].includes(tool)],
+    ['lineMenuBtn', tool => ['segment','line','ray','vector','vectorEqual'].includes(tool)],
     ['linesMenuBtn', tool => ['perpendicular','parallel','bisector','tangent','bisectorPerp'].includes(tool)],
     ['circleMenuBtn', tool => ['circle','circleRadius'].includes(tool)],
     ['cevianMenuBtn', tool => ['altitude','median','bisectorSeg'].includes(tool)],
@@ -2173,10 +2160,10 @@
 
   /* ================= line-like geometry ================= */
   function getLineGeom(obj){
-    if(obj.type==='segment' || obj.type==='line'){
+    if(obj.type==='segment' || obj.type==='line' || obj.type==='ray'){
       const p1 = getPointXY(obj.parents[0]);
       const p2 = getPointXY(obj.parents[1]);
-      return { anchor:p1, dir:normalize(sub(p2,p1)), p1, p2, ray:false };
+      return { anchor:p1, dir:normalize(sub(p2,p1)), p1, p2, ray: obj.type==='ray' };
     }
     if(obj.type==='perpendicular'){
       const through = getPointXY(obj.parents[0]);
@@ -2805,6 +2792,7 @@
     pointon: 'Кликни върху отсечка, права, окръжност или друг обект — точката ще остане закачена за него и ще се движи само по него.',
     segment: ['Избери или постави първа точка на отсечката.', 'Избери или постави втора точка.'],
     line: ['Избери или постави първа точка от правата.', 'Избери или постави втора точка от правата.'],
+    ray: ['Избери или постави началото на лъча.', 'Избери или постави втора точка — накъде да сочи лъчът.'],
     circle: ['Избери центъра на окръжността.', 'Избери точка от окръжността.'],
     polygon: 'Кликвай точки на многоъгълника; затвори върху първата точка.',
     perpendicular: ['Избери права или отсечка.', 'Избери точката, през която минава перпендикулярът.'],
@@ -2972,7 +2960,8 @@
       const msg = type==='circle'
         ? 'Окръжност с нулев радиус не е позволена — избери друга точка за окръжността.'
         : (type==='vector' ? 'Векторът не може да започва и завършва в една и съща точка — избери друга точка.'
-                            : 'Отсечка/права не може да свързва точка със себе си — избери друга точка.');
+        : (type==='ray' ? 'Лъчът не може да започва и минава през една и съща точка — избери друга точка.'
+                            : 'Отсечка/права не може да свързва точка със себе си — избери друга точка.'));
       hintText.textContent = msg;
       render();
       return;
@@ -3707,6 +3696,13 @@
   // since they call render() too.
   let lastCanvasW = -1, lastCanvasH = -1, lastCanvasDpr = -1;
   let renderDprOverride = null;
+  // Set (per page) by collectAllPagePNGs while it captures the print/PDF images —
+  // the axis arrowheads are normally pinned a few px from the raw canvas edge,
+  // which is fine on screen (canvas === viewport) but during print capture the
+  // canvas is bigger than the A4-shaped "frame" that actually gets cropped into
+  // the page, so an arrow drawn at the canvas edge lands in the cropped-away
+  // margin and never appears on paper. See drawAxisNames.
+  let printFrameOverride = null;
   function resizeCanvas(){
     dpr = renderDprOverride || Math.max(1, window.devicePixelRatio || 1);
     const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
@@ -3821,19 +3817,24 @@
 
   function drawAxisNames(w,h,pal){
     const origin = worldToScreen(0,0);
+    // During print/PDF/PNG capture, pin the arrows to the actual printable frame
+    // (see printFrameOverride) instead of the raw, larger capture canvas — else
+    // they land in the margin that gets cropped away and never reach the page.
+    const b = printFrameOverride || {x:0, y:0, w, h};
+    const right = b.x+b.w, bottom = b.y+b.h;
     ctx.font = 'italic 700 16px Manrope, sans-serif';
     ctx.fillStyle = pal.axisText;
-    if(origin.y>=0 && origin.y<=h){
-      drawArrowHead({x:w-6, y:origin.y}, 1, 0, pal.axisText);
+    if(origin.y>=b.y && origin.y<=bottom){
+      drawArrowHead({x:right-6, y:origin.y}, 1, 0, pal.axisText);
       ctx.textAlign = 'right';
       ctx.textBaseline = 'bottom';
-      ctx.fillText('x', w-14, origin.y-6);
+      ctx.fillText('x', right-14, origin.y-6);
     }
-    if(origin.x>=0 && origin.x<=w){
-      drawArrowHead({x:origin.x, y:8}, 0, -1, pal.axisText);
+    if(origin.x>=b.x && origin.x<=right){
+      drawArrowHead({x:origin.x, y:b.y+8}, 0, -1, pal.axisText);
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText('y', origin.x+8, 6);
+      ctx.fillText('y', origin.x+8, b.y+6);
     }
   }
 
@@ -4091,6 +4092,7 @@
     else if(o.type==='parallel'){ color=pal.green; dash=[11,4]; }
     else if(o.type==='tangent'){ color=pal.blue; dash=[5,3]; }
     else if(o.type==='bisectorPerp'){ color=pal.orange; dash=[3,3]; }
+    else if(o.type==='ray'){ color=pal.primary; dash=[]; }
     else { color=pal.yellow; dash=[9,3,2,3]; }
     if(o.tint) color = tintColor(pal, o.tint);
     if(o.dash) dash = DASH_PATTERNS[o.dash] || [];
@@ -4104,6 +4106,13 @@
     ctx.setLineDash(dash);
     ctx.stroke();
     ctx.setLineDash([]);
+    if(o.type==='ray'){
+      // Mark the open end so it reads as a ray, not a full line — the fixed
+      // endpoint (pa, drawn by drawPointObj like any other point) is enough to
+      // mark the closed end.
+      const rdx=pb.x-pa.x, rdy=pb.y-pa.y, rl=Math.hypot(rdx,rdy);
+      if(rl>1e-6) drawArrowHead(pb, rdx/rl, rdy/rl, color, 9);
+    }
   }
 
   // The direction a right-angle marker's arm should point from the shared vertex,
@@ -4694,6 +4703,7 @@
     if(currentTool==='point'){ handlePointClick(sx,sy); return; }
     if(currentTool==='segment'){ handleTwoPointTool(sx,sy,'segment'); return; }
     if(currentTool==='line'){ handleTwoPointTool(sx,sy,'line'); return; }
+    if(currentTool==='ray'){ handleTwoPointTool(sx,sy,'ray'); return; }
     if(currentTool==='circle'){ handleTwoPointTool(sx,sy,'circle'); return; }
     if(currentTool==='polygon'){ handlePolygonClick(sx,sy); return; }
     if(currentTool==='perpendicular'){ handlePerpendicularClick(sx,sy); return; }
@@ -5136,7 +5146,7 @@
   setupToolMenu('triangleMenuBtn', 'triangleSubmenu');
   setupToolMenu('quadMenuBtn', 'quadSubmenu');
   setupToolMenu('pointMenuBtn', 'pointSubmenu');
-  setupToolMenu('vectorsMenuBtn', 'vectorsSubmenu');
+  setupToolMenu('lineMenuBtn', 'lineSubmenu');
   setupToolMenu('linesMenuBtn', 'linesSubmenu');
   setupToolMenu('circleMenuBtn', 'circleSubmenu');
   setupToolMenu('cevianMenuBtn', 'cevianSubmenu');
@@ -5327,6 +5337,7 @@
     const frame = getPageFrameRect(w,h); // target A4-ratio rect every page's content is scaled to fill
     const screenDpr = Math.max(1, window.devicePixelRatio || 1);
     renderDprOverride = Math.max(screenDpr, printSize.pxW/frame.w, printSize.pxH/frame.h);
+    printFrameOverride = frame;
     const previousSelectedId = selectedId, previousHoverId = hoverId;
     selectedId = null; hoverId = null;
     try{
@@ -5357,6 +5368,7 @@
     return dataUrls;
     } finally {
       renderDprOverride = null;
+      printFrameOverride = null;
       const active = pages[activeIndex];
       objects = active.objects; inkStrokes = active.inkStrokes;
       Object.assign(view, active.view);
