@@ -1774,8 +1774,6 @@
   let pending = [];        // array of point ids, used by point-collecting tools
   let pendingBase = null;  // line-like object id, used by perpendicular tool
   let radiusCircleCenterId = null; // center point already chosen, waiting on the radius dialog (see handleCircleRadiusClick)
-  let quadCircleBase = null; // base circle id chosen, waiting on the 4 angle clicks (see handleCyclicQuadClick / handleTangentQuadClick)
-  let quadAngles = [];       // world angles (radians) collected so far for the above
   let selectedId = null;
   let hoverId = null;
   let draggingPointId = null;
@@ -1999,16 +1997,20 @@
     }
     if(p.sub === 'tangentIntersect'){
       /* Описан четириъгълник: this vertex is where the tangent lines to the base
-         circle at two chosen angles (ta, tb) cross. The tangent to a circle at
-         angle θ is the set of points X with (X-center)·(cosθ,sinθ) = r, so the
-         vertex solves that 2×2 linear system for the two angles — see the
-         comment at handleTangentQuadClick for the derivation. Recomputed live
-         from the circle's current center/radius, so dragging the circle moves
-         the whole quadrilateral with it. */
-      const circleObj = getObj(p.parents[0]);
+         circle at two touch points (parents[0], parents[1] — ordinary 'onobject'
+         points ON the circle, so they're freely draggable along it) cross. The
+         tangent to a circle at the point currently sitting at angle θ is the set
+         of points X with (X-center)·(cosθ,sinθ) = r, so the vertex solves that
+         2×2 linear system for the two touch points' CURRENT angles — recomputed
+         from their live position every call, so dragging either touch point (or
+         the circle itself) reshapes the quadrilateral immediately, exactly like
+         dragging a triangle/quad's free vertices does elsewhere in the app. */
+      const circleObj = getObj(p.parents[2]);
       if(circleObj){
         const cr = circleCenterRadius(circleObj);
-        const ta = p.ta, tb = p.tb;
+        const Ta = getPointXY(p.parents[0]), Tb = getPointXY(p.parents[1]);
+        const ta = Math.atan2(Ta.y-cr.c.y, Ta.x-cr.c.x);
+        const tb = Math.atan2(Tb.y-cr.c.y, Tb.x-cr.c.x);
         const det = Math.sin(tb-ta);
         if(Math.abs(det) > 1e-9){
           const dx = cr.r*(Math.sin(tb)-Math.sin(ta))/det;
@@ -2902,8 +2904,6 @@
   function resetPending(){
     pending = [];
     pendingBase = null;
-    quadCircleBase = null;
-    quadAngles = [];
     updateHint();
   }
 
@@ -3457,38 +3457,39 @@
   /* Вписан четириъгълник — click a circle, then 4 points on it: those become
      the quadrilateral's vertices ('onobject' points, same as the generic
      "точка върху обект" tool, so they stay draggable along the circle
-     afterwards). The 4 angles are sorted before building the shape so the
-     vertices are always connected in the order they sit around the circle —
-     clicking them in any order still gives a simple, non-self-crossing
-     quadrilateral. */
+     afterwards — dragging one moves that vertex and the polygon updates with
+     it, same as any other polygon). pendingBase holds the chosen circle and
+     pending holds the touch points collected so far, exactly like the
+     tri_free/quad_* shape tools above reuse pending for their own vertices. */
   function handleCyclicQuadClick(sx,sy){
-    if(quadCircleBase===null){
+    if(pendingBase===null){
       const cid = pickCircle(sx,sy);
       if(!cid) return;
-      quadCircleBase = cid;
-      quadAngles = [];
+      pendingBase = cid;
       hintText.textContent = 'Избери 4 точки върху окръжността — стават върхове на четириъгълника.';
       render();
       return;
     }
-    const circleObj = getObj(quadCircleBase);
+    const circleObj = getObj(pendingBase);
     if(!circleObj){ resetPending(); render(); return; }
+    armHistory();
     const cr = circleCenterRadius(circleObj);
     const w = screenToWorld(sx,sy);
-    quadAngles.push(Math.atan2(w.y-cr.c.y, w.x-cr.c.x));
-    if(quadAngles.length < 4){
-      hintText.textContent = 'Избери още '+(4-quadAngles.length)+' точки върху окръжността.';
+    const t = Math.atan2(w.y-cr.c.y, w.x-cr.c.x);
+    const pid = uid();
+    objects.push({ id:pid, type:'point', sub:'onobject', parents:[pendingBase], t, label:nextLabel() });
+    pending.push(pid);
+    commitArmedHistory();
+    if(pending.length < 4){
+      hintText.textContent = 'Избери още '+(4-pending.length)+' точки върху окръжността.';
       render();
       return;
     }
+    // Connect the 4 points in the order they sit around the circle (by current
+    // angle), not click order, so the quadrilateral is always simple — never
+    // self-crossing — however they were clicked.
+    const verts = pending.slice().sort((a,b)=>getObj(a).t-getObj(b).t);
     saveHistory();
-    const circleId = quadCircleBase;
-    const sorted = quadAngles.slice().sort((a,b)=>a-b);
-    const verts = sorted.map(t=>{
-      const pid = uid();
-      objects.push({ id:pid, type:'point', sub:'onobject', parents:[circleId], t, label:nextLabel() });
-      return pid;
-    });
     objects.push({ id:uid(), type:'polygon', parents:verts });
     resetPending();
     hintText.textContent = '✓ Построен вписан четириъгълник.';
@@ -3496,42 +3497,49 @@
   }
 
   /* Описан четириъгълник — click a circle, then 4 points on it marking the
-     touch points of its sides; each side is the tangent line to the circle at
-     one of those points, and each vertex is where two neighbouring tangents
-     cross (see the 'tangentIntersect' case in getPointXY for the formula).
-     The 4 angles are sorted first, same reasoning as the cyclic quad above,
-     so the tangent lines are always paired up with their circle-order
-     neighbours. */
+     touch points of its sides. Each touch point is an ordinary 'onobject'
+     point on the circle (draggable along it, just like the cyclic quad's
+     vertices above); each side is the tangent line to the circle at one of
+     them, and each polygon vertex is where two neighbouring tangents cross
+     (see the 'tangentIntersect' case in getPointXY, which reads the touch
+     points' LIVE position — that's what makes dragging a touch point reshape
+     the quadrilateral instead of leaving it frozen at the angle it was first
+     clicked at). Touch points are sorted by angle before pairing them up into
+     tangent lines, same non-self-crossing reasoning as the cyclic quad. */
   function handleTangentQuadClick(sx,sy){
-    if(quadCircleBase===null){
+    if(pendingBase===null){
       const cid = pickCircle(sx,sy);
       if(!cid) return;
-      quadCircleBase = cid;
-      quadAngles = [];
+      pendingBase = cid;
       hintText.textContent = 'Избери 4 точки върху окръжността — допирателните в тях ще образуват страните.';
       render();
       return;
     }
-    const circleObj = getObj(quadCircleBase);
+    const circleObj = getObj(pendingBase);
     if(!circleObj){ resetPending(); render(); return; }
+    armHistory();
     const cr = circleCenterRadius(circleObj);
     const w = screenToWorld(sx,sy);
-    quadAngles.push(Math.atan2(w.y-cr.c.y, w.x-cr.c.x));
-    if(quadAngles.length < 4){
-      hintText.textContent = 'Избери още '+(4-quadAngles.length)+' точки върху окръжността.';
+    const t = Math.atan2(w.y-cr.c.y, w.x-cr.c.x);
+    const pid = uid();
+    objects.push({ id:pid, type:'point', sub:'onobject', parents:[pendingBase], t, label:nextLabel() });
+    pending.push(pid);
+    commitArmedHistory();
+    if(pending.length < 4){
+      hintText.textContent = 'Избери още '+(4-pending.length)+' точки върху окръжността.';
       render();
       return;
     }
     saveHistory();
-    const circleId = quadCircleBase;
-    const sorted = quadAngles.slice().sort((a,b)=>a-b);
-    const n = sorted.length;
+    const circleId = pendingBase;
+    const touchIds = pending.slice().sort((a,b)=>getObj(a).t-getObj(b).t);
+    const n = touchIds.length;
     const verts = [];
     for(let i=0;i<n;i++){
-      const ta = sorted[(i-1+n)%n], tb = sorted[i];
-      const pid = uid();
-      objects.push({ id:pid, type:'point', sub:'tangentIntersect', parents:[circleId], ta, tb, label:nextLabel() });
-      verts.push(pid);
+      const A = touchIds[(i-1+n)%n], B = touchIds[i];
+      const vid = uid();
+      objects.push({ id:vid, type:'point', sub:'tangentIntersect', parents:[A,B,circleId], label:nextLabel() });
+      verts.push(vid);
     }
     objects.push({ id:uid(), type:'polygon', parents:verts });
     resetPending();
@@ -5242,7 +5250,7 @@
     if(e.key==='Escape'){
       // Undo whatever unfinished construction is in progress — but never touch
       // objects already committed to the board (see item 4 in the edit brief).
-      const wasMidConstruction = cropMode || pending.length>0 || pendingBase!==null || quadCircleBase!==null;
+      const wasMidConstruction = cropMode || pending.length>0 || pendingBase!==null;
       if(cropMode){ cropMode=false; cropTargetId=null; cropRectStart=null; cropRectCurrent=null; }
       resetPending();
       if(wasMidConstruction){
