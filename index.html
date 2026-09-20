@@ -1013,6 +1013,9 @@
   #radiusDialog{max-width:90vw;width:280px;border:1px solid #739797;border-radius:12px;padding:20px;}
   #radiusDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:12px 0;font-size:18px;}
   #radiusDialog::backdrop{background:#0007;}
+  #sidesDialog{max-width:90vw;width:280px;border:1px solid #739797;border-radius:12px;padding:20px;}
+  #sidesDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:12px 0;font-size:18px;}
+  #sidesDialog::backdrop{background:#0007;}
 
   .welcome-remember-row{
     display:flex;
@@ -1126,12 +1129,18 @@
         </div>
       </div>
 
-      <button class="tool-btn" data-tool="polygon" data-tint="white" title="Многоъгълник">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="12,3 21,9 18,20 6,20 3,9"/>
-        </svg>
-        <span class="tool-label">Многоъгълник</span>
-      </button>
+      <div class="tool-menu" id="polygonMenu">
+        <button type="button" class="tool-btn menu-trigger" id="polygonMenuBtn" data-tint="white" title="Многоъгълник" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12,3 21,9 18,20 6,20 3,9"/>
+          </svg>
+          <span class="tool-label">Многоъгълник</span>
+        </button>
+        <div class="tool-submenu" id="polygonSubmenu" role="menu" aria-label="Вид многоъгълник" hidden>
+          <button type="button" class="submenu-item" data-tool="polygon" role="menuitem">Произволен</button>
+          <button type="button" class="submenu-item" data-tool="regularPolygon" role="menuitem">Правилен</button>
+        </div>
+      </div>
 
       <div class="tool-menu lesson-keep" id="triangleMenu">
         <button type="button" class="tool-btn menu-trigger" id="triangleMenuBtn" data-tint="white" title="Триъгълник" aria-haspopup="true" aria-expanded="false">
@@ -1159,6 +1168,8 @@
           <button type="button" class="submenu-item" data-tool="quad_trap_iso" role="menuitem">Равнобедрен трапец</button>
           <button type="button" class="submenu-item" data-tool="quad_trap_right" role="menuitem">Правоъгълен трапец</button>
           <button type="button" class="submenu-item" data-tool="quad_trap_free" role="menuitem">Произволен трапец</button>
+          <button type="button" class="submenu-item" data-tool="quad_cyclic" role="menuitem">Вписан в окръжност</button>
+          <button type="button" class="submenu-item" data-tool="quad_circumscribed" role="menuitem">Описан около окръжност</button>
         </div>
       </div>
 
@@ -1558,6 +1569,7 @@
      "active" for a given currentTool, so the flyout trigger reflects the live selection
      even while its submenu is closed */
   const MENU_TRIGGER_MEMBERSHIP = new Map([
+    ['polygonMenuBtn', tool => tool==='polygon' || tool==='regularPolygon'],
     ['triangleMenuBtn', tool => tool.indexOf('tri_')===0],
     ['quadMenuBtn', tool => tool.indexOf('quad_')===0],
     ['pointMenuBtn', tool => ['point','pointon','intersect','midpoint'].includes(tool)],
@@ -1762,6 +1774,8 @@
   let pending = [];        // array of point ids, used by point-collecting tools
   let pendingBase = null;  // line-like object id, used by perpendicular tool
   let radiusCircleCenterId = null; // center point already chosen, waiting on the radius dialog (see handleCircleRadiusClick)
+  let quadCircleBase = null; // base circle id chosen, waiting on the 4 angle clicks (see handleCyclicQuadClick / handleTangentQuadClick)
+  let quadAngles = [];       // world angles (radians) collected so far for the above
   let selectedId = null;
   let hoverId = null;
   let draggingPointId = null;
@@ -1972,6 +1986,40 @@
       const u = normalize(sub(B,A));
       const t = dot(sub(C,M), u);
       return { x:C.x-2*t*u.x, y:C.y-2*t*u.y };
+    }
+    if(p.sub === 'regularPolyVertex'){
+      /* Правилен многоъгълник: vertex 0 is the free point the user placed (the
+         "V" argument below); every other vertex is that same point rotated
+         around the center by index/n of a full turn. Dragging the center moves
+         the whole shape, dragging V rotates and/or resizes it — everything else
+         follows automatically, same idea as equilateralApex/squareApex above. */
+      const C = getPointXY(p.parents[0]), V = getPointXY(p.parents[1]);
+      const v = rotateVec(sub(V,C), p.index * 2*Math.PI/p.n);
+      return { x:C.x+v.x, y:C.y+v.y };
+    }
+    if(p.sub === 'tangentIntersect'){
+      /* Описан четириъгълник: this vertex is where the tangent lines to the base
+         circle at two chosen angles (ta, tb) cross. The tangent to a circle at
+         angle θ is the set of points X with (X-center)·(cosθ,sinθ) = r, so the
+         vertex solves that 2×2 linear system for the two angles — see the
+         comment at handleTangentQuadClick for the derivation. Recomputed live
+         from the circle's current center/radius, so dragging the circle moves
+         the whole quadrilateral with it. */
+      const circleObj = getObj(p.parents[0]);
+      if(circleObj){
+        const cr = circleCenterRadius(circleObj);
+        const ta = p.ta, tb = p.tb;
+        const det = Math.sin(tb-ta);
+        if(Math.abs(det) > 1e-9){
+          const dx = cr.r*(Math.sin(tb)-Math.sin(ta))/det;
+          const dy = cr.r*(Math.cos(ta)-Math.cos(tb))/det;
+          const x = cr.c.x+dx, y = cr.c.y+dy;
+          p._lastX=x; p._lastY=y;
+          return { x, y };
+        }
+      }
+      if(p._lastX !== undefined) return { x:p._lastX, y:p._lastY };
+      return { x:0, y:0 };
     }
     if(p.sub === 'bisectorFoot'){
       /* Where the internal angle bisector from a triangle's vertex meets the
@@ -2826,7 +2874,10 @@
     quad_trap_right: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка от основата.', 'Кликни за височината над втората точка — под прав ъгъл.', 'Кликни, за да зададеш дължината на горната страна.'],
     quad_trap_free: ['Избери или постави първата точка от основата.', 'Избери или постави втората точка от основата.', 'Избери или постави горния ляв връх.', 'Кликни, за да зададеш дължината на горната страна — успоредна на основата.'],
     bisectorPerp: 'Избери отсечка — симетралата (перпендикулярната права през средата) ще се построи автоматично и ще се обновява, ако местиш краищата.',
-    circleRadius: 'Избери центъра на окръжността, после въведи радиуса в полето.'
+    circleRadius: 'Избери центъра на окръжността, после въведи радиуса в полето.',
+    regularPolygon: ['Избери или постави центъра на многоъгълника.', 'Избери или постави първия връх — после въведи броя страни в полето.'],
+    quad_cyclic: 'Избери окръжност, после 4 точки върху нея — стават върхове на вписания четириъгълник.',
+    quad_circumscribed: 'Избери окръжност, после 4 точки върху нея — допирателните в тях образуват описания четириъгълник.'
   };
 
   function updateHint(){
@@ -2851,6 +2902,8 @@
   function resetPending(){
     pending = [];
     pendingBase = null;
+    quadCircleBase = null;
+    quadAngles = [];
     updateHint();
   }
 
@@ -2921,6 +2974,16 @@
   // valid radius means for it.
   function openRadiusDialog(onDone){
     const dialog=document.getElementById('radiusDialog'), input=document.getElementById('radiusDialogInput');
+    input.value='';
+    dialog.onclose=()=>{ onDone(dialog.returnValue==='save' ? input.value : null); canvas.focus(); };
+    dialog.returnValue='cancel'; dialog.showModal(); input.focus();
+  }
+
+  // Side-count input for "Правилен многоъгълник" (see handleRegularPolygonClick).
+  // Same contract as openRadiusDialog: onDone gets the typed string on confirm,
+  // or null on cancel/close.
+  function openSidesDialog(onDone){
+    const dialog=document.getElementById('sidesDialog'), input=document.getElementById('sidesDialogInput');
     input.value='';
     dialog.onclose=()=>{ onDone(dialog.returnValue==='save' ? input.value : null); canvas.focus(); };
     dialog.returnValue='cancel'; dialog.showModal(); input.focus();
@@ -3339,6 +3402,141 @@
       });
       render();
     }
+  }
+
+  /* Правилен многоъгълник — first two clicks pick/place the center and one
+     vertex (an ordinary free point, so dragging it rotates/resizes the whole
+     shape); a small dialog then asks how many sides. Every other vertex is a
+     'regularPolyVertex' point rotated around the center — see getPointXY —
+     wrapped in the same type:'polygon' object every triangle/quad tool ends
+     with, so fill/area/incircle/circumcircle/drag/delete all just work. */
+  function handleRegularPolygonClick(sx,sy){
+    armHistory();
+    const before = objects.length;
+    const pid = getOrCreatePointAt(sx,sy);
+    if(pending.length===1 && pid===pending[0]){
+      discardArmedHistory();
+      hintText.textContent = 'Върхът не може да съвпада с центъра — избери друга точка.';
+      render();
+      return;
+    }
+    const objectsChanged = objects.length!==before;
+    pending.push(pid);
+    if(pending.length < 2){
+      if(objectsChanged) commitArmedHistory(); else discardArmedHistory();
+      updateHint();
+      render();
+      return;
+    }
+    if(objectsChanged) commitArmedHistory(); else discardArmedHistory();
+    const centerId = pending[0], vertexId = pending[1];
+    hintText.textContent = 'Въведи брой страни (3–12) в полето и натисни Enter.';
+    render();
+    openSidesDialog(function(value){
+      resetPending();
+      if(value===null){ updateHint(); render(); return; }
+      const n = parseInt(String(value).trim(), 10);
+      if(!Number.isFinite(n) || n<3 || n>12){
+        hintText.textContent = 'Въведи цяло число от 3 до 12 за брой страни.';
+        render();
+        return;
+      }
+      saveHistory();
+      const verts = [vertexId];
+      for(let k=1;k<n;k++){
+        const kid = uid();
+        objects.push({ id:kid, type:'point', sub:'regularPolyVertex', parents:[centerId, vertexId], n, index:k, label:nextLabel() });
+        verts.push(kid);
+      }
+      objects.push({ id:uid(), type:'polygon', parents:verts });
+      hintText.textContent = '✓ Построен правилен '+n+'-ъгълник.';
+      render();
+    });
+  }
+
+  /* Вписан четириъгълник — click a circle, then 4 points on it: those become
+     the quadrilateral's vertices ('onobject' points, same as the generic
+     "точка върху обект" tool, so they stay draggable along the circle
+     afterwards). The 4 angles are sorted before building the shape so the
+     vertices are always connected in the order they sit around the circle —
+     clicking them in any order still gives a simple, non-self-crossing
+     quadrilateral. */
+  function handleCyclicQuadClick(sx,sy){
+    if(quadCircleBase===null){
+      const cid = pickCircle(sx,sy);
+      if(!cid) return;
+      quadCircleBase = cid;
+      quadAngles = [];
+      hintText.textContent = 'Избери 4 точки върху окръжността — стават върхове на четириъгълника.';
+      render();
+      return;
+    }
+    const circleObj = getObj(quadCircleBase);
+    if(!circleObj){ resetPending(); render(); return; }
+    const cr = circleCenterRadius(circleObj);
+    const w = screenToWorld(sx,sy);
+    quadAngles.push(Math.atan2(w.y-cr.c.y, w.x-cr.c.x));
+    if(quadAngles.length < 4){
+      hintText.textContent = 'Избери още '+(4-quadAngles.length)+' точки върху окръжността.';
+      render();
+      return;
+    }
+    saveHistory();
+    const circleId = quadCircleBase;
+    const sorted = quadAngles.slice().sort((a,b)=>a-b);
+    const verts = sorted.map(t=>{
+      const pid = uid();
+      objects.push({ id:pid, type:'point', sub:'onobject', parents:[circleId], t, label:nextLabel() });
+      return pid;
+    });
+    objects.push({ id:uid(), type:'polygon', parents:verts });
+    resetPending();
+    hintText.textContent = '✓ Построен вписан четириъгълник.';
+    render();
+  }
+
+  /* Описан четириъгълник — click a circle, then 4 points on it marking the
+     touch points of its sides; each side is the tangent line to the circle at
+     one of those points, and each vertex is where two neighbouring tangents
+     cross (see the 'tangentIntersect' case in getPointXY for the formula).
+     The 4 angles are sorted first, same reasoning as the cyclic quad above,
+     so the tangent lines are always paired up with their circle-order
+     neighbours. */
+  function handleTangentQuadClick(sx,sy){
+    if(quadCircleBase===null){
+      const cid = pickCircle(sx,sy);
+      if(!cid) return;
+      quadCircleBase = cid;
+      quadAngles = [];
+      hintText.textContent = 'Избери 4 точки върху окръжността — допирателните в тях ще образуват страните.';
+      render();
+      return;
+    }
+    const circleObj = getObj(quadCircleBase);
+    if(!circleObj){ resetPending(); render(); return; }
+    const cr = circleCenterRadius(circleObj);
+    const w = screenToWorld(sx,sy);
+    quadAngles.push(Math.atan2(w.y-cr.c.y, w.x-cr.c.x));
+    if(quadAngles.length < 4){
+      hintText.textContent = 'Избери още '+(4-quadAngles.length)+' точки върху окръжността.';
+      render();
+      return;
+    }
+    saveHistory();
+    const circleId = quadCircleBase;
+    const sorted = quadAngles.slice().sort((a,b)=>a-b);
+    const n = sorted.length;
+    const verts = [];
+    for(let i=0;i<n;i++){
+      const ta = sorted[(i-1+n)%n], tb = sorted[i];
+      const pid = uid();
+      objects.push({ id:pid, type:'point', sub:'tangentIntersect', parents:[circleId], ta, tb, label:nextLabel() });
+      verts.push(pid);
+    }
+    objects.push({ id:uid(), type:'polygon', parents:verts });
+    resetPending();
+    hintText.textContent = '✓ Построен описан четириъгълник.';
+    render();
   }
 
   function handleTangentClick(sx,sy){
@@ -4724,6 +4922,9 @@
     if(currentTool==='circumcircle'){ handleCircumcircleClick(sx,sy); return; }
     if(currentTool==='bisectorPerp'){ handleBisectorPerpClick(sx,sy); return; }
     if(currentTool==='circleRadius'){ handleCircleRadiusClick(sx,sy); return; }
+    if(currentTool==='regularPolygon'){ handleRegularPolygonClick(sx,sy); return; }
+    if(currentTool==='quad_cyclic'){ handleCyclicQuadClick(sx,sy); return; }
+    if(currentTool==='quad_circumscribed'){ handleTangentQuadClick(sx,sy); return; }
     if(SHAPE_SPECS[currentTool]){ handleShapeClick(sx,sy); return; }
     if(currentTool==='delete'){ handleDeleteClick(sx,sy); return; }
     if(currentTool==='pen' || currentTool==='smartpen'){
@@ -5041,7 +5242,7 @@
     if(e.key==='Escape'){
       // Undo whatever unfinished construction is in progress — but never touch
       // objects already committed to the board (see item 4 in the edit brief).
-      const wasMidConstruction = cropMode || pending.length>0 || pendingBase!==null;
+      const wasMidConstruction = cropMode || pending.length>0 || pendingBase!==null || quadCircleBase!==null;
       if(cropMode){ cropMode=false; cropTargetId=null; cropRectStart=null; cropRectCurrent=null; }
       resetPending();
       if(wasMidConstruction){
@@ -5143,6 +5344,7 @@
     toolMenus.push({ trigger, submenu, closeMenu, positionMenu });
     wireToolMenuGlobals();
   }
+  setupToolMenu('polygonMenuBtn', 'polygonSubmenu');
   setupToolMenu('triangleMenuBtn', 'triangleSubmenu');
   setupToolMenu('quadMenuBtn', 'quadSubmenu');
   setupToolMenu('pointMenuBtn', 'pointSubmenu');
@@ -6130,6 +6332,14 @@
   document.body.appendChild(radiusDialog);
   radiusDialog.querySelector('form').addEventListener('keydown',e=>{
     if(e.key==='Enter'){e.preventDefault();radiusDialog.close('save');}
+  });
+
+  const sidesDialog=document.createElement('dialog');
+  sidesDialog.id='sidesDialog';
+  sidesDialog.innerHTML='<form method="dialog"><label for="sidesDialogInput">Брой страни (3–12)</label><input id="sidesDialogInput" type="text" inputmode="numeric" maxlength="2" autocomplete="off" placeholder="напр. 5"><button value="cancel">Отказ</button> <button value="save">Построй</button></form>';
+  document.body.appendChild(sidesDialog);
+  sidesDialog.querySelector('form').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();sidesDialog.close('save');}
   });
 
   /* ================= boot ================= */
