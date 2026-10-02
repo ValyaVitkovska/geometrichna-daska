@@ -1016,6 +1016,15 @@
   #sidesDialog{max-width:90vw;width:280px;border:1px solid #739797;border-radius:12px;padding:20px;}
   #sidesDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:12px 0;font-size:18px;}
   #sidesDialog::backdrop{background:#0007;}
+  #lengthDialog{max-width:90vw;width:280px;border:1px solid #739797;border-radius:12px;padding:20px;}
+  #lengthDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:12px 0;font-size:18px;}
+  #lengthDialog::backdrop{background:#0007;}
+  #angleDialog{max-width:90vw;width:280px;border:1px solid #739797;border-radius:12px;padding:20px;}
+  #angleDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:12px 0;font-size:18px;}
+  #angleDialog::backdrop{background:#0007;}
+  #labelDialog{max-width:90vw;width:280px;border:1px solid #739797;border-radius:12px;padding:20px;}
+  #labelDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:12px 0;font-size:18px;}
+  #labelDialog::backdrop{background:#0007;}
 
   .welcome-remember-row{
     display:flex;
@@ -1107,6 +1116,7 @@
         </button>
         <div class="tool-submenu" id="lineSubmenu" role="menu" aria-label="Вид отсечка, права или вектор" hidden>
           <button type="button" class="submenu-item" data-tool="segment" role="menuitem">Отсечка</button>
+          <button type="button" class="submenu-item" data-tool="segmentLength" role="menuitem">Отсечка с дадена дължина</button>
           <button type="button" class="submenu-item" data-tool="line" role="menuitem">Права</button>
           <button type="button" class="submenu-item" data-tool="ray" role="menuitem">Лъч</button>
           <button type="button" class="submenu-item" data-tool="vector" role="menuitem">Вектор</button>
@@ -1204,14 +1214,20 @@
         </div>
       </div>
 
-      <button class="tool-btn" data-tool="angle" data-tint="yellow" title="Избери ъгъл — стойността му се показва при включен бутон Стойности">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="4" y1="20" x2="20" y2="20"/>
-          <line x1="4" y1="20" x2="16" y2="5"/>
-          <path d="M13 20a9 9 0 0 1 2.2-9.4"/>
-        </svg>
-        <span class="tool-label">Ъгъл</span>
-      </button>
+      <div class="tool-menu" id="angleMenu">
+        <button type="button" class="tool-btn menu-trigger" id="angleMenuBtn" data-tint="yellow" title="Ъгъл" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="20" x2="20" y2="20"/>
+            <line x1="4" y1="20" x2="16" y2="5"/>
+            <path d="M13 20a9 9 0 0 1 2.2-9.4"/>
+          </svg>
+          <span class="tool-label">Ъгъл</span>
+        </button>
+        <div class="tool-submenu" id="angleSubmenu" role="menu" aria-label="Вид ъгъл" hidden>
+          <button type="button" class="submenu-item" data-tool="angle" role="menuitem">Избери ъгъл</button>
+          <button type="button" class="submenu-item" data-tool="angleFixed" role="menuitem">Ъгъл с дадена големина</button>
+        </div>
+      </div>
 
       <div class="tool-menu" id="circlesMenu">
         <button type="button" class="tool-btn menu-trigger" id="circlesMenuBtn" data-tint="green" title="Окръжности в триъгълник" aria-haspopup="true" aria-expanded="false">
@@ -1564,7 +1580,7 @@
   const LINE_TYPES = ['segment','line','ray','perpendicular','bisector','parallel','tangent','bisectorPerp'];
   /* point subs that stay draggable after a shape construction finishes — each recomputes
      its own stored parameter (t / angle) from the drag position, see the pointermove handler */
-  const DRAGGABLE_SUBS = new Set(['free','onobject','onPerpBisector','onPerpThrough','onCircleRadiusFrom','onParallelThrough','onThalesCircle']);
+  const DRAGGABLE_SUBS = new Set(['free','onobject','onPerpBisector','onPerpThrough','onCircleRadiusFrom','onParallelThrough','onThalesCircle','onFixedRadius','onFixedAngleFrom']);
   /* which category button (Триъгълник / Четириъгълник / Прави / Точки) should show as
      "active" for a given currentTool, so the flyout trigger reflects the live selection
      even while its submenu is closed */
@@ -1573,7 +1589,8 @@
     ['triangleMenuBtn', tool => tool.indexOf('tri_')===0],
     ['quadMenuBtn', tool => tool.indexOf('quad_')===0],
     ['pointMenuBtn', tool => ['point','pointon','intersect','midpoint'].includes(tool)],
-    ['lineMenuBtn', tool => ['segment','line','ray','vector','vectorEqual'].includes(tool)],
+    ['lineMenuBtn', tool => ['segment','segmentLength','line','ray','vector','vectorEqual'].includes(tool)],
+    ['angleMenuBtn', tool => tool==='angle' || tool==='angleFixed'],
     ['linesMenuBtn', tool => ['perpendicular','parallel','bisector','tangent','bisectorPerp'].includes(tool)],
     ['circleMenuBtn', tool => ['circle','circleRadius'].includes(tool)],
     ['cevianMenuBtn', tool => ['altitude','median','bisectorSeg'].includes(tool)],
@@ -1953,6 +1970,27 @@
       const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]);
       const r = dist(A,B);
       return { x:B.x+r*Math.cos(p.t), y:B.y+r*Math.sin(p.t) };
+    }
+    if(p.sub === 'onFixedRadius'){
+      /* "Отсечка с дадена дължина": this point sits at an EXACT, user-typed
+         distance (p.r, fixed at construction time) from its anchor, at a
+         freely draggable angle p.t — so afterwards it can be swung all the
+         way around the anchor and the segment to it always keeps that exact
+         length, same idea as onCircleRadiusFrom above but with a literal
+         number instead of a second point setting the radius. */
+      const A = getPointXY(p.parents[0]);
+      return { x:A.x+p.r*Math.cos(p.t), y:A.y+p.r*Math.sin(p.t) };
+    }
+    if(p.sub === 'onFixedAngleFrom'){
+      /* "Ъгъл с дадена големина": this point sits on the ray from the vertex
+         (parents[0]) that makes an EXACT, user-typed angle (p.ang, radians,
+         fixed at construction time) with the existing arm through parents[1].
+         p.t is the freely draggable distance along that ray, so the arm's
+         length can change afterwards but the angle itself never does. */
+      const V = getPointXY(p.parents[0]), A = getPointXY(p.parents[1]);
+      const dir = normalize(sub(A,V));
+      const rotated = rotateVec(dir, p.ang);
+      return { x:V.x+rotated.x*p.t, y:V.y+rotated.y*p.t };
     }
     if(p.sub === 'onThalesCircle'){
       /* Thales' theorem: any point on the circle whose diameter is AB sees AB at a
@@ -2837,7 +2875,7 @@
 
   /* ================= tool step hints ================= */
   const TOOL_HINTS = {
-    move: 'Провлачи точка, за да я преместиш. Кликни обект, за да го избереш — Delete го изтрива.',
+    move: 'Провлачи точка, за да я преместиш. Кликни обект, за да го избереш — Delete го изтрива. Кликни два пъти върху точка, за да я преименуваш.',
     point: 'Кликни върху дъската, за да поставиш точка.',
     pointon: 'Кликни върху отсечка, права, окръжност или друг обект — точката ще остане закачена за него и ще се движи само по него.',
     segment: ['Избери или постави първа точка на отсечката.', 'Избери или постави втора точка.'],
@@ -2879,7 +2917,9 @@
     circleRadius: 'Избери центъра на окръжността, после въведи радиуса в полето.',
     regularPolygon: ['Избери или постави центъра на многоъгълника.', 'Избери или постави първия връх — после въведи броя страни в полето.'],
     quad_cyclic: 'Избери окръжност, после 4 точки върху нея — стават върхове на вписания четириъгълник.',
-    quad_circumscribed: 'Избери окръжност, после 4 точки върху нея — допирателните в тях образуват описания четириъгълник.'
+    quad_circumscribed: 'Избери окръжност, после 4 точки върху нея — допирателните в тях образуват описания четириъгълник.',
+    segmentLength: ['Избери или постави първата точка на отсечката.', 'Кликни в посоката на втория край — после въведи дължината в полето.'],
+    angleFixed: ['Избери или постави върха на ъгъла.', 'Избери или постави точка от първото рамо.', 'Кликни в посоката, накъде да сочи второто рамо — после въведи градусите в полето.']
   };
 
   function updateHint(){
@@ -2987,6 +3027,32 @@
     input.value='';
     dialog.onclose=()=>{ onDone(dialog.returnValue==='save' ? input.value : null); canvas.focus(); };
     dialog.returnValue='cancel'; dialog.showModal(); input.focus();
+  }
+
+  // Length input for "Отсечка с дадена дължина" (see handleSegmentLengthClick).
+  // Same onDone contract as openRadiusDialog above.
+  function openLengthDialog(onDone){
+    const dialog=document.getElementById('lengthDialog'), input=document.getElementById('lengthDialogInput');
+    input.value='';
+    dialog.onclose=()=>{ onDone(dialog.returnValue==='save' ? input.value : null); canvas.focus(); };
+    dialog.returnValue='cancel'; dialog.showModal(); input.focus();
+  }
+
+  // Degree input for "Ъгъл с дадена големина" (see handleAngleFixedClick).
+  function openAngleDialog(onDone){
+    const dialog=document.getElementById('angleDialog'), input=document.getElementById('angleDialogInput');
+    input.value='';
+    dialog.onclose=()=>{ onDone(dialog.returnValue==='save' ? input.value : null); canvas.focus(); };
+    dialog.returnValue='cancel'; dialog.showModal(); input.focus();
+  }
+
+  // Name input for renaming a point (see the canvas dblclick handler below).
+  // prefill is the point's current label, shown so the user can see/replace it.
+  function openLabelDialog(prefill, onDone){
+    const dialog=document.getElementById('labelDialog'), input=document.getElementById('labelDialogInput');
+    input.value = prefill || '';
+    dialog.onclose=()=>{ onDone(dialog.returnValue==='save' ? input.value : null); canvas.focus(); };
+    dialog.returnValue='cancel'; dialog.showModal(); input.select();
   }
 
   // Placing a symbol from the "Символи" menu works exactly like the text tool
@@ -3222,6 +3288,63 @@
     render();
   }
 
+  /* Ъгъл с дадена големина — click the vertex, then a point for the first arm
+     (both ordinary free points), then click ANYWHERE roughly on the side the
+     second arm should open towards — that third click is never turned into a
+     point, it only decides which way (clockwise or counter-clockwise from the
+     first arm) to rotate, via the sign of the cross product. A dialog then
+     asks for the exact degree measure; the second arm's point is built with
+     sub:'onFixedAngleFrom' at that exact angle (see getPointXY), draggable
+     afterwards only along its ray, so the arm's length can change but the
+     angle itself can't. */
+  function handleAngleFixedClick(sx,sy){
+    armHistory();
+    const before = objects.length;
+    const pid = getOrCreatePointAt(sx,sy);
+    const created = objects.length !== before;
+    if(pending.length < 2){
+      if(pending.length===1 && pid===pending[0]){
+        discardArmedHistory();
+        hintText.textContent = 'Точката съвпада с върха — избери друга точка.';
+        render();
+        return;
+      }
+      pending.push(pid);
+      if(created) commitArmedHistory(); else discardArmedHistory();
+      updateHint();
+      render();
+      return;
+    }
+    if(created) objects.pop(); // the orientation click never becomes a real point
+    discardArmedHistory();
+    const vertexId = pending[0], armId = pending[1];
+    const V = getPointXY(vertexId), A = getPointXY(armId);
+    const dir = normalize(sub(A,V));
+    const w = screenToWorld(sx,sy);
+    const cross = dir.x*(w.y-V.y) - dir.y*(w.x-V.x);
+    const sign = cross>=0 ? 1 : -1;
+    const armLen = dist(V,A);
+    hintText.textContent = 'Въведи градусите (0–180) в полето и натисни Enter.';
+    render();
+    openAngleDialog(function(value){
+      resetPending();
+      if(value===null){ updateHint(); render(); return; }
+      const deg = parseFloat(String(value).trim().replace(',', '.'));
+      if(!isFinite(deg) || deg<=0 || deg>=180){
+        hintText.textContent = 'Въведи число от 0 до 180 за градуси.';
+        render();
+        return;
+      }
+      saveHistory();
+      const ang = sign * deg*Math.PI/180;
+      const newId = uid();
+      objects.push({ id:newId, type:'point', sub:'onFixedAngleFrom', parents:[vertexId, armId], ang, t:armLen, label:nextLabel() });
+      objects.push({ id:uid(), type:'angle', parents:[armId, vertexId, newId], label:nextGreekLabel() });
+      hintText.textContent = '✓ Построен ъгъл от '+formatMeasure(deg)+'°.';
+      render();
+    });
+  }
+
   function handleMidpointClick(sx,sy){
     // Only take the "click a whole segment -> instant midpoint" shortcut when there
     // isn't an actual point under the click. Without this guard, a point that sits
@@ -3402,6 +3525,52 @@
       });
       render();
     }
+  }
+
+  /* Отсечка с дадена дължина — click the first point, then click roughly
+     where the other end should point towards (that second click is only a
+     direction hint and never becomes a real point, same idea as the
+     orientation click in handleAngleFixedClick above); a dialog then asks for
+     the exact length. The second point is built with sub:'onFixedRadius' at
+     that exact distance (see getPointXY), draggable afterwards only around
+     the first point on a circle of that fixed radius — so it can be swung to
+     any angle but never changes the segment's length. */
+  function handleSegmentLengthClick(sx,sy){
+    armHistory();
+    const before = objects.length;
+    const pid = getOrCreatePointAt(sx,sy);
+    const created = objects.length !== before;
+    if(pending.length < 1){
+      pending.push(pid);
+      if(created) commitArmedHistory(); else discardArmedHistory();
+      updateHint();
+      render();
+      return;
+    }
+    if(created) objects.pop(); // the direction click never becomes a real point
+    discardArmedHistory();
+    const anchorId = pending[0];
+    const A = getPointXY(anchorId);
+    const w = screenToWorld(sx,sy);
+    const t0 = Math.atan2(w.y-A.y, w.x-A.x);
+    hintText.textContent = 'Въведи дължината в полето и натисни Enter.';
+    render();
+    openLengthDialog(function(value){
+      resetPending();
+      if(value===null){ updateHint(); render(); return; }
+      const r = parseFloat(String(value).trim().replace(',', '.'));
+      if(!isFinite(r) || r<=0){
+        hintText.textContent = 'Въведи положително число за дължина, напр. 4,5.';
+        render();
+        return;
+      }
+      saveHistory();
+      const bid = uid();
+      objects.push({ id:bid, type:'point', sub:'onFixedRadius', parents:[anchorId], r, t:t0, label:nextLabel() });
+      objects.push({ id:uid(), type:'segment', parents:[anchorId, bid] });
+      hintText.textContent = '✓ Построена отсечка с дължина '+formatMeasure(r)+'.';
+      render();
+    });
   }
 
   /* Правилен многоъгълник — first two clicks pick/place the center and one
@@ -4908,6 +5077,7 @@
     if(currentTool==='text'){ handleTextClick(sx,sy); return; }
     if(currentTool==='point'){ handlePointClick(sx,sy); return; }
     if(currentTool==='segment'){ handleTwoPointTool(sx,sy,'segment'); return; }
+    if(currentTool==='segmentLength'){ handleSegmentLengthClick(sx,sy); return; }
     if(currentTool==='line'){ handleTwoPointTool(sx,sy,'line'); return; }
     if(currentTool==='ray'){ handleTwoPointTool(sx,sy,'ray'); return; }
     if(currentTool==='circle'){ handleTwoPointTool(sx,sy,'circle'); return; }
@@ -4925,6 +5095,7 @@
     if(currentTool==='bisector'){ handleBisectorClick(sx,sy); return; }
     if(currentTool==='midpoint'){ handleMidpointClick(sx,sy); return; }
     if(currentTool==='angle'){ handleAngleClick(sx,sy); return; }
+    if(currentTool==='angleFixed'){ handleAngleFixedClick(sx,sy); return; }
     if(currentTool==='pointon'){ handlePointOnObjectClick(sx,sy); return; }
     if(currentTool==='incircle'){ handleIncircleClick(sx,sy); return; }
     if(currentTool==='circumcircle'){ handleCircumcircleClick(sx,sy); return; }
@@ -5005,6 +5176,26 @@
         const B = getPointXY(p.parents[1]);
         const w = screenToWorld(sx,sy);
         p.t = Math.atan2(w.y-B.y, w.x-B.x);
+        requestRender();
+        return;
+      }
+      if(p.sub==='onFixedRadius'){
+        const A = getPointXY(p.parents[0]);
+        const w = screenToWorld(sx,sy);
+        p.t = Math.atan2(w.y-A.y, w.x-A.x);
+        requestRender();
+        return;
+      }
+      if(p.sub==='onFixedAngleFrom'){
+        // Project the drag onto the fixed-angle ray itself so the point only
+        // ever slides along it (keeping the exact constructed angle); never
+        // let it cross back past the vertex, which would flip the arm onto
+        // the opposite ray and silently double the angle's apparent size.
+        const V = getPointXY(p.parents[0]), A = getPointXY(p.parents[1]);
+        const dir = normalize(sub(A,V));
+        const rayDir = rotateVec(dir, p.ang);
+        const w = screenToWorld(sx,sy);
+        p.t = Math.max(0.1, dot(sub(w,V), rayDir));
         requestRender();
         return;
       }
@@ -5107,19 +5298,45 @@
     if(currentTool!=='move') return;
     const {x:sx,y:sy} = canvasCoords(e);
     const tid = pickText(sx,sy);
-    if(!tid) return;
-    const o = getObj(tid);
-    if(!o) return;
-    openTextEditor(o.text||'', next=>{
-    if(next.trim()===''){
+    if(tid){
+      const o = getObj(tid);
+      if(!o) return;
+      openTextEditor(o.text||'', next=>{
+      if(next.trim()===''){
+        saveHistory();
+        deleteAnyById(tid);
+        render();
+        return;
+      }
       saveHistory();
-      deleteAnyById(tid);
+      o.text = next;
       render();
+      });
       return;
     }
-    saveHistory();
-    o.text = next;
-    render();
+    const pid = pickPoint(sx,sy);
+    if(!pid) return;
+    const pt = getObj(pid);
+    if(!pt) return;
+    openLabelDialog(pt.label||'', next=>{
+      if(next===null) return;
+      const name = next.trim();
+      if(name===''){
+        hintText.textContent = 'Името не може да е празно.';
+        render();
+        return;
+      }
+      if(name===pt.label) return;
+      saveHistory();
+      // If another point already uses the requested name, swap labels instead
+      // of creating a duplicate: the point that used to be called `name` takes
+      // over this point's OLD name, so every point on the board keeps a
+      // unique label — exactly as if the two names traded places.
+      const clash = objects.find(o=>o.type==='point' && o.id!==pid && o.label===name);
+      if(clash) clash.label = pt.label;
+      pt.label = name;
+      hintText.textContent = '✓ Точката е преименувана на '+name+'.';
+      render();
     });
   });
 
@@ -5357,6 +5574,7 @@
   setupToolMenu('quadMenuBtn', 'quadSubmenu');
   setupToolMenu('pointMenuBtn', 'pointSubmenu');
   setupToolMenu('lineMenuBtn', 'lineSubmenu');
+  setupToolMenu('angleMenuBtn', 'angleSubmenu');
   setupToolMenu('linesMenuBtn', 'linesSubmenu');
   setupToolMenu('circleMenuBtn', 'circleSubmenu');
   setupToolMenu('cevianMenuBtn', 'cevianSubmenu');
@@ -6348,6 +6566,30 @@
   document.body.appendChild(sidesDialog);
   sidesDialog.querySelector('form').addEventListener('keydown',e=>{
     if(e.key==='Enter'){e.preventDefault();sidesDialog.close('save');}
+  });
+
+  const lengthDialog=document.createElement('dialog');
+  lengthDialog.id='lengthDialog';
+  lengthDialog.innerHTML='<form method="dialog"><label for="lengthDialogInput">Дължина</label><input id="lengthDialogInput" type="text" inputmode="decimal" maxlength="12" autocomplete="off" placeholder="напр. 4,5"><button value="cancel">Отказ</button> <button value="save">Построй</button></form>';
+  document.body.appendChild(lengthDialog);
+  lengthDialog.querySelector('form').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();lengthDialog.close('save');}
+  });
+
+  const angleDialog=document.createElement('dialog');
+  angleDialog.id='angleDialog';
+  angleDialog.innerHTML='<form method="dialog"><label for="angleDialogInput">Ъгъл (градуси, 0–180)</label><input id="angleDialogInput" type="text" inputmode="decimal" maxlength="12" autocomplete="off" placeholder="напр. 60"><button value="cancel">Отказ</button> <button value="save">Построй</button></form>';
+  document.body.appendChild(angleDialog);
+  angleDialog.querySelector('form').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();angleDialog.close('save');}
+  });
+
+  const labelDialog=document.createElement('dialog');
+  labelDialog.id='labelDialog';
+  labelDialog.innerHTML='<form method="dialog"><label for="labelDialogInput">Име на точката</label><input id="labelDialogInput" type="text" maxlength="4" autocomplete="off" placeholder="напр. M"><button value="cancel">Отказ</button> <button value="save">Преименувай</button></form>';
+  document.body.appendChild(labelDialog);
+  labelDialog.querySelector('form').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();labelDialog.close('save');}
   });
 
   /* ================= boot ================= */
