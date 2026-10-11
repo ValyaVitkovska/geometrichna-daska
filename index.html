@@ -1017,7 +1017,14 @@
   #sidesDialog{max-width:90vw;width:280px;border:1px solid #739797;border-radius:12px;padding:20px;}
   #sidesDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:12px 0;font-size:18px;}
   #sidesDialog::backdrop{background:#0007;}
-  #functionDialog{max-width:92vw;width:420px;border:1px solid #739797;border-radius:12px;padding:20px;}
+  #functionDialog .fd-keys{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin:2px 0 10px;}
+  #functionDialog .fd-keys button{padding:9px 0;font-size:15px;font-weight:600;border:1px solid #9bb5b2;border-radius:8px;background:#f2f8f7;color:#172f2b;cursor:pointer;min-width:0;}
+  #functionDialog .fd-keys button:hover{background:#dcecea;}
+  #functionDialog .fd-keys button:active{background:#c4dfdb;}
+  #functionDialog .fd-keys button.op{background:#e6eefb;}
+  #functionDialog .fd-keys button.fn{background:#fdf1de;font-size:13px;}
+  #functionDialog .fd-keys button.ctl{background:#fbe6e4;}
+  #functionDialog{max-width:94vw;width:470px;border:1px solid #739797;border-radius:12px;padding:20px;}
   #functionDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:12px 0 6px;font-size:18px;}
   #functionDialog::backdrop{background:#0007;}
   #functionDialog .fd-hint{font-size:12px;color:#44615c;margin-bottom:8px;line-height:1.7;}
@@ -1686,7 +1693,7 @@
     <div class="welcome-body">
       <section class="welcome-section">
         <h3>Нови: Графика на функция</h3>
-        <p>Бутонът „Графика на функция“ (в „Построения“) чертае графика по формула — например <b>x^2-4x+3</b>, <b>sin(x)</b>, <b>1/x</b>, <b>sqrt(x)</b>, <b>abs(x)</b>, <b>2^x</b>. Дъската показва координатите на пресечните точки с осите и между графиките, както и най-голямата и най-малката стойност във видимата част. Двоен клик върху графиката сменя формулата или скрива точките.</p>
+        <p>Бутонът „Графика на функция“ (в „Построения“) чертае графика по формула, която въвеждаш с виртуална клавиатура (цифри, x, π, степени, корени, sin, cos, tg, ln…) — например <b>x^2-4x+3</b>, <b>sin(x)</b>, <b>1/x</b>, <b>sqrt(x)</b>, <b>abs(x)</b>, <b>2^x</b>. Дъската показва координатите на пресечните точки с осите и между графиките, както и най-голямата и най-малката стойност във видимата част. Двоен клик върху графиката сменя формулата или скрива точките.</p>
       </section>
       <section class="welcome-section">
         <h3>Нови: 3D тела</h3>
@@ -7682,7 +7689,7 @@
 
   const functionDialog=document.createElement('dialog');
   functionDialog.id='functionDialog';
-  functionDialog.innerHTML='<form method="dialog"><label for="functionDialogInput">Графика на функция: y =</label><input id="functionDialogInput" type="text" autocomplete="off" spellcheck="false" placeholder="напр. x^2 - 4x + 3"><div class="fd-hint">Примери: <code>2x+1</code> · <code>x^2-4x+3</code> · <code>sin(x)</code> · <code>1/x</code> · <code>sqrt(x)</code> · <code>abs(x)</code> · <code>2^x</code> · <code>ln(x)</code></div><label class="fd-check"><input type="checkbox" id="functionDialogAnalyze" checked> Покажи пресечните точки с осите и най-голямата / най-малката стойност</label><div class="fd-error" id="functionDialogError" role="alert"></div><button type="button" id="functionDialogCancel">Отказ</button> <button type="submit" value="save" id="functionDialogOk">Построй</button></form>';
+  functionDialog.innerHTML='<form method="dialog"><label for="functionDialogInput">Графика на функция: y =</label><input id="functionDialogInput" type="text" autocomplete="off" spellcheck="false" placeholder="напр. x^2 - 4x + 3"><div class="fd-keys" id="functionKeys" aria-label="Виртуална клавиатура"></div><div class="fd-hint">Примери: <code>2x+1</code> · <code>x^2-4x+3</code> · <code>sin(x)</code> · <code>1/x</code> · <code>sqrt(x)</code> · <code>abs(x)</code> · <code>2^x</code> · <code>ln(x)</code></div><label class="fd-check"><input type="checkbox" id="functionDialogAnalyze" checked> Покажи пресечните точки с осите и най-голямата / най-малката стойност</label><div class="fd-error" id="functionDialogError" role="alert"></div><button type="button" id="functionDialogCancel">Отказ</button> <button type="submit" value="save" id="functionDialogOk">Построй</button></form>';
   document.body.appendChild(functionDialog);
   (function(){
     const form = functionDialog.querySelector('form'), inp = document.getElementById('functionDialogInput'), er = document.getElementById('functionDialogError');
@@ -7691,6 +7698,43 @@
       functionDialog.close('save');
     }
     form.addEventListener('submit', e=>{ e.preventDefault(); trySave(); });
+    // Виртуална клавиатура: цифри, действия, x, π, степени, корени и функции.
+    const KEYS = [
+      ['7'],['8'],['9'],['÷','/','op'],['(','(','op'],[')',')','op'],['x','x','op'],['⌫','','ctl','back'],
+      ['4'],['5'],['6'],['×','*','op'],['x²','^2','op'],['xⁿ','^','op'],['π','pi','op'],['C','','ctl','clear'],
+      ['1'],['2'],['3'],['−','-','op'],['√','sqrt(','fn'],['|x|','abs(','fn'],['e','e','op'],['←','','ctl','left'],
+      ['0'],[','],['+','+','op'],['sin','sin(','fn'],['cos','cos(','fn'],['tg','tg(','fn'],['ctg','ctg(','fn'],['→','','ctl','right'],
+      ['ln','ln(','fn'],['log','log(','fn'],['eˣ','exp(','fn'],['asin','asin(','fn'],['acos','acos(','fn'],['atan','atan(','fn'],['∛','cbrt(','fn'],['sign','sign(','fn']
+    ];
+    const keysBox = document.getElementById('functionKeys');
+    KEYS.forEach(k=>{
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = k[0];
+      b.className = k[2] || '';
+      b.setAttribute('aria-label', k[0]);
+      b.dataset.ins = k[1]!==undefined && k[1]!=='' ? k[1] : (k[3] ? '' : k[0]);
+      if(k[3]) b.dataset.act = k[3];
+      keysBox.appendChild(b);
+    });
+    // Бутоните не вземат фокуса от полето, за да не се губи курсорът.
+    keysBox.addEventListener('pointerdown', e=>{ if(e.target.closest('button')) e.preventDefault(); });
+    keysBox.addEventListener('click', e=>{
+      const b = e.target.closest('button'); if(!b) return;
+      inp.focus();
+      const a = inp.selectionStart, z = inp.selectionEnd;
+      const act = b.dataset.act;
+      if(act==='clear'){ inp.value = ''; }
+      else if(act==='back'){
+        if(a!==z) inp.setRangeText('', a, z, 'end');
+        else if(a>0) inp.setRangeText('', a-1, a, 'end');
+      } else if(act==='left'){ const c = Math.max(0, a-1); inp.setSelectionRange(c,c); }
+      else if(act==='right'){ const c = Math.min(inp.value.length, z+1); inp.setSelectionRange(c,c); }
+      else inp.setRangeText(b.dataset.ins, a, z, 'end');
+      er.textContent = '';
+    });
+    // На сензорен екран собствената клавиатура замества системната.
+    if(window.matchMedia && window.matchMedia('(pointer: coarse)').matches) inp.setAttribute('inputmode','none');
     document.getElementById('functionDialogCancel').addEventListener('click', ()=>functionDialog.close('cancel'));
   })();
 
