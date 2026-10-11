@@ -305,6 +305,7 @@
   }
 
   .toolbar-spacer{ flex:1 1 auto; }
+  .tool-btn:disabled{ opacity:0.4; cursor:default; pointer-events:none; filter:none; }
 
   /* ---- neutral glass chips (toggles / undo / clear) ---- */
   .toggle-row{ display:flex; flex-direction:column; gap:6px; }
@@ -1016,6 +1017,14 @@
   #sidesDialog{max-width:90vw;width:280px;border:1px solid #739797;border-radius:12px;padding:20px;}
   #sidesDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:12px 0;font-size:18px;}
   #sidesDialog::backdrop{background:#0007;}
+  #functionDialog{max-width:92vw;width:420px;border:1px solid #739797;border-radius:12px;padding:20px;}
+  #functionDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:12px 0 6px;font-size:18px;}
+  #functionDialog::backdrop{background:#0007;}
+  #functionDialog .fd-hint{font-size:12px;color:#44615c;margin-bottom:8px;line-height:1.7;}
+  #functionDialog .fd-hint code{background:#e8f0ef;padding:1px 5px;border-radius:4px;}
+  #functionDialog .fd-check{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:4px 0 8px;}
+  #functionDialog .fd-check input{display:inline-block;width:auto;margin:3px 0 0;}
+  #functionDialog .fd-error{min-height:18px;color:#b3261e;font-size:13px;font-weight:600;margin-bottom:6px;}
   #lengthDialog{max-width:90vw;width:280px;border:1px solid #739797;border-radius:12px;padding:20px;}
   #lengthDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:12px 0;font-size:18px;}
   #lengthDialog::backdrop{background:#0007;}
@@ -1033,6 +1042,90 @@
     padding:0 14px 12px;
     font-size:13px;
     font-weight:600;
+  }
+
+  /* ================= долна лента с инструменти (вдъхновена от whiteboard.vseosvita.ua) =================
+     Лентата е под дъската, групите са наредени в ред със заглавия, лентата се
+     плъзга хоризонтално (колелце / пръст), а менютата се отварят нагоре. */
+  .app-shell{ flex-direction:column-reverse; }
+  .toolbar, .toolbar.lesson-mode{
+    width:auto !important;
+    flex:0 0 auto;
+    flex-direction:row;
+    align-items:stretch;
+    gap:8px;
+    padding:6px 10px 8px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    border-right:none;
+    border-top:3px solid var(--tb-edge);
+    box-shadow: inset 0 6px 14px -10px rgba(0,0,0,0.45);
+    scrollbar-width:thin;
+  }
+  .toolbar > *{ flex:0 0 auto; }
+  .toolbar .tool-group{
+    flex-direction:row;
+    align-items:stretch;
+    gap:6px;
+    padding-right:9px;
+    border-right:1px solid rgba(255,255,255,0.22);
+  }
+  .toolbar .tool-group-label,
+  .toolbar.lesson-mode .tool-group-label{
+    display:block;
+    writing-mode:vertical-rl;
+    transform:rotate(180deg);
+    align-self:center;
+    padding:0;
+    font-size:8.5px;
+    white-space:nowrap;
+  }
+  .toolbar.lesson-mode .tool-group-label{ display:none; }
+  .toolbar .tool-btn{ width:66px; min-height:60px; padding:6px 3px 5px; gap:3px; justify-content:center; }
+  .toolbar .tool-btn .tool-label{ font-size:9.5px; }
+  .toolbar .tool-btn svg{ width:21px; height:21px; }
+  .toolbar .tool-menu{ display:flex; }
+  .toolbar .tool-menu .menu-trigger{ width:66px; }
+  .toolbar-spacer{ display:none; }
+  /* превключватели и помощни бутони: два реда, подредени по колони */
+  .toolbar .toggle-row,
+  .toolbar .tool-group:not(.page-bar):not(.lesson-keep-group):not(.lesson-partial-group){ }
+  .toolbar .toggle-row{
+    display:grid; grid-auto-flow:column; grid-template-rows:repeat(2, auto); gap:4px 5px;
+    align-content:center; padding-right:9px; border-right:1px solid rgba(255,255,255,0.22);
+  }
+  .toolbar .toggle-chip, .toolbar .util-btn{ padding:5px 7px; white-space:nowrap; }
+  .toolbar .tool-group > .util-btn{ align-self:center; }
+  .toolbar .tool-group:has(> #undoBtn){
+    display:grid; grid-auto-flow:column; grid-template-rows:repeat(2, auto); gap:4px 5px; align-content:center;
+  }
+  /* „Режим за час“ най-отпред, листовете най-отзад */
+  .toolbar > .tool-group:has(#lessonModeBtn){ order:-1; flex-direction:column; justify-content:center; }
+  .toolbar > .page-bar{
+    order:40; display:grid; grid-template-columns:auto auto; gap:4px 6px; align-content:center; width:250px; border-right:none;
+  }
+  .toolbar > .page-bar .page-title-label,
+  .toolbar > .page-bar .tool-group-label{
+    position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; transform:none; writing-mode:horizontal-tb;
+  }
+  .toolbar > .page-bar #pageTitleInput{ grid-column:1 / span 2; padding:5px 8px; }
+  .toolbar > .page-bar .page-bar-row{ min-width:0; }
+  /* бележките с балончета не се побират в плъзгащата се лента — етикетите са видими */
+  .toolbar .util-btn[data-tooltip]::after,
+  .toolbar .toggle-chip[data-tooltip]::after,
+  .toolbar .tool-btn:not(.active)[data-tooltip]::after{ display:none !important; }
+  .toolbar .tool-btn.active::after{ width:13px; height:13px; font-size:9px; }
+  .toolbar .tool-btn:not(.active)[data-tooltip]:hover::after{ display:none !important; }
+  .site-footer{ padding:3px 12px; }
+  @media (max-width: 820px){
+    .toolbar .tool-btn, .toolbar .tool-menu .menu-trigger{ width:58px; min-height:56px; }
+    .toolbar .tool-btn .tool-label{ display:block; font-size:8.5px; }
+  }
+  @media (max-width: 560px){
+    .toolbar .tool-btn, .toolbar .tool-menu .menu-trigger{ width:48px; min-height:48px; }
+    .toolbar .tool-btn .tool-label{ display:none; }
+    .toolbar .tool-group-label{ display:none; }
+    .toolbar > .page-bar{ width:200px; }
   }
 </style>
 <style id="printPageOrientation">@page{size:A4 landscape;margin:0}</style>
@@ -1183,10 +1276,34 @@
         </div>
       </div>
 
+      <div class="tool-menu" id="solidMenu">
+        <button type="button" class="tool-btn menu-trigger" id="solidMenuBtn" data-tint="white" title="3D тела" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 9l8-4 8 4v8l-8 4-8-4z"/><path d="M4 9l8 4 8-4M12 13v8"/>
+          </svg>
+          <span class="tool-label">3D тела</span>
+        </button>
+        <div class="tool-submenu" id="solidSubmenu" role="menu" aria-label="3D геометрични тела" hidden>
+          <button type="button" class="submenu-item" data-tool="solid_cube" role="menuitem">Куб</button>
+          <button type="button" class="submenu-item" data-tool="solid_cuboid" role="menuitem">Правоъгълен паралелепипед</button>
+          <button type="button" class="submenu-item" data-tool="solid_prism" role="menuitem">Триъгълна призма</button>
+          <button type="button" class="submenu-item" data-tool="solid_pyramid" role="menuitem">Четириъгълна пирамида</button>
+          <button type="button" class="submenu-item" data-tool="solid_tetra" role="menuitem">Триъгълна пирамида</button>
+          <button type="button" class="submenu-item" data-tool="solid_cylinder" role="menuitem">Цилиндър</button>
+          <button type="button" class="submenu-item" data-tool="solid_cone" role="menuitem">Конус</button>
+          <button type="button" class="submenu-item" data-tool="solid_sphere" role="menuitem">Сфера</button>
+        </div>
+      </div>
+
     </div>
 
     <div class="tool-group lesson-keep-group">
       <div class="tool-group-label">Построения</div>
+
+      <button type="button" class="tool-btn" id="funcBtn" data-tint="orange" title="Графика на функция — въведи формула, напр. x^2 - 4x + 3">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M5 3v18"/><path d="M6 17c3 0 4-11 7-11s3.2 9 6 9"/></svg>
+        <span class="tool-label">Графика на функция</span>
+      </button>
 
       <div class="tool-menu" id="linesMenu">
         <button type="button" class="tool-btn menu-trigger" id="linesMenuBtn" data-tint="rose" title="Прави" aria-haspopup="true" aria-expanded="false">
@@ -1240,6 +1357,54 @@
         <div class="tool-submenu" id="circlesSubmenu" role="menu" aria-label="Вид окръжност" hidden>
           <button type="button" class="submenu-item" data-tool="incircle" role="menuitem">Вписана окръжност</button>
           <button type="button" class="submenu-item" data-tool="circumcircle" role="menuitem">Описана окръжност</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tool-group lesson-partial-group" id="editGroup">
+      <div class="tool-group-label">Редактиране</div>
+      <button class="tool-btn" data-tool="marquee" data-tint="blue" title="Избор с рамка — избери няколко обекта наведнъж">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="5" width="16" height="14" rx="1.5" stroke-dasharray="3 2.4"/><path d="M10 10l5 2.2-2.2.9-.9 2.2z" fill="currentColor"/>
+        </svg>
+        <span class="tool-label">Избор с рамка</span>
+      </button>
+      <button class="tool-btn lesson-keep" data-tool="eraser" data-tint="rose" title="Гумичка — трие рисунките с писалка">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 20h11"/><path d="M5.5 14.5l8-8a2 2 0 012.8 0l2.2 2.2a2 2 0 010 2.8L11.5 18H8l-2.5-2.5a1.4 1.4 0 010-1z"/><path d="M9 11l4.5 4.5"/>
+        </svg>
+        <span class="tool-label">Гумичка</span>
+      </button>
+      <button type="button" class="tool-btn" id="copyBtn" data-tint="green" title="Копирай избраното (Ctrl+C)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="8" y="8" width="12" height="12" rx="1.6"/><path d="M16 8V5.6A1.6 1.6 0 0014.4 4H5.6A1.6 1.6 0 004 5.6v8.8A1.6 1.6 0 005.6 16H8"/>
+        </svg>
+        <span class="tool-label">Копирай</span>
+      </button>
+      <button type="button" class="tool-btn" id="pasteBtn" data-tint="green" title="Постави копираното (Ctrl+V)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5" y="5" width="14" height="16" rx="1.6"/><path d="M9 5V3.5h6V5M9 12h6M9 16h4"/>
+        </svg>
+        <span class="tool-label">Постави</span>
+      </button>
+      <button type="button" class="tool-btn" id="dupBtn" data-tint="green" title="Дублирай избраното (Ctrl+D)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3.5" y="3.5" width="11" height="11" rx="1.6"/><rect x="9.5" y="9.5" width="11" height="11" rx="1.6"/>
+        </svg>
+        <span class="tool-label">Дублирай</span>
+      </button>
+      <div class="tool-menu" id="arrangeMenu">
+        <button type="button" class="tool-btn menu-trigger" id="arrangeMenuBtn" data-tint="yellow" title="Подреди — напред / назад" aria-haspopup="true" aria-expanded="false" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3.5" y="3.5" width="10" height="10" rx="1.4"/><rect x="10.5" y="10.5" width="10" height="10" rx="1.4" fill="currentColor" fill-opacity="0.35"/>
+          </svg>
+          <span class="tool-label">Подреди</span>
+        </button>
+        <div class="tool-submenu" id="arrangeSubmenu" role="menu" aria-label="Подреждане" hidden>
+          <button type="button" class="submenu-item" data-act="front" role="menuitem">На преден план</button>
+          <button type="button" class="submenu-item" data-act="forward" role="menuitem">Една стъпка напред</button>
+          <button type="button" class="submenu-item" data-act="backward" role="menuitem">Една стъпка назад</button>
+          <button type="button" class="submenu-item" data-act="back" role="menuitem">На заден план</button>
         </div>
       </div>
     </div>
@@ -1314,6 +1479,10 @@
       <button type="button" class="toggle-chip on" id="gridToggle" title="Покажи/скрий мрежата">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
         <span class="chip-label">Мрежа</span>
+      </button>
+      <button type="button" class="toggle-chip" id="bgStyleBtn" title="Смени вида на фона: квадрати, точки, милиметрова хартия, тетрадка">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1" fill="currentColor"/><circle cx="15" cy="9" r="1" fill="currentColor"/><circle cx="9" cy="15" r="1" fill="currentColor"/><circle cx="15" cy="15" r="1" fill="currentColor"/></svg>
+        <span class="chip-label" id="bgStyleLabel">Фон: Квадрати</span>
       </button>
       <button type="button" class="toggle-chip on" id="axesToggle" title="Покажи/скрий координатните оси">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="4" y1="20" x2="4" y2="4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
@@ -1516,8 +1685,24 @@
     </div>
     <div class="welcome-body">
       <section class="welcome-section">
+        <h3>Нови: Графика на функция</h3>
+        <p>Бутонът „Графика на функция“ (в „Построения“) чертае графика по формула — например <b>x^2-4x+3</b>, <b>sin(x)</b>, <b>1/x</b>, <b>sqrt(x)</b>, <b>abs(x)</b>, <b>2^x</b>. Дъската показва координатите на пресечните точки с осите и между графиките, както и най-голямата и най-малката стойност във видимата част. Двоен клик върху графиката сменя формулата или скрива точките.</p>
+      </section>
+      <section class="welcome-section">
+        <h3>Нови: 3D тела</h3>
+        <p>Менюто „3D тела“: куб, паралелепипед, призма, пирамиди, цилиндър, конус и сфера — с две кликвания. Невидимите ръбове са пунктирани, а с мърдане на двете начални точки тялото се мести, върти и мащабира.</p>
+      </section>
+      <section class="welcome-section">
+        <h3>Нови: Редактиране</h3>
+        <p>„Избор с рамка“ избира много обекти наведнъж (местят се заедно), „Гумичката“ трие рисунки с писалка, а „Копирай“, „Постави“ и „Дублирай“ (Ctrl+C, Ctrl+V, Ctrl+D) размножават избраното. „Подреди“ праща обекти напред или назад.</p>
+      </section>
+      <section class="welcome-section">
+        <h3>Нови: Фонове и долна лента</h3>
+        <p>Бутонът „Фон“ сменя квадрати, точки, милиметрова хартия и тетрадка. Инструментите са в лента най-долу — плъзни я встрани, за да видиш всички групи; менютата се отварят нагоре.</p>
+      </section>
+      <section class="welcome-section">
         <h3>Чертане</h3>
-        <p>Менюто „Точки“ (точка, точка върху обект, пресечна точка и среда на отсечка), отсечки, прави, окръжности, многоъгълници и менюто „Вектори“ (вектор и равен вектор) — с едно кликване на дъската.</p>
+        <p>Менюто „Точки“ (точка, точка върху обект, пресечна точка и среда на отсечка), „Отсечка/Права“ (отсечка, отсечка с дадена дължина, права, лъч, вектор и равен вектор), окръжности (и окръжност с даден радиус), многоъгълници (произволен и правилен) — с едно кликване на дъската. Двоен клик върху точка я преименува; ако буквата вече е заета, двете точки си сменят имената.</p>
       </section>
       <section class="welcome-section">
         <h3>Триъгълник и Четириъгълник</h3>
@@ -1529,7 +1714,7 @@
       </section>
       <section class="welcome-section">
         <h3>Още построения</h3>
-        <p>Ъгъл с именуване на гръцки букви и менюто „Окръжности“ — вписана и описана окръжност около триъгълник.</p>
+        <p>Ъгъл с именуване на гръцки букви, ъгъл с дадена големина в градуси, менюто „Окръжности“ (вписана и описана окръжност около триъгълник), а в „Четириъгълник“ — вписан в окръжност и описан около окръжност (допирните точки се местят и четириъгълникът се променя).</p>
       </section>
       <section class="welcome-section">
         <h3>Листове</h3>
@@ -1545,7 +1730,7 @@
       </section>
       <section class="welcome-section">
         <h3>Измервания</h3>
-        <p>Бутонът „Стойности“ показва дължини, радиуси, лица и градуси на ъглите направо върху чертежа.</p>
+        <p>Бутонът „Измервания“ показва при поискване дължини, ъгли, радиуси, лица и координати направо върху чертежа — по подразбиране нищо не е показано, избираш какво да се вижда.</p>
       </section>
       <section class="welcome-section">
         <h3>Управление</h3>
@@ -1594,7 +1779,8 @@
     ['linesMenuBtn', tool => ['perpendicular','parallel','bisector','tangent','bisectorPerp'].includes(tool)],
     ['circleMenuBtn', tool => ['circle','circleRadius'].includes(tool)],
     ['cevianMenuBtn', tool => ['altitude','median','bisectorSeg'].includes(tool)],
-    ['circlesMenuBtn', tool => ['incircle','circumcircle'].includes(tool)]
+    ['circlesMenuBtn', tool => ['incircle','circumcircle'].includes(tool)],
+    ['solidMenuBtn', tool => tool.indexOf('solid_')===0]
   ]);
   const DASH_PATTERNS = { dashed:[8,5], dotted:[1.6,3.6] };
 
@@ -1635,7 +1821,7 @@
   // Which measurement kinds "Измервания" shows, and at what precision — see the
   // measure-panel wiring further down. Kept separate from formatNum (used for
   // axis-tick labels, which must stay plain "5"/"1.5", never comma-decimal).
-  let measureTypes = { length:true, angle:true, radius:true, area:true, coords:false };
+  let measureTypes = { length:false, angle:false, radius:false, area:false, coords:false };
   let measurePrecision = 1; // 0 -> "5", 1 -> "5,3" (default), 2 -> "5,27"
   function formatMeasure(v){
     const factor = Math.pow(10, measurePrecision);
@@ -1793,6 +1979,14 @@
   let radiusCircleCenterId = null; // center point already chosen, waiting on the radius dialog (see handleCircleRadiusClick)
   let selectedId = null;
   let hoverId = null;
+  /* Многократен избор (инструмент „Избор с рамка“) и помощни състояния за
+     гумичката, рамката, групово местене и клипборда. */
+  let multiSel = new Set();
+  let marqueeStart = null, marqueeCur = null, groupDrag = null;
+  let isErasing = false, eraserPos = null;
+  let clipboardData = null, pasteCount = 0;
+  const ERASER_R = 14;
+  function isHotId(id){ return id===hoverId || id===selectedId || multiSel.has(id); }
   let draggingPointId = null;
   let draggingLabelId = null;
   let draggingImageId = null;
@@ -2022,6 +2216,19 @@
       const u = normalize(sub(B,A));
       const t = dot(sub(C,M), u);
       return { x:C.x-2*t*u.x, y:C.y-2*t*u.y };
+    }
+    if(p.sub === 'solidVertex'){
+      /* 3D тела: връх, зададен в локална координатна система с начало A и
+         ос x = вектора AB (v = AB завъртян на 90°). Така цялото тяло се мести,
+         върти и мащабира, като местиш само A и B. */
+      const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]);
+      const u = sub(B,A), v = rot90(u);
+      return { x:A.x+p.lx*u.x+p.ly*v.x, y:A.y+p.lx*u.y+p.ly*v.y };
+    }
+    if(p.sub === 'roundSolidPoint'){
+      const A = getPointXY(p.parents[0]), B = getPointXY(p.parents[1]);
+      const r = dist(A,B);
+      return { x:A.x+p.dx*r, y:A.y+p.dy*r };
     }
     if(p.sub === 'regularPolyVertex'){
       /* Правилен многоъгълник: vertex 0 is the free point the user placed (the
@@ -2556,6 +2763,7 @@
     inkStrokes = snap.inkStrokes || [];
     hydrateImages(objects);
     selectedId = null;
+    multiSel.clear();
     pending = [];
     pendingBase = null;
   }
@@ -2857,6 +3065,8 @@
       || pickLineLike(sx,sy, LINE_TYPES)
       || pickVector(sx,sy)
       || pickCircle(sx,sy)
+      || pickSolid3d(sx,sy)
+      || pickFunction(sx,sy)
       || pickPolygon(sx,sy)
       || pickRightAngle(sx,sy)
       || pickAngleMarker(sx,sy)
@@ -2922,6 +3132,19 @@
     angleFixed: ['Избери или постави върха на ъгъла.', 'Избери или постави точка от първото рамо.', 'Кликни в посоката, накъде да сочи второто рамо — после въведи градусите в полето.']
   };
 
+  Object.assign(TOOL_HINTS, {
+    marquee: 'Провлачи рамка около обектите, за да ги избереш. После ги премести с провлачване, копирай (Ctrl+C / Ctrl+V), подреди или изтрий (Delete). Shift добавя към избора.',
+    eraser: 'Гумичката трие само рисунките с писалка. Провлачи през тях. За фигури и точки използвай „Изтрий“.',
+    solid_cube: ['3D куб: избери или постави първата точка (долен ляв ъгъл).', 'Избери или постави втора точка — определя ръба. Мести A и B, за да местиш/въртиш/мащабираш куба.'],
+    solid_cuboid: ['3D правоъгълен паралелепипед: избери или постави първата точка.', 'Избери или постави втора точка — определя ширината.'],
+    solid_prism: ['3D триъгълна призма: избери или постави първата точка.', 'Избери или постави втора точка — определя основата.'],
+    solid_pyramid: ['3D четириъгълна пирамида: избери или постави първата точка.', 'Избери или постави втора точка — определя основата.'],
+    solid_tetra: ['3D триъгълна пирамида: избери или постави първата точка.', 'Избери или постави втора точка — определя основата.'],
+    solid_cylinder: ['3D цилиндър: избери или постави центъра на долната основа.', 'Избери или постави точка от основата — определя радиуса.'],
+    solid_cone: ['3D конус: избери или постави центъра на основата.', 'Избери или постави точка от основата — определя радиуса.'],
+    solid_sphere: ['3D сфера: избери или постави центъра.', 'Избери или постави точка от сферата — определя радиуса.']
+  });
+
   function updateHint(){
     let h = TOOL_HINTS[currentTool];
     if(Array.isArray(h)){
@@ -2935,6 +3158,8 @@
       h = `Точка ${pending.length+1} — затвори върху първата точка (или Enter).`;
     } else if(currentTool==='midpoint' && pending.length>0){
       h = 'Избери втора точка.';
+    } else if(currentTool==='marquee' && multiSel.size>0){
+      h = 'Избрани обекти: '+multiSel.size+'. Провлачи ги, за да ги преместиш · Ctrl+C / Ctrl+V копира · Delete трие.';
     } else if(currentTool==='move' && selectedId!==null){
       h = 'Избери цвят горе, за да оцветиш маркирания обект. Провлачи точка или натисни Delete.';
     }
@@ -2948,7 +3173,9 @@
   }
 
   /* ================= tool actions ================= */
-  function setTool(tool){
+  function setTool(tool, keepSel){
+    if(!keepSel) multiSel.clear();
+    marqueeStart = null; marqueeCur = null; groupDrag = null; isErasing = false; eraserPos = null;
     if(cropMode){ cropMode=false; cropTargetId=null; cropRectStart=null; cropRectCurrent=null; }
     currentTool = tool;
     selectedId = null;
@@ -2967,7 +3194,7 @@
       if(btn) btn.classList.toggle('active', matches(tool));
     });
     document.getElementById('penOptions').classList.toggle('show', tool==='pen' || tool==='smartpen');
-    canvas.style.cursor = tool==='move' ? 'default' : 'crosshair';
+    canvas.style.cursor = tool==='move' ? 'default' : (tool==='eraser' ? 'none' : 'crosshair');
     render();
   }
 
@@ -4089,21 +4316,83 @@
     canvas.style.height = h+'px';
   }
 
+  // Фон на дъската: 'grid' (квадрати, по подразбиране), 'dots' (точки във възлите),
+  // 'mm' (милиметрова хартия — фини линии през 0,1 и по-плътни през 0,5 и 1),
+  // 'notebook' (само хоризонтални линии, като тетрадка на редове).
+  // Бутонът „Мрежа" пак я включва/изключва; бутонът „Фон" сменя вида.
+  const BG_STYLES = [
+    { id:'grid',     label:'Квадрати' },
+    { id:'dots',     label:'Точки' },
+    { id:'mm',       label:'Милиметрова' },
+    { id:'notebook', label:'Тетрадка' }
+  ];
+  let bgStyle = 'grid';
+
   function drawGridLines(w,h,pal){
     const topLeft = screenToWorld(0,0);
     const bottomRight = screenToWorld(w,h);
     const step = 1; // grid & axis numbers always spaced by exactly 1 world unit
+    const startX = Math.ceil(topLeft.x/step)*step;
+    const startY = Math.ceil(bottomRight.y/step)*step;
+
+    if(bgStyle==='dots'){
+      ctx.fillStyle = pal.axisText;
+      ctx.globalAlpha = 0.55;
+      const r = Math.max(1.1, Math.min(2.2, view.scale/22));
+      ctx.beginPath();
+      for(let x=startX; x<=bottomRight.x; x+=step){
+        for(let y=startY; y<=topLeft.y; y+=step){
+          const s = worldToScreen(x,y);
+          ctx.moveTo(s.x+r, s.y);
+          ctx.arc(s.x, s.y, r, 0, Math.PI*2);
+        }
+      }
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    if(bgStyle==='mm'){
+      // three line weights: every 0.1 (thin), 0.5 (medium), 1 (strong). Fine lines
+      // are skipped when zoomed out so they never turn into a solid grey wash.
+      const levels = [
+        { st:0.1, lw:0.5, a:0.35, minPx:6 },
+        { st:0.5, lw:0.8, a:0.6,  minPx:6 },
+        { st:1,   lw:1.1, a:1,    minPx:0 }
+      ];
+      ctx.strokeStyle = pal.gridLine;
+      for(const L of levels){
+        if(L.st*view.scale < L.minPx) continue;
+        ctx.globalAlpha = L.a; ctx.lineWidth = L.lw;
+        ctx.beginPath();
+        const n0 = Math.ceil(topLeft.x/L.st), n1 = Math.floor(bottomRight.x/L.st);
+        for(let i=n0;i<=n1;i++){
+          if(L.st<1 && Math.abs(i*L.st - Math.round(i*L.st)) < 1e-6) continue;
+          const sx = worldToScreen(i*L.st,0).x;
+          ctx.moveTo(sx+0.5,0); ctx.lineTo(sx+0.5,h);
+        }
+        const m0 = Math.ceil(bottomRight.y/L.st), m1 = Math.floor(topLeft.y/L.st);
+        for(let j=m0;j<=m1;j++){
+          if(L.st<1 && Math.abs(j*L.st - Math.round(j*L.st)) < 1e-6) continue;
+          const sy = worldToScreen(0,j*L.st).y;
+          ctx.moveTo(0,sy+0.5); ctx.lineTo(w,sy+0.5);
+        }
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      return;
+    }
 
     ctx.lineWidth = 1;
     ctx.strokeStyle = pal.gridLine;
     ctx.beginPath();
-    const startX = Math.ceil(topLeft.x/step)*step;
-    for(let x=startX; x<=bottomRight.x; x+=step){
-      const s = worldToScreen(x,0);
-      ctx.moveTo(s.x+0.5, 0);
-      ctx.lineTo(s.x+0.5, h);
+    if(bgStyle!=='notebook'){
+      for(let x=startX; x<=bottomRight.x; x+=step){
+        const s = worldToScreen(x,0);
+        ctx.moveTo(s.x+0.5, 0);
+        ctx.lineTo(s.x+0.5, h);
+      }
     }
-    const startY = Math.ceil(bottomRight.y/step)*step;
     for(let y=startY; y<=topLeft.y; y+=step){
       const s = worldToScreen(0,y);
       ctx.moveTo(0, s.y+0.5);
@@ -4842,41 +5131,44 @@
     if(axesEnabled && axisNamesEnabled) drawAxisNames(w,h,pal);
     if(pageGuideEnabled && !(opts && opts.hidePageGuide)) drawPageBoundaryGuide(w,h,pal);
 
-    for(const o of objects){ if(o.type==='image' && !o.hidden) drawImageObj(o, o.id===hoverId||o.id===selectedId, pal); }
-    for(const o of objects){ if(o.type==='polygon' && !o.hidden) drawPolygonObj(o, o.id===hoverId||o.id===selectedId, pal); }
-    for(const o of objects){ if(o.type==='circle' && !o.hidden) drawCircleObj(o, o.id===hoverId||o.id===selectedId, pal); }
+    for(const o of objects){ if(o.type==='image' && !o.hidden) drawImageObj(o, isHotId(o.id), pal); }
+    for(const o of objects){ if(o.type==='polygon' && !o.hidden) drawPolygonObj(o, isHotId(o.id), pal); }
+    for(const o of objects){ if(o.type==='circle' && !o.hidden) drawCircleObj(o, isHotId(o.id), pal); }
     for(const o of objects){
       if(LINE_TYPES.includes(o.type) && !o.hidden){
-        drawLineLikeObj(o, o.id===hoverId||o.id===selectedId, pal);
+        drawLineLikeObj(o, isHotId(o.id), pal);
       }
     }
     for(const o of objects){
       if((o.type==='vector'||o.type==='vectorEqual') && !o.hidden){
-        drawVectorObj(o, o.id===hoverId||o.id===selectedId, pal);
+        drawVectorObj(o, isHotId(o.id), pal);
       }
     }
     for(const o of objects){
       if(o.type==='rightangle' && !o.hidden){
-        drawRightAngleMarker(o, o.id===hoverId||o.id===selectedId, pal);
+        drawRightAngleMarker(o, isHotId(o.id), pal);
       }
     }
     for(const o of objects){
       if(o.type==='angle' && !o.hidden){
-        drawAngleMarker(o, o.id===hoverId||o.id===selectedId, pal);
+        drawAngleMarker(o, isHotId(o.id), pal);
       }
     }
+    fnLabelPlaced = [];
+    for(const o of objects){ if(o.type==='function' && !o.hidden) drawFunctionObj(o, isHotId(o.id), pal); }
+    for(const o of objects){ if(o.type==='solid3d' && !o.hidden) drawSolid3dObj(o, isHotId(o.id), pal); }
     for(const o of objects){
       if(o.type==='point' && !o.hidden){
-        drawPointObj(o, o.id===hoverId||o.id===selectedId, !printMode && pending.includes(o.id), pal);
+        drawPointObj(o, isHotId(o.id), !printMode && pending.includes(o.id), pal);
       }
     }
     for(const o of objects){
       if(o.type==='text' && !o.hidden){
-        drawTextObj(o, o.id===hoverId||o.id===selectedId, pal);
+        drawTextObj(o, isHotId(o.id), pal);
       }
     }
     for(const s of inkStrokes){
-      if(!s.hidden) drawInkStroke(s, s.id===hoverId||s.id===selectedId, pal);
+      if(!s.hidden) drawInkStroke(s, isHotId(s.id), pal);
     }
     if(measurementsEnabled) drawMeasurements(pal);
     if(!printMode && pageTitle.trim()){
@@ -4900,11 +5192,36 @@
       ctx.restore();
     }
 
+    if(!printMode && marqueeStart && marqueeCur){
+      const x0 = Math.min(marqueeStart.sx, marqueeCur.sx), y0 = Math.min(marqueeStart.sy, marqueeCur.sy);
+      const rw = Math.abs(marqueeCur.sx-marqueeStart.sx), rh = Math.abs(marqueeCur.sy-marqueeStart.sy);
+      ctx.save();
+      ctx.fillStyle = 'rgba(80,140,255,0.14)';
+      ctx.fillRect(x0,y0,rw,rh);
+      ctx.strokeStyle = pal.hot;
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([6,4]);
+      ctx.strokeRect(x0,y0,rw,rh);
+      ctx.restore();
+    }
+    if(!printMode && currentTool==='eraser' && eraserPos){
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(eraserPos.sx, eraserPos.sy, ERASER_R, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = pal.primary;
+      ctx.stroke();
+      ctx.restore();
+    }
+
     let countMsg = objects.length===1 ? '1 обект' : objects.length+' обекта';
     if(inkStrokes.length>0) countMsg += ' · '+inkStrokes.length+(inkStrokes.length===1?' бележка':' бележки');
     countsText.textContent = countMsg;
 
     updateColorPanel();
+    updateEditButtons();
   }
 
   function getSelectedTintable(){
@@ -4987,6 +5304,715 @@
     zoomPct.textContent = Math.round(view.scale/42*100)+'%';
   }
 
+  /* ================= 3D тела ================= */
+  /* Многостените тела са наредба от точки (solidVertex) и отсечки; невидимите
+     ръбове са прекъснати (dash:'dashed'). Цилиндър / конус / сфера са един
+     обект solid3d, чертан от елипси. Първата точка (A) и втората (B) са
+     истински точки на потребителя — мести ги и цялото тяло ги следва. */
+  const SOLID_SPECS = {
+    solid_cube: {
+      verts:[[0,0],[1,0],[1,1],[0,1],[.45,.35],[1.45,.35],[1.45,1.35],[.45,1.35]],
+      edges:[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]],
+      hidden:['4-5','4-7','0-4'], name:'куб' },
+    solid_cuboid: {
+      verts:[[0,0],[1,0],[1,.6],[0,.6],[.55,.4],[1.55,.4],[1.55,1],[.55,1]],
+      edges:[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]],
+      hidden:['4-5','4-7','0-4'], name:'правоъгълен паралелепипед' },
+    solid_prism: {
+      verts:[[0,0],[1,0],[.4,.85],[.5,.35],[1.5,.35],[.9,1.2]],
+      edges:[[0,1],[1,2],[2,0],[3,4],[4,5],[5,3],[0,3],[1,4],[2,5]],
+      hidden:['3-4','3-5','0-3'], name:'триъгълна призма' },
+    solid_pyramid: {
+      verts:[[0,0],[1,0],[1.45,.35],[.45,.35],[.725,1.15]],
+      edges:[[0,1],[1,2],[2,3],[3,0],[4,0],[4,1],[4,2],[4,3]],
+      hidden:['3-0','2-3','3-4'], name:'четириъгълна пирамида' },
+    solid_tetra: {
+      verts:[[0,0],[1,0],[1.4,.4],[.5,1.1]],
+      edges:[[0,1],[1,2],[2,0],[3,0],[3,1],[3,2]],
+      hidden:['2-0'], name:'триъгълна пирамида' }
+  };
+  const ROUND_SOLIDS = { solid_cylinder:'cylinder', solid_cone:'cone', solid_sphere:'sphere' };
+  const ROUND_NAMES = { cylinder:'цилиндър', cone:'конус', sphere:'сфера' };
+
+  function handleSolidClick(sx,sy){
+    const isRound = !!ROUND_SOLIDS[currentTool];
+    const spec = SOLID_SPECS[currentTool];
+    if(!isRound && !spec) return;
+    armHistory();
+    const before = objects.length;
+    const pid = getOrCreatePointAt(sx,sy);
+    if(pending.length===1 && pid===pending[0]){
+      discardArmedHistory();
+      hintText.textContent = 'Втората точка не може да съвпада с първата — избери друга.';
+      render();
+      return;
+    }
+    const changed = objects.length!==before;
+    pending.push(pid);
+    if(pending.length<2){
+      if(changed) commitArmedHistory(); else discardArmedHistory();
+      updateHint();
+      render();
+      return;
+    }
+    const aId = pending[0], bId = pending[1];
+    // A newly placed second point is levelled with the first one when the
+    // click is nearly horizontal, so the solid stands upright instead of
+    // leaning because of a few pixels of hand tremor.
+    const bObj = getObj(bId), aXY = getPointXY(aId);
+    if(changed && bObj && bObj.sub==='free'){
+      const dx = Math.abs(bObj.x-aXY.x), dy = Math.abs(bObj.y-aXY.y);
+      if(dx>1e-9 && dy < dx*0.21) bObj.y = aXY.y;
+    }
+    resetPending();
+    const toolName = currentTool;
+    if(isRound){
+      const kind = ROUND_SOLIDS[toolName];
+      objects.push({ id:uid(), type:'solid3d', kind, parents:[aId,bId] });
+      if(kind==='cylinder' || kind==='cone'){
+        const tid = uid();
+        objects.push({ id:tid, type:'point', sub:'roundSolidPoint', parents:[aId,bId], dx:0, dy:(kind==='cylinder'?1.6:1.5), label:nextLabel() });
+        objects.push({ id:uid(), type:'segment', parents:[aId,tid], dash:'dashed' });
+      }
+      hintText.textContent = '✓ Построен '+ROUND_NAMES[kind]+'. Мести точките, за да го местиш или мащабираш.';
+    } else {
+      const ids = [aId,bId];
+      spec.verts.forEach((v,i)=>{
+        if(i<2) return;
+        const id = uid();
+        objects.push({ id, type:'point', sub:'solidVertex', parents:[aId,bId], lx:v[0], ly:v[1], label:nextLabel() });
+        ids[i] = id;
+      });
+      const hid = new Set(spec.hidden.map(h=>h.split('-').sort().join('-')));
+      spec.edges.forEach(([i,j])=>{
+        const seg = { id:uid(), type:'segment', parents:[ids[i],ids[j]] };
+        if(hid.has([i,j].sort().join('-'))) seg.dash = 'dashed';
+        objects.push(seg);
+      });
+      hintText.textContent = '✓ Построен: '+spec.name+'. Мести A или B, за да го местиш, въртиш или мащабираш.';
+    }
+    commitArmedHistory();
+    render();
+  }
+
+  function solid3dPaths(o){
+    const A = getPointXY(o.parents[0]), B = getPointXY(o.parents[1]);
+    const r = dist(A,B);
+    if(r<1e-6) return [];
+    const RY = 0.3;
+    const ell = (cx,cy,a0,a1)=>{
+      const pts = [];
+      const n = Math.max(8, Math.round(48*Math.abs(a1-a0)/(2*Math.PI)));
+      for(let i=0;i<=n;i++){
+        const t = a0 + (a1-a0)*i/n;
+        pts.push(worldToScreen(cx + r*Math.cos(t), cy + RY*r*Math.sin(t)));
+      }
+      return pts;
+    };
+    const line = (x0,y0,x1,y1)=>[worldToScreen(x0,y0), worldToScreen(x1,y1)];
+    const paths = [];
+    if(o.kind==='cylinder'){
+      const h = 1.6*r;
+      paths.push({ pts:ell(A.x,A.y,Math.PI,2*Math.PI), dashed:false });
+      paths.push({ pts:ell(A.x,A.y,0,Math.PI), dashed:true });
+      paths.push({ pts:ell(A.x,A.y+h,0,2*Math.PI), dashed:false });
+      paths.push({ pts:line(A.x-r,A.y,A.x-r,A.y+h), dashed:false });
+      paths.push({ pts:line(A.x+r,A.y,A.x+r,A.y+h), dashed:false });
+    } else if(o.kind==='cone'){
+      const h = 1.5*r;
+      paths.push({ pts:ell(A.x,A.y,Math.PI,2*Math.PI), dashed:false });
+      paths.push({ pts:ell(A.x,A.y,0,Math.PI), dashed:true });
+      paths.push({ pts:line(A.x-r,A.y,A.x,A.y+h), dashed:false });
+      paths.push({ pts:line(A.x+r,A.y,A.x,A.y+h), dashed:false });
+    } else {
+      paths.push({ pts:ell(A.x,A.y,0,2*Math.PI).map((_,i,arr)=>{
+        const t = 2*Math.PI*i/(arr.length-1);
+        return worldToScreen(A.x+r*Math.cos(t), A.y+r*Math.sin(t));
+      }), dashed:false });
+      paths.push({ pts:ell(A.x,A.y,Math.PI,2*Math.PI), dashed:false });
+      paths.push({ pts:ell(A.x,A.y,0,Math.PI), dashed:true });
+    }
+    return paths;
+  }
+
+  function drawSolid3dObj(o, isHot, pal){
+    const paths = solid3dPaths(o);
+    const baseW = o.strokeWidth || 2;
+    const color = isHot ? pal.hot : (o.tint ? tintColor(pal, o.tint) : pal.primary);
+    ctx.save();
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.lineWidth = isHot ? baseW+0.6 : baseW;
+    ctx.strokeStyle = color;
+    for(const pa of paths){
+      if(!pa.pts.length) continue;
+      ctx.setLineDash(pa.dashed ? [6,4] : (o.dash ? (DASH_PATTERNS[o.dash]||[]) : []));
+      ctx.beginPath();
+      ctx.moveTo(pa.pts[0].x, pa.pts[0].y);
+      for(let i=1;i<pa.pts.length;i++) ctx.lineTo(pa.pts[i].x, pa.pts[i].y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function distToSeg(px,py,ax,ay,bx,by){
+    const dx=bx-ax, dy=by-ay;
+    const l2 = dx*dx+dy*dy;
+    let t = l2<1e-9 ? 0 : ((px-ax)*dx+(py-ay)*dy)/l2;
+    t = Math.max(0,Math.min(1,t));
+    return Math.hypot(px-(ax+t*dx), py-(ay+t*dy));
+  }
+  function pickSolid3d(sx,sy){
+    let best=null, bestD=9;
+    for(const o of objects){
+      if(o.type!=='solid3d' || o.hidden) continue;
+      for(const pa of solid3dPaths(o)){
+        for(let i=1;i<pa.pts.length;i++){
+          const d = distToSeg(sx,sy,pa.pts[i-1].x,pa.pts[i-1].y,pa.pts[i].x,pa.pts[i].y);
+          if(d<bestD){ bestD=d; best=o.id; }
+        }
+      }
+    }
+    return best;
+  }
+
+  /* ================= избор с рамка, гумичка, копиране, подреждане ================= */
+  function withAncestors(ids){
+    const set = new Set(ids);
+    let changed = true;
+    while(changed){
+      changed = false;
+      for(const o of objects){
+        if(!set.has(o.id) || !o.parents) continue;
+        for(const pid of o.parents){ if(!set.has(pid)){ set.add(pid); changed = true; } }
+      }
+    }
+    return set;
+  }
+  function currentSelectionSet(){
+    if(multiSel.size) return new Set(multiSel);
+    if(selectedId!==null) return new Set([selectedId]);
+    return new Set();
+  }
+  function objectsInRect(x0,y0,x1,y1){
+    const inside = (wx,wy)=>{ const s = worldToScreen(wx,wy); return s.x>=x0 && s.x<=x1 && s.y>=y0 && s.y<=y1; };
+    const set = new Set();
+    for(const o of objects){
+      if(o.hidden) continue;
+      if(o.type==='point'){ const p = getPointXY(o.id); if(inside(p.x,p.y)) set.add(o.id); }
+      else if(o.type==='text' || o.type==='image'){ if(inside(o.x,o.y)) set.add(o.id); }
+    }
+    for(const s of inkStrokes){
+      if(!s.hidden && s.points.length && s.points.every(p=>inside(p.x,p.y))) set.add(s.id);
+    }
+    // Фигурите (отсечки, окръжности, многоъгълници…) влизат в избора, когато са избрани всичките им опорни точки.
+    let changed = true;
+    while(changed){
+      changed = false;
+      for(const o of objects){
+        if(set.has(o.id) || o.hidden || !o.parents || !o.parents.length) continue;
+        if(o.parents.every(pid=>set.has(pid))){ set.add(o.id); changed = true; }
+      }
+    }
+    return set;
+  }
+  function startGroupDrag(sx,sy){
+    const items = [];
+    for(const id of multiSel){
+      const o = getObj(id);
+      if(o){
+        if(o.type==='point' && o.sub==='free') items.push({ kind:'xy', o, ox:o.x, oy:o.y });
+        else if(o.type==='text' || o.type==='image') items.push({ kind:'xy', o, ox:o.x, oy:o.y });
+      } else {
+        const s = inkStrokes.find(k=>k.id===id);
+        if(s) items.push({ kind:'ink', s, pts:s.points.map(p=>({x:p.x,y:p.y})) });
+      }
+    }
+    groupDrag = { sx, sy, items };
+    armHistory();
+  }
+  function applyGroupDrag(sx,sy){
+    const dx = (sx-groupDrag.sx)/view.scale, dy = -(sy-groupDrag.sy)/view.scale;
+    for(const it of groupDrag.items){
+      if(it.kind==='xy'){ it.o.x = it.ox+dx; it.o.y = it.oy+dy; }
+      else { it.s.points.forEach((p,i)=>{ p.x = it.pts[i].x+dx; p.y = it.pts[i].y+dy; }); }
+    }
+  }
+  function marqueePointerDown(e,sx,sy){
+    const hit = pickAny(sx,sy);
+    canvas.setPointerCapture(e.pointerId);
+    if(hit){
+      if(multiSel.has(hit) && e.shiftKey){ multiSel.delete(hit); updateHint(); render(); return; }
+      if(!multiSel.has(hit)){
+        if(!e.shiftKey) multiSel.clear();
+        withAncestors([hit]).forEach(id=>multiSel.add(id));
+      }
+      startGroupDrag(sx,sy);
+      updateHint(); render();
+      return;
+    }
+    if(!e.shiftKey) multiSel.clear();
+    marqueeStart = { sx, sy };
+    marqueeCur = { sx, sy };
+    updateHint(); render();
+  }
+  function finishMarquee(){
+    if(!marqueeStart) return;
+    const x0 = Math.min(marqueeStart.sx, marqueeCur.sx), x1 = Math.max(marqueeStart.sx, marqueeCur.sx);
+    const y0 = Math.min(marqueeStart.sy, marqueeCur.sy), y1 = Math.max(marqueeStart.sy, marqueeCur.sy);
+    marqueeStart = null; marqueeCur = null;
+    if((x1-x0) > 4 || (y1-y0) > 4){
+      objectsInRect(x0,y0,x1,y1).forEach(id=>multiSel.add(id));
+    }
+    updateHint();
+  }
+
+  function eraseAt(sx,sy){
+    const R = ERASER_R;
+    let changed = false;
+    const out = [];
+    for(const s of inkStrokes){
+      if(s.hidden || !s.points.length){ out.push(s); continue; }
+      const sp = s.points.map(p=>worldToScreen(p.x,p.y));
+      let touched = false;
+      if(sp.length===1) touched = Math.hypot(sp[0].x-sx, sp[0].y-sy) < R;
+      else for(let i=1;i<sp.length && !touched;i++){
+        if(distToSeg(sx,sy,sp[i-1].x,sp[i-1].y,sp[i].x,sp[i].y) < R) touched = true;
+      }
+      if(!touched){ out.push(s); continue; }
+      changed = true;
+      // зареждаме гъсти точки по ударените отсечки, за да се къса точно под гумичката
+      const pts = [];
+      for(let i=0;i<s.points.length;i++){
+        pts.push({ x:s.points[i].x, y:s.points[i].y, p:s.points[i].p });
+        if(i<s.points.length-1){
+          const d = Math.hypot(sp[i+1].x-sp[i].x, sp[i+1].y-sp[i].y);
+          const k = Math.floor(d/(R/2));
+          for(let j=1;j<=k;j++){
+            const t = j/(k+1);
+            pts.push({ x:s.points[i].x+(s.points[i+1].x-s.points[i].x)*t,
+                       y:s.points[i].y+(s.points[i+1].y-s.points[i].y)*t,
+                       p:((s.points[i].p||0.5)+(s.points[i+1].p||0.5))/2 });
+          }
+        }
+      }
+      let run = [];
+      const flush = ()=>{
+        if(run.length>=2) out.push({ id:uid(), tint:s.tint, width:s.width, points:run });
+        run = [];
+      };
+      for(const p of pts){
+        const q = worldToScreen(p.x,p.y);
+        if(Math.hypot(q.x-sx, q.y-sy) < R) flush(); else run.push(p);
+      }
+      flush();
+    }
+    if(changed){
+      commitArmedHistory();
+      inkStrokes.splice(0, inkStrokes.length, ...out);
+      if(selectedId!==null && !getObj(selectedId) && !inkStrokes.some(k=>k.id===selectedId)) selectedId = null;
+    }
+    return changed;
+  }
+
+  function copySelection(){
+    const base = currentSelectionSet();
+    if(!base.size){ hintText.textContent = 'Първо избери обекти (инструмент „Избор с рамка“).'; return false; }
+    const set = withAncestors(base);
+    const objs = objects.filter(o=>set.has(o.id)).map(o=>{
+      const c = JSON.parse(JSON.stringify(serializeObjects([o])[0]));
+      if(o.type==='image') c.src = imageCache.get(o.id) || '';
+      return c;
+    });
+    const inks = inkStrokes.filter(s=>set.has(s.id)).map(s=>JSON.parse(JSON.stringify(s)));
+    clipboardData = { objs, inks };
+    pasteCount = 0;
+    hintText.textContent = '✓ Копирани: '+(objs.length+inks.length)+' обекта. Ctrl+V или „Постави“ ги поставя.';
+    updateEditButtons();
+    return true;
+  }
+  function pasteClipboard(){
+    if(!clipboardData || (!clipboardData.objs.length && !clipboardData.inks.length)) return false;
+    saveHistory();
+    pasteCount++;
+    const off = 0.6*pasteCount;
+    const map = new Map();
+    clipboardData.objs.forEach(o=>map.set(o.id, uid()));
+    clipboardData.inks.forEach(s=>map.set(s.id, uid()));
+    const newIds = [];
+    for(const src of clipboardData.objs){
+      const o = JSON.parse(JSON.stringify(src));
+      o.id = map.get(src.id);
+      if(o.parents) o.parents = o.parents.map(pid=>map.has(pid) ? map.get(pid) : pid);
+      if(o.type==='point'){ if(o.sub==='free'){ o.x += off; o.y -= off; } o.label = nextLabel(); }
+      if(o.type==='angle') o.label = nextGreekLabel();
+      if(o.type==='text' || o.type==='image'){ o.x += off; o.y -= off; }
+      objects.push(o);
+      newIds.push(o.id);
+    }
+    for(const src of clipboardData.inks){
+      const s = JSON.parse(JSON.stringify(src));
+      s.id = map.get(src.id);
+      s.points.forEach(p=>{ p.x += off; p.y -= off; });
+      inkStrokes.push(s);
+      newIds.push(s.id);
+    }
+    hydrateImages(objects);
+    setTool('marquee', true);
+    multiSel = new Set(newIds);
+    hintText.textContent = '✓ Поставени: '+newIds.length+' обекта. Провлачи ги на място.';
+    render();
+    return true;
+  }
+  function duplicateSelection(){
+    if(copySelection()) pasteClipboard();
+  }
+  function reorderArray(arr, sel, mode){
+    const items = arr.filter(x=>sel.has(x.id)), rest = arr.filter(x=>!sel.has(x.id));
+    if(!items.length) return;
+    if(mode==='front') arr.splice(0, arr.length, ...rest, ...items);
+    else if(mode==='back') arr.splice(0, arr.length, ...items, ...rest);
+    else if(mode==='forward'){
+      for(let i=arr.length-2;i>=0;i--){ if(sel.has(arr[i].id) && !sel.has(arr[i+1].id)){ const t=arr[i]; arr[i]=arr[i+1]; arr[i+1]=t; } }
+    } else if(mode==='backward'){
+      for(let i=1;i<arr.length;i++){ if(sel.has(arr[i].id) && !sel.has(arr[i-1].id)){ const t=arr[i]; arr[i]=arr[i-1]; arr[i-1]=t; } }
+    }
+  }
+  function arrangeSelection(mode){
+    const sel = currentSelectionSet();
+    if(!sel.size){ hintText.textContent = 'Първо избери обект.'; return; }
+    saveHistory();
+    reorderArray(objects, sel, mode);
+    reorderArray(inkStrokes, sel, mode);
+    hintText.textContent = '✓ Подредбата е променена (вижда се при припокриващи се снимки, оцветени фигури и бележки).';
+    render();
+  }
+  function updateEditButtons(){
+    const has = currentSelectionSet().size>0;
+    for(const id of ['copyBtn','dupBtn','arrangeMenuBtn']){
+      const b = document.getElementById(id);
+      if(b) b.disabled = !has;
+    }
+    const pb = document.getElementById('pasteBtn');
+    if(pb) pb.disabled = !clipboardData;
+  }
+
+  /* ================= графика на функция ================= */
+  /* Малък, безопасен разбирач на формули (без eval): + - * / ^, скоби, неявно
+     умножение (2x, 3(x+1)), x, константи pi и e, и функции sin cos tan tg cot
+     ctg asin acos atan sqrt abs ln log lg exp floor ceil sign cbrt. Десетичната
+     запетая е позволена (0,5). */
+  const FUNC_NAMES = {
+    sin:Math.sin, cos:Math.cos, tan:Math.tan, tg:Math.tan,
+    cot:v=>1/Math.tan(v), ctg:v=>1/Math.tan(v), cotg:v=>1/Math.tan(v),
+    asin:Math.asin, arcsin:Math.asin, acos:Math.acos, arccos:Math.acos, atan:Math.atan, arctan:Math.atan, arctg:Math.atan,
+    sqrt:Math.sqrt, abs:Math.abs, ln:Math.log, log:Math.log10, lg:Math.log10, exp:Math.exp,
+    floor:Math.floor, ceil:Math.ceil, sign:Math.sign, cbrt:Math.cbrt
+  };
+  function compileFunctionExpr(src){
+    let t = String(src||'').toLowerCase().replace(/π/g,'pi').replace(/²/g,'^2').replace(/³/g,'^3').replace(/[·×]/g,'*').replace(/÷/g,'/').replace(/[−–]/g,'-');
+    t = t.replace(/^\s*(y|f\s*\(\s*x\s*\))\s*=\s*/,'');
+    if(!t.trim()) throw new Error('Въведи формула, напр. x^2 - 4x + 3');
+    const toks = [];
+    const re = /\s*(\d+(?:[.,]\d+)?|[.,]\d+|[a-z]+|[-+*\/^()])/y;
+    let pos = 0, m;
+    while(pos < t.length){
+      re.lastIndex = pos;
+      m = re.exec(t);
+      if(!m){
+        if(/^\s*$/.test(t.slice(pos))) break;
+        throw new Error('Непознат знак в „'+t.slice(pos).trim().charAt(0)+'“.');
+      }
+      toks.push(m[1]); pos = re.lastIndex;
+    }
+    let i = 0;
+    const peek = ()=>toks[i];
+    const isAtomStart = tk => tk!==undefined && (/^[\d.,]/.test(tk) || /^[a-z]/.test(tk) || tk==='(');
+    function parseExpr(){
+      let l = parseTerm();
+      while(peek()==='+' || peek()==='-'){
+        const op = toks[i++]; const r = parseTerm(); const a = l;
+        l = op==='+' ? (x=>a(x)+r(x)) : (x=>a(x)-r(x));
+      }
+      return l;
+    }
+    function parseTerm(){
+      let l = parseUnary();
+      for(;;){
+        const tk = peek();
+        if(tk==='*' || tk==='/'){
+          i++; const r = parseUnary(); const a = l;
+          l = tk==='*' ? (x=>a(x)*r(x)) : (x=>a(x)/r(x));
+        } else if(isAtomStart(tk)){
+          const r = parsePower(); const a = l;
+          l = x=>a(x)*r(x);
+        } else break;
+      }
+      return l;
+    }
+    function parseUnary(){
+      if(peek()==='-'){ i++; const v = parseUnary(); return x=>-v(x); }
+      if(peek()==='+'){ i++; return parseUnary(); }
+      return parsePower();
+    }
+    function parsePower(){
+      const base = parseAtom();
+      if(peek()==='^'){
+        i++; const ex = parseUnary();
+        return x=>Math.pow(base(x), ex(x));
+      }
+      return base;
+    }
+    function parseAtom(){
+      const tk = toks[i++];
+      if(tk===undefined) throw new Error('Формулата свършва неочаквано.');
+      if(/^[\d.,]/.test(tk)){ const v = parseFloat(tk.replace(',','.')); return ()=>v; }
+      if(tk==='('){
+        const e = parseExpr();
+        if(toks[i++]!==')') throw new Error('Липсва затваряща скоба.');
+        return e;
+      }
+      if(tk==='x') return x=>x;
+      if(tk==='pi') return ()=>Math.PI;
+      if(tk==='e') return ()=>Math.E;
+      if(FUNC_NAMES[tk]){
+        if(toks[i]!=='(') throw new Error('След „'+tk+'“ трябва скоба, напр. '+tk+'(x).');
+        i++;
+        const e = parseExpr();
+        if(toks[i++]!==')') throw new Error('Липсва затваряща скоба.');
+        const fn = FUNC_NAMES[tk];
+        return x=>fn(e(x));
+      }
+      throw new Error('Непозната дума „'+tk+'“. Използвай x, pi, e, sin, cos, tan, sqrt, abs, ln, log, exp…');
+    }
+    const f = parseExpr();
+    if(i < toks.length) throw new Error('Неочакван знак „'+toks[i]+'“.');
+    f(1); // пробно изчисление
+    return f;
+  }
+  function funcObjEval(o){
+    if(!o._f){ try{ o._f = compileFunctionExpr(o.expr); }catch(err){ o._f = ()=>NaN; } }
+    return o._f;
+  }
+  function functionScreenPaths(o){
+    const w = canvas.width/dpr, h = canvas.height/dpr;
+    const f = funcObjEval(o);
+    const paths = [];
+    let cur = [], prev = null;
+    const LIM = 4e4;
+    for(let sx=-2; sx<=w+2; sx+=1.5){
+      const x = screenToWorld(sx,0).x;
+      let y; try{ y = f(x); }catch(err){ y = NaN; }
+      if(typeof y!=='number' || !isFinite(y)){ if(cur.length>1) paths.push(cur); cur=[]; prev=null; continue; }
+      const sy = worldToScreen(0,y).y;
+      if(Math.abs(sy) > LIM){ if(cur.length>1) paths.push(cur); cur=[]; prev=null; continue; }
+      if(prev && Math.abs(sy-prev.y) > Math.max(h*1.5, 600)){ if(cur.length>1) paths.push(cur); cur=[]; }
+      cur.push({x:sx,y:sy}); prev = {x:sx,y:sy};
+    }
+    if(cur.length>1) paths.push(cur);
+    return paths;
+  }
+  /* Пресечни точки на графиката (с оста x, оста y и другите графики) и
+     най-голяма / най-малка стойност в видимата част на дъската. */
+  function fmtNum(v){
+    let r = Math.round(v*100)/100;
+    if(Object.is(r,-0) || r===0) r = 0;
+    return String(r).replace('.',',');
+  }
+  function functionKeyPoints(o){
+    const w = canvas.width/dpr, h = canvas.height/dpr;
+    const f = funcObjEval(o);
+    const x0 = screenToWorld(0,0).x, x1 = screenToWorld(w,0).x;
+    const N = 700, dx = (x1-x0)/N;
+    const safe = (fn,x)=>{ try{ const y = fn(x); return (typeof y==='number' && isFinite(y)) ? y : NaN; }catch(e){ return NaN; } };
+    const xs = [], ys = [];
+    for(let i=0;i<=N;i++){ const x = x0+dx*i; xs.push(x); ys.push(safe(f,x)); }
+    const pts = [];
+    const bisect = (fn,a,b)=>{
+      let fa = fn(a);
+      for(let k=0;k<45;k++){
+        const m = (a+b)/2, fm = fn(m);
+        if((fa<0) === (fm<0)){ a = m; fa = fm; } else b = m;
+      }
+      return (a+b)/2;
+    };
+    // 1) нули (пресичане с оста x)
+    const zeros = [];
+    for(let i=0;i<N;i++){
+      const a = ys[i], b = ys[i+1];
+      if(isNaN(a) || isNaN(b)) continue;
+      if(a===0){ zeros.push(xs[i]); continue; }
+      if(a*b < 0){
+        const r = bisect(x=>safe(f,x), xs[i], xs[i+1]);
+        const fr = Math.abs(safe(f,r));
+        if(fr < 1e-3 || fr < Math.min(Math.abs(a),Math.abs(b))*0.5) zeros.push(r);
+      }
+    }
+    if(ys[N]===0) zeros.push(xs[N]);
+    zeros.sort((p,q)=>Math.abs(p)-Math.abs(q));
+    zeros.slice(0,10).forEach(x=>pts.push({ x, y:0, kind:'zero' }));
+    // 2) пресичане с оста y
+    if(0>=x0 && 0<=x1){
+      const y0 = safe(f,0);
+      if(!isNaN(y0) && Math.abs(y0)>1e-9) pts.push({ x:0, y:y0, kind:'yint' });
+    }
+    // 3) най-голяма и най-малка стойност (вътрешни локални екстремуми във видимата част)
+    const pxPerY = view.scale;
+    let imax=-1, imin=-1;
+    for(let i=1;i<N;i++){
+      const y = ys[i], a = ys[i-1], b = ys[i+1];
+      if(isNaN(y)||isNaN(a)||isNaN(b)) continue;
+      if(Math.abs(y-a)*pxPerY > 40 || Math.abs(y-b)*pxPerY > 40) continue; // скок / асимптота
+      if(y>=a && y>=b && (a!==y || b!==y) && (imax<0 || y>ys[imax]+1e-9)) imax = i;
+      if(y<=a && y<=b && (a!==y || b!==y) && (imin<0 || y<ys[imin]-1e-9)) imin = i;
+    }
+    const refine = (i,sign)=>{
+      let lo = xs[i-1], hi = xs[i+1];
+      const g = x=>sign*safe(f,x);
+      for(let k=0;k<50;k++){
+        const m1 = lo+(hi-lo)/3, m2 = hi-(hi-lo)/3;
+        if(g(m1) < g(m2)) lo = m1; else hi = m2;
+      }
+      const x = (lo+hi)/2;
+      return { x, y:safe(f,x) };
+    };
+    // глобален екстремум на видимата част: показваме го само ако е истински връх на графиката,
+    // т.е. по-голям (по-малък) от всички други видими стойности
+    const finite = ys.filter(v=>!isNaN(v));
+    const gmax = Math.max.apply(null, finite), gmin = Math.min.apply(null, finite);
+    if(imax>0 && ys[imax] >= gmax - 1e-9*Math.max(1,Math.abs(gmax))){ const p = refine(imax,1); if(!isNaN(p.y)) pts.push({ x:p.x, y:p.y, kind:'max' }); }
+    if(imin>0 && ys[imin] <= gmin + 1e-9*Math.max(1,Math.abs(gmin))){ const p = refine(imin,-1); if(!isNaN(p.y)) pts.push({ x:p.x, y:p.y, kind:'min' }); }
+    // 4) пресичане с други графики
+    for(const g of objects){
+      if(g.type!=='function' || g.id<=o.id || g.hidden || g.analyze===false) continue;
+      const gf = funcObjEval(g);
+      const d = x=>f(x)-gf(x);
+      let found = 0;
+      for(let i=0;i<N && found<6;i++){
+        const a = safe(d,xs[i]), b = safe(d,xs[i+1]);
+        if(isNaN(a)||isNaN(b)||a*b>=0) continue;
+        const r = bisect(x=>safe(d,x), xs[i], xs[i+1]);
+        const yr = safe(f,r);
+        if(isNaN(yr) || Math.abs(safe(d,r)) > 1e-3) continue;
+        pts.push({ x:r, y:yr, kind:'cross' }); found++;
+      }
+    }
+    return pts;
+  }
+  let fnLabelPlaced = [];
+  function drawFunctionKeyPoints(o, color, pal){
+    const pts = functionKeyPoints(o);
+    const w = canvas.width/dpr, h = canvas.height/dpr;
+    ctx.save();
+    ctx.font = '600 12px system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.setLineDash([]);
+    const placed = fnLabelPlaced;
+    for(const p of pts){
+      const s = worldToScreen(p.x,p.y);
+      if(s.x<-5 || s.x>w+5 || s.y<-5 || s.y>h+5) continue;
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,4.2,0,Math.PI*2);
+      if(p.kind==='max' || p.kind==='min'){ ctx.fillStyle = color; ctx.fill(); }
+      else { ctx.fillStyle = pal.board; ctx.fill(); }
+      ctx.lineWidth = 2; ctx.strokeStyle = color; ctx.stroke();
+      const coord = '('+fmtNum(p.x)+'; '+fmtNum(p.y)+')';
+      const text = p.kind==='max' ? 'най-голяма '+coord : (p.kind==='min' ? 'най-малка '+coord : coord);
+      const tw = ctx.measureText(text).width;
+      // избираме място за надписа, което не се застъпва с вече поставен
+      const cands = [[8,-11],[8,13],[-tw-8,-11],[-tw-8,13],[-tw/2,-18],[-tw/2,20]];
+      let best = cands[0];
+      for(const c of cands){
+        const bx = s.x+c[0], by = s.y+c[1];
+        if(bx<2 || bx+tw>w-2 || by<8 || by>h-8) continue;
+        if(!placed.some(r=>bx<r.x+r.w && bx+tw>r.x && Math.abs(by-r.y)<14)){ best = c; break; }
+      }
+      const bx = s.x+best[0], by = s.y+best[1];
+      placed.push({ x:bx, y:by, w:tw });
+      ctx.lineWidth = 3.5; ctx.strokeStyle = pal.board; ctx.lineJoin = 'round';
+      ctx.strokeText(text, bx, by);
+      ctx.fillStyle = color;
+      ctx.fillText(text, bx, by);
+    }
+    ctx.restore();
+  }
+
+  function drawFunctionObj(o, isHot, pal){
+    const paths = functionScreenPaths(o);
+    const w = canvas.width/dpr, h = canvas.height/dpr;
+    const baseW = o.strokeWidth || 2.2;
+    const color = isHot ? pal.hot : (o.tint ? tintColor(pal, o.tint) : pal.blue);
+    ctx.save();
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.lineWidth = isHot ? baseW+0.6 : baseW;
+    ctx.strokeStyle = color;
+    ctx.setLineDash(o.dash ? (DASH_PATTERNS[o.dash]||[]) : []);
+    for(const pa of paths){
+      ctx.beginPath();
+      ctx.moveTo(pa[0].x, pa[0].y);
+      for(let i=1;i<pa.length;i++) ctx.lineTo(pa[i].x, pa[i].y);
+      ctx.stroke();
+    }
+    // надпис „y = …“ до най-десния видим участък на графиката
+    ctx.setLineDash([]);
+    let lab = null;
+    for(const pa of paths){
+      for(const p of pa){ if(p.x<w-110 && p.y>24 && p.y<h-24 && (!lab || p.x>lab.x)) lab = p; }
+    }
+    if(lab){
+      ctx.font = '600 13px system-ui, sans-serif';
+      ctx.fillStyle = color;
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('y = '+o.expr, lab.x+8, lab.y-6);
+    }
+    ctx.restore();
+    if(o.analyze!==false) drawFunctionKeyPoints(o, color, pal);
+  }
+  function pickFunction(sx,sy){
+    let best=null, bestD=9;
+    for(const o of objects){
+      if(o.type!=='function' || o.hidden) continue;
+      for(const pa of functionScreenPaths(o)){
+        for(let i=1;i<pa.length;i++){
+          const d = distToSeg(sx,sy,pa[i-1].x,pa[i-1].y,pa[i].x,pa[i].y);
+          if(d<bestD){ bestD=d; best=o.id; }
+        }
+      }
+    }
+    return best;
+  }
+  function openFunctionDialog(initial, analyze, onDone){
+    const dialog=document.getElementById('functionDialog'), input=document.getElementById('functionDialogInput'), err=document.getElementById('functionDialogError');
+    const cb = document.getElementById('functionDialogAnalyze');
+    input.value = initial||'';
+    cb.checked = analyze!==false;
+    err.textContent = '';
+    dialog.onclose=()=>{ onDone(dialog.returnValue==='save' ? input.value.trim() : null, cb.checked); canvas.focus(); };
+    dialog.returnValue='cancel'; dialog.showModal(); input.focus(); input.select();
+  }
+  function addFunctionGraph(){
+    openFunctionDialog('', true, (expr, analyze)=>{
+      if(expr===null) return;
+      saveHistory();
+      const tints = ['blue','rose','green','orange','yellow'];
+      const o = { id:uid(), type:'function', expr, analyze, parents:[], tint:tints[objects.filter(k=>k.type==='function').length % tints.length] };
+      objects.push(o);
+      setTool('move');
+      selectedId = o.id;
+      hintText.textContent = '✓ Построена графика y = '+expr+'. Кликни два пъти върху нея, за да смениш формулата или да скриеш точките.';
+      render();
+    });
+  }
+  function editFunctionGraph(id){
+    const o = getObj(id);
+    if(!o) return;
+    openFunctionDialog(o.expr, o.analyze, (expr, analyze)=>{
+      if(expr===null || (expr===o.expr && analyze===(o.analyze!==false))) return;
+      saveHistory();
+      o.expr = expr; o._f = null; o.analyze = analyze;
+      render();
+    });
+  }
+
   /* ================= pointer + wheel events ================= */
   function canvasCoords(e){
     const r = canvas.getBoundingClientRect();
@@ -5005,6 +6031,17 @@
       render();
       return;
     }
+
+    if(currentTool==='eraser'){
+      armHistory();
+      isErasing = true;
+      eraserPos = { sx, sy };
+      canvas.setPointerCapture(e.pointerId);
+      eraseAt(sx,sy);
+      render();
+      return;
+    }
+    if(currentTool==='marquee'){ marqueePointerDown(e,sx,sy); return; }
 
     if(currentTool==='move'){
       const pid = pickPoint(sx,sy);
@@ -5104,6 +6141,7 @@
     if(currentTool==='regularPolygon'){ handleRegularPolygonClick(sx,sy); return; }
     if(currentTool==='quad_cyclic'){ handleCyclicQuadClick(sx,sy); return; }
     if(currentTool==='quad_circumscribed'){ handleTangentQuadClick(sx,sy); return; }
+    if(SOLID_SPECS[currentTool] || ROUND_SOLIDS[currentTool]){ handleSolidClick(sx,sy); return; }
     if(SHAPE_SPECS[currentTool]){ handleShapeClick(sx,sy); return; }
     if(currentTool==='delete'){ handleDeleteClick(sx,sy); return; }
     if(currentTool==='pen' || currentTool==='smartpen'){
@@ -5132,6 +6170,24 @@
 
     if(cropMode && cropRectStart){
       cropRectCurrent = {sx,sy};
+      requestRender();
+      return;
+    }
+
+    if(currentTool==='eraser'){
+      eraserPos = { sx, sy };
+      if(isErasing) eraseAt(sx,sy);
+      requestRender();
+      return;
+    }
+    if(groupDrag){
+      commitArmedHistory();
+      applyGroupDrag(sx,sy);
+      requestRender();
+      return;
+    }
+    if(marqueeStart){
+      marqueeCur = { sx, sy };
       requestRender();
       return;
     }
@@ -5315,7 +6371,11 @@
       return;
     }
     const pid = pickPoint(sx,sy);
-    if(!pid) return;
+    if(!pid){
+      const fid = pickFunction(sx,sy);
+      if(fid) editFunctionGraph(fid);
+      return;
+    }
     const pt = getObj(pid);
     if(!pt) return;
     openLabelDialog(pt.label||'', next=>{
@@ -5408,6 +6468,9 @@
     draggingTextId = null;
     dragTextStart = null;
     isPanning = false;
+    isErasing = false;
+    groupDrag = null;
+    finishMarquee();
     const wasDrawingInk = isDrawingInk;
     const finishedStroke = currentStroke;
     isDrawingInk = false;
@@ -5441,7 +6504,7 @@
   canvas.addEventListener('pointercancel', endPointerInteraction);
   canvas.addEventListener('lostpointercapture', endPointerInteraction);
   window.addEventListener('pointerup', e=>{if(e.pointerId===activePointerId) endPointerInteraction(e);});
-  canvas.addEventListener('pointerleave', function(){ hoverId=null; render(); });
+  canvas.addEventListener('pointerleave', function(){ hoverId=null; eraserPos=null; render(); });
 
   canvas.addEventListener('contextmenu', function(e){ e.preventDefault(); });
 
@@ -5477,6 +6540,23 @@
       render();
     }
     else if(e.key==='Enter' && currentTool==='polygon'){ finalizePolygon(); render(); }
+    else if((e.key==='Delete' || e.key==='Backspace') && multiSel.size>0){
+      e.preventDefault();
+      saveHistory();
+      for(const id of Array.from(multiSel)) deleteAnyById(id);
+      multiSel.clear();
+      selectedId = null;
+      updateHint();
+      render();
+    }
+    else if((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='c' && currentSelectionSet().size>0){
+      e.preventDefault();
+      copySelection();
+    }
+    else if((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='d'){
+      e.preventDefault();
+      duplicateSelection();
+    }
     else if((e.key==='Delete' || e.key==='Backspace') && selectedId!==null){
       e.preventDefault();
       saveHistory();
@@ -5542,10 +6622,10 @@
       submenu.style.left = '0px';
       submenu.style.top = '0px';
       const mw = submenu.offsetWidth, mh = submenu.offsetHeight;
-      let left = r.right + 6;
-      if(left + mw > window.innerWidth - 8) left = Math.max(8, r.left - mw - 6);
-      let top = Math.min(r.top, window.innerHeight - mh - 8);
-      top = Math.max(8, top);
+      // Лентата е долу, затова менюто се отваря нагоре над бутона.
+      let left = Math.max(8, Math.min(r.left, window.innerWidth - mw - 8));
+      let top = r.top - mh - 6;
+      if(top < 8) top = Math.min(r.bottom + 6, Math.max(8, window.innerHeight - mh - 8));
       submenu.style.left = left+'px';
       submenu.style.top = top+'px';
     }
@@ -5579,6 +6659,20 @@
   setupToolMenu('circleMenuBtn', 'circleSubmenu');
   setupToolMenu('cevianMenuBtn', 'cevianSubmenu');
   setupToolMenu('circlesMenuBtn', 'circlesSubmenu');
+  setupToolMenu('solidMenuBtn', 'solidSubmenu');
+  setupToolMenu('arrangeMenuBtn', 'arrangeSubmenu');
+  document.querySelectorAll('#arrangeSubmenu .submenu-item[data-act]').forEach(item=>{
+    item.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      arrangeSelection(item.dataset.act);
+      document.getElementById('arrangeSubmenu').hidden = true;
+      document.getElementById('arrangeMenuBtn').setAttribute('aria-expanded','false');
+    });
+  });
+  document.getElementById('funcBtn').addEventListener('click', ()=>{ addFunctionGraph(); });
+  document.getElementById('copyBtn').addEventListener('click', ()=>{ copySelection(); });
+  document.getElementById('pasteBtn').addEventListener('click', ()=>{ pasteClipboard(); });
+  document.getElementById('dupBtn').addEventListener('click', ()=>{ duplicateSelection(); });
   // The Symbols menu reuses setupToolMenu purely for its open/close/position/
   // outside-click behaviour (its items carry data-symbol, not data-tool, so the
   // generic [data-tool] wiring inside setupToolMenu simply finds nothing to bind
@@ -5599,6 +6693,19 @@
     el.setAttribute('aria-pressed', el.classList.contains('on') ? 'true' : 'false');
   });
 
+  const bgStyleBtn = document.getElementById('bgStyleBtn');
+  function setBgStyle(id){
+    const st = BG_STYLES.find(b=>b.id===id) || BG_STYLES[0];
+    bgStyle = st.id;
+    document.getElementById('bgStyleLabel').textContent = 'Фон: '+st.label;
+    bgStyleBtn.classList.toggle('on', bgStyle!=='grid');
+    render();
+  }
+  bgStyleBtn.addEventListener('click', ()=>{
+    const i = BG_STYLES.findIndex(b=>b.id===bgStyle);
+    if(!gridEnabled){ gridEnabled = true; gridToggle.classList.add('on'); gridToggle.setAttribute('aria-pressed','true'); }
+    setBgStyle(BG_STYLES[(i+1)%BG_STYLES.length].id);
+  });
   const gridToggle = document.getElementById('gridToggle');
   const snapToggle = document.getElementById('snapToggle');
   gridToggle.addEventListener('click', ()=>{
@@ -5645,10 +6752,9 @@
     const r = measureToggle.getBoundingClientRect();
     measurePanel.style.left = '0px'; measurePanel.style.top = '0px';
     const mw = measurePanel.offsetWidth, mh = measurePanel.offsetHeight;
-    let left = r.right + 6;
-    if(left + mw > window.innerWidth - 8) left = Math.max(8, r.left - mw - 6);
-    let top = Math.min(r.top, window.innerHeight - mh - 8);
-    top = Math.max(8, top);
+    let left = Math.max(8, Math.min(r.left, window.innerWidth - mw - 8));
+    let top = r.top - mh - 6;
+    if(top < 8) top = Math.min(r.bottom + 6, Math.max(8, window.innerHeight - mh - 8));
     measurePanel.style.left = left+'px';
     measurePanel.style.top = top+'px';
   }
@@ -5915,7 +7021,11 @@
     if(target && (target.matches('input,textarea') || target.isContentEditable)) return;
     const items=Array.from((e.clipboardData && e.clipboardData.items) || []);
     const imageItem=items.find(item=>item.kind==='file' && item.type.startsWith('image/'));
-    if(!imageItem) return; // keep ordinary text Paste available to the browser
+    if(!imageItem){
+      // Вътрешният клипборд (Ctrl+C върху избрани обекти) има предимство пред празен системен клипборд.
+      if(clipboardData && !items.some(i=>i.kind==='string' && i.type==='text/plain')){ e.preventDefault(); pasteClipboard(); }
+      return; // keep ordinary text Paste available to the browser
+    }
     const file=imageItem.getAsFile();
     if(!file) return;
     e.preventDefault();
@@ -6160,7 +7270,7 @@
       }
     }
     let seenAlready = null;
-    try{ seenAlready = localStorage.getItem('geoboard-welcome-seen'); }catch(err){}
+    try{ seenAlready = localStorage.getItem('geoboard-welcome-seen-v2'); }catch(err){}
     const dontShowCb = document.getElementById('welcomeDontShowAgain');
     if(dontShowCb) dontShowCb.checked = !!seenAlready;
     welcomeReturnFocus = document.activeElement;
@@ -6178,8 +7288,8 @@
     // comes back next time the app starts.
     const dontShowCb = document.getElementById('welcomeDontShowAgain');
     try{
-      if(dontShowCb && dontShowCb.checked) localStorage.setItem('geoboard-welcome-seen', '1');
-      else localStorage.removeItem('geoboard-welcome-seen');
+      if(dontShowCb && dontShowCb.checked) localStorage.setItem('geoboard-welcome-seen-v2', '1');
+      else localStorage.removeItem('geoboard-welcome-seen-v2');
     }catch(err){}
     if(welcomeReturnFocus && typeof welcomeReturnFocus.focus === 'function'){
       welcomeReturnFocus.focus({ preventScroll:true });
@@ -6196,7 +7306,7 @@
 
   function initWelcome(){
     let seen = null;
-    try{ seen = localStorage.getItem('geoboard-welcome-seen'); }catch(err){}
+    try{ seen = localStorage.getItem('geoboard-welcome-seen-v2'); }catch(err){}
     if(!seen) openWelcome();
   }
 
@@ -6264,7 +7374,7 @@
     pages[currentPageIndex] = capturePageRecord();
     return {
       app: 'geoboard', version: 6,
-      idCounter, currentPageIndex, pageOrientation,
+      idCounter, currentPageIndex, pageOrientation, bgStyle,
       pages: pages.map(p => ({
         title: p.title || '',
         paperBounds:p.paperBounds,
@@ -6309,6 +7419,7 @@
   function loadFromSaveData(data){
     idCounter = data.idCounter || 1;
     pageOrientation = data.pageOrientation || 'landscape';
+    setBgStyle(data.bgStyle || 'grid');
     pages = (data.pages || []).map(p => {
       const objs = p.objects || [];
       hydrateImages(objs);
@@ -6437,6 +7548,7 @@
         pages = newPages;
         idCounter = data.idCounter || (maxId+1);
         pageOrientation = data.pageOrientation==='portrait' ? 'portrait' : 'landscape';
+        setBgStyle(data.bgStyle || 'grid');
         currentPageIndex = Math.min(Math.max(0, data.currentPageIndex|0), pages.length-1);
         applyPageRecord(pages[currentPageIndex]);
         updatePageOrientationUI();
@@ -6568,6 +7680,20 @@
     if(e.key==='Enter'){e.preventDefault();sidesDialog.close('save');}
   });
 
+  const functionDialog=document.createElement('dialog');
+  functionDialog.id='functionDialog';
+  functionDialog.innerHTML='<form method="dialog"><label for="functionDialogInput">Графика на функция: y =</label><input id="functionDialogInput" type="text" autocomplete="off" spellcheck="false" placeholder="напр. x^2 - 4x + 3"><div class="fd-hint">Примери: <code>2x+1</code> · <code>x^2-4x+3</code> · <code>sin(x)</code> · <code>1/x</code> · <code>sqrt(x)</code> · <code>abs(x)</code> · <code>2^x</code> · <code>ln(x)</code></div><label class="fd-check"><input type="checkbox" id="functionDialogAnalyze" checked> Покажи пресечните точки с осите и най-голямата / най-малката стойност</label><div class="fd-error" id="functionDialogError" role="alert"></div><button type="button" id="functionDialogCancel">Отказ</button> <button type="submit" value="save" id="functionDialogOk">Построй</button></form>';
+  document.body.appendChild(functionDialog);
+  (function(){
+    const form = functionDialog.querySelector('form'), inp = document.getElementById('functionDialogInput'), er = document.getElementById('functionDialogError');
+    function trySave(){
+      try{ compileFunctionExpr(inp.value); }catch(err){ er.textContent = err.message; return; }
+      functionDialog.close('save');
+    }
+    form.addEventListener('submit', e=>{ e.preventDefault(); trySave(); });
+    document.getElementById('functionDialogCancel').addEventListener('click', ()=>functionDialog.close('cancel'));
+  })();
+
   const lengthDialog=document.createElement('dialog');
   lengthDialog.id='lengthDialog';
   lengthDialog.innerHTML='<form method="dialog"><label for="lengthDialogInput">Дължина</label><input id="lengthDialogInput" type="text" inputmode="decimal" maxlength="12" autocomplete="off" placeholder="напр. 4,5"><button value="cancel">Отказ</button> <button value="save">Построй</button></form>';
@@ -6666,7 +7792,7 @@
      window.__TEST__ = true via an init script BEFORE the page loads. Never
      true for real users, so this has no effect on normal use of the app. */
   if(window.__TEST__){
-    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj, worldToScreen, screenToWorld, getLineGeom, rightAngleRayDir, computeIntersections, render, get view(){ return view; }, get history(){ return history; }, get redoStack(){ return redoStack; }, undo, redo, get selectedId(){ return selectedId; }, get currentTool(){ return currentTool; }, get draggingPointId(){ return draggingPointId; }, get pages(){ return pages; }, get currentPageIndex(){ return currentPageIndex; }, getPageFrameRect, pageContentWorldBBox, textWorldFootprint, collectAllPagePNGs, computeLivePageWorldRect, get pageGuideEnabled(){ return pageGuideEnabled; } };
+    window.__state = { get objects(){ return objects; }, get inkStrokes(){ return inkStrokes; }, getPointXY, getObj, worldToScreen, screenToWorld, getLineGeom, rightAngleRayDir, computeIntersections, render, get view(){ return view; }, get history(){ return history; }, get redoStack(){ return redoStack; }, undo, redo, get selectedId(){ return selectedId; }, get multiSel(){ return multiSel; }, get currentTool(){ return currentTool; }, get draggingPointId(){ return draggingPointId; }, get pages(){ return pages; }, get currentPageIndex(){ return currentPageIndex; }, getPageFrameRect, pageContentWorldBBox, textWorldFootprint, collectAllPagePNGs, computeLivePageWorldRect, get pageGuideEnabled(){ return pageGuideEnabled; } };
   }
 })();
 </script>
