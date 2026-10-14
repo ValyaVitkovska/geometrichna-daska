@@ -318,6 +318,10 @@
   }
   .sel-bar button:hover{ filter:brightness(1.08); }
   .sel-bar button.danger{ background:rgba(var(--ink-danger-rgb),0.2); color:#b3261e; }
+  #revealBar{ bottom:64px; }
+  #revealBar .reveal-count{ font-size:13px; font-weight:800; color:var(--ink-primary); padding:0 8px; white-space:nowrap; }
+  #revealBar button.primary{ background:rgba(var(--accent-rgb),0.55); }
+  #revealBar button:disabled{ opacity:0.4; cursor:default; }
   .toolbar-spacer{ flex:1 1 auto; }
   .tool-btn:disabled{ opacity:0.4; cursor:default; pointer-events:none; filter:none; }
 
@@ -404,6 +408,15 @@
   #textDialog{max-width:90vw;width:440px;border:1px solid #739797;border-radius:12px;padding:20px;}
   #textDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:12px 0;font-size:18px;}
   #textDialog::backdrop{background:#0007;}
+
+  #formulaDialog{max-width:94vw;width:560px;border:1px solid #739797;border-radius:12px;padding:16px;}
+  #formulaDialog::backdrop{background:#0007;}
+  #formulaDialog input{display:block;box-sizing:border-box;width:100%;padding:10px;margin:8px 0;font-size:17px;font-family:monospace;}
+  #formulaDialog .fm-keys{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0;}
+  #formulaDialog .fm-keys button{min-width:40px;height:38px;padding:0 8px;font-size:17px;font-family:Cambria,"Times New Roman",serif;border:1px solid #739797;border-radius:6px;background:#f3f8f8;cursor:pointer;}
+  #formulaDialog .fm-keys button:hover{background:#dcecec;}
+  #formulaDialog canvas{display:block;width:100%;height:84px;background:#2b4a4a;border-radius:8px;margin:6px 0;}
+  #formulaDialog .fm-help{font-size:12px;color:#456;margin:4px 0 8px;}
   .page-title-label{ display:block; font-size:12px; margin:8px 0 4px; }
   #pageTitleInput{ box-sizing:border-box; width:100%; padding:8px; border:1px solid #739797; border-radius:7px; background:#fff; color:#172f2b; font:inherit; font-size:13px; }
   .page-bar-row .util-btn{ flex:1 1 0; justify-content:center; }
@@ -1486,9 +1499,30 @@
           <button type="button" class="submenu-item symbol-item" data-symbol="°" role="menuitem">°</button>
           <button type="button" class="submenu-item symbol-item" data-symbol="Δ" role="menuitem">Δ</button>
           <button type="button" class="submenu-item symbol-item" data-symbol="→" role="menuitem">→</button>
+          <button type="button" class="submenu-item symbol-item" data-formula="x^{2}" role="menuitem" title="Степен">x²</button>
+          <button type="button" class="submenu-item symbol-item" data-formula="\sqrt{x}" role="menuitem" title="Квадратен корен">√‾</button>
+          <button type="button" class="submenu-item symbol-item" data-formula="\root{3}{x}" role="menuitem" title="Корен n-ти">ⁿ√</button>
+          <button type="button" class="submenu-item symbol-item" data-formula="\vec{AB}" role="menuitem" title="Вектор">AB⃗</button>
+          <button type="button" class="submenu-item symbol-item" data-formula="\arc{AB}" role="menuitem" title="Дъга от окръжност">⌒AB</button>
+          <button type="button" class="submenu-item symbol-item" data-formula="\angle ABC=45°" role="menuitem" title="Ъгъл">∡</button>
+          <button type="button" class="submenu-item symbol-item" data-formula="\frac{a}{b}" role="menuitem" title="Дроб">a/b</button>
+          <button type="button" class="submenu-item symbol-item" data-formula="" role="menuitem" title="Формула — свободно писане" style="grid-column:span 2">Формула…</button>
           <button type="button" class="submenu-item symbol-item" data-symbol="sin" role="menuitem">sin</button>
           <button type="button" class="submenu-item symbol-item" data-symbol="cos" role="menuitem">cos</button>
           <button type="button" class="submenu-item symbol-item" data-symbol="tan" role="menuitem">tan</button>
+        </div>
+      </div>
+      <div class="tool-menu" id="revealMenu">
+        <button type="button" class="tool-btn menu-trigger" id="revealMenuBtn" data-tint="yellow" title="Информация, която се показва постепенно" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span class="tool-label">Постепенно</span>
+        </button>
+        <div class="tool-submenu" id="revealSubmenu" role="menu" aria-label="Постепенно показване" hidden>
+          <button type="button" class="submenu-item" data-rev="new" role="menuitem">Избраното – нова стъпка</button>
+          <button type="button" class="submenu-item" data-rev="last" role="menuitem">Избраното – към последната стъпка</button>
+          <button type="button" class="submenu-item" data-rev="start" role="menuitem">Започни показването (скрий стъпките)</button>
+          <button type="button" class="submenu-item" data-rev="all" role="menuitem">Покажи всичко</button>
+          <button type="button" class="submenu-item" data-rev="clear" role="menuitem">Премахни всички стъпки</button>
         </div>
       </div>
     </div>
@@ -1706,8 +1740,16 @@
         <span class="sel-count" id="selCount"></span>
         <button type="button" id="selCopyBtn">Копирай</button>
         <button type="button" id="selDupBtn">Дублирай</button>
+        <button type="button" id="selStepBtn" title="Маркираното ще се показва постепенно — като нова стъпка">+ Стъпка</button>
         <button type="button" id="selDeleteBtn" class="danger">Изтрий</button>
         <button type="button" id="selCancelBtn" title="Откажи маркирането" aria-label="Откажи маркирането">✕</button>
+      </div>
+      <div class="sel-bar" id="revealBar" hidden role="toolbar" aria-label="Постепенно показване">
+        <button type="button" id="revPrevBtn" title="Скрий последно показаното">◀ Назад</button>
+        <span class="reveal-count" id="revCount"></span>
+        <button type="button" id="revNextBtn" class="primary" title="Покажи следващата стъпка (Интервал)">Напред ▶</button>
+        <button type="button" id="revAllBtn" title="Покажи всичко">Всичко</button>
+        <button type="button" id="revResetBtn" title="Скрий всичко и започни отначало">⟲ Отначало</button>
       </div>
       <div class="watermark" id="watermark" aria-hidden="true"></div>
       <div class="readout" id="readout">x: 0.00&nbsp;&nbsp;y: 0.00</div>
@@ -1740,6 +1782,14 @@
       </button>
     </div>
     <div class="welcome-body">
+      <section class="welcome-section">
+        <h3>Нови: Формули като в учебник</h3>
+        <p>Менюто „Символи“ вече пише <b>степен</b> (x²), <b>квадратен корен</b>, <b>корен n-ти</b>, <b>дроб</b>, <b>вектор</b> със стрелка, <b>дъга от окръжност</b>, по-красив знак за <b>ъгъл</b> и <b>градус</b>. „Формула…“ отваря прозорец с бутони и жив преглед; пишеш и на ръка, напр. <b>\\sqrt{x^{2}+1}</b>. Двоен клик върху формула я редактира.</p>
+      </section>
+      <section class="welcome-section">
+        <h3>Нови: Постепенно показване</h3>
+        <p>Избери обекти (или очертай област с „Маркирай област“ и натисни „+ Стъпка“), после от менюто „Постепенно“ ги прибави към нова стъпка. „Започни показването“ скрива всичко по стъпките, а лентата долу („Напред“, „Назад“, Интервал) го разкрива стъпка по стъпка — за отговори, обосновки и последователни построения.</p>
+      </section>
       <section class="welcome-section">
         <h3>Нови: Графика на функция</h3>
         <p>Бутонът „Графика на функция“ (в „Построения“) чертае графика по формула, която въвеждаш с виртуална клавиатура (цифри, x, π, степени, корени, sin, cos, tg, ln…) — например <b>x^2-4x+3</b>, <b>sin(x)</b>, <b>1/x</b>, <b>sqrt(x)</b>, <b>abs(x)</b>, <b>2^x</b>. Дъската показва координатите на пресечните точки с осите и между графиките, както и най-голямата и най-малката стойност във видимата част. Двоен клик върху графиката сменя формулата или скрива точките.</p>
@@ -1888,7 +1938,7 @@
 
   /* ================= state ================= */
   const canvas = document.getElementById('board');
-  const ctx = canvas.getContext('2d');
+  let ctx = canvas.getContext('2d');
   const boardWrap = document.getElementById('boardWrap');
   const hintText = document.getElementById('hintText');
   const countsText = document.getElementById('countsText');
@@ -3022,14 +3072,214 @@
     const worldSize = (typeof o.fontSize==='number') ? o.fontSize : DEFAULT_TEXT_FONT_WORLD;
     return Math.max(6, worldSize*view.scale);
   }
+  /* ================= формули като в учебник ================= */
+  /* Малък оформител на формули (подобен на LaTeX): \sqrt{x} \root{3}{x} \frac{a}{b}
+     \vec{AB} \arc{AB} \overline{AB} \angle ^{2} _{1} ° — рисува се директно върху
+     платното, така че работи и при печат / PNG. */
+  const MATH_FAMILY = 'Cambria, "Times New Roman", "Liberation Serif", "DejaVu Serif", serif';
+  function parseMath(src){
+    let i = 0;
+    const n = src.length;
+    function parseSeq(inBrace){
+      const out = [];
+      while(i<n){
+        if(src[i]==='}'){ if(inBrace) return out; i++; continue; }
+        let atom = parseAtom();
+        let sup = null, sub = null;
+        for(;;){
+          if(src[i]==='^'){ i++; sup = parseArg(); }
+          else if(src[i]==='_'){ i++; sub = parseArg(); }
+          else break;
+        }
+        if(sup || sub) atom = { t:'script', b:atom, sup, sub };
+        out.push(atom);
+      }
+      return out;
+    }
+    function parseArg(){
+      if(i>=n) return { t:'grp', n:[] };
+      if(src[i]==='{'){ i++; const g = parseSeq(true); if(src[i]==='}') i++; return { t:'grp', n:g }; }
+      if(src[i]==='\\') return parseAtom();
+      return { t:'ch', s:src[i++] };
+    }
+    function parseAtom(){
+      const c = src[i];
+      if(c==='{'){ i++; const g = parseSeq(true); if(src[i]==='}') i++; return { t:'grp', n:g }; }
+      if(c==='\\'){
+        i++;
+        let name = '';
+        while(i<n && /[a-zA-Z]/.test(src[i])) name += src[i++];
+        if(!name) return { t:'ch', s:(src[i++]||'') };
+        if(name==='sqrt') return { t:'sqrt', n:parseArg() };
+        if(name==='root'){ const idx = parseArg(); const body = parseArg(); return { t:'sqrt', n:body, idx }; }
+        if(name==='frac'){ const a = parseArg(); const b = parseArg(); return { t:'frac', a, b }; }
+        if(name==='vec' || name==='arc' || name==='overline') return { t:name, n:parseArg() };
+        if(name==='angle') return { t:'angle' };
+        if(name==='deg') return { t:'ch', s:'°' };
+        return { t:'ch', s:'\\'+name };
+      }
+      i++;
+      return { t:'ch', s:c };
+    }
+    return { t:'grp', n:parseSeq(false) };
+  }
+  function mathLayout(node, sz){
+    const lw = Math.max(1, sz/15);
+    switch(node.t){
+      case 'ch': {
+        const s = node.s;
+        const italic = /[A-Za-zα-ω]/.test(s);
+        const font = (italic ? 'italic ' : '') + sz + 'px ' + MATH_FAMILY;
+        ctx.save(); ctx.font = font;
+        const w = ctx.measureText(s).width;
+        ctx.restore();
+        return { w, a:0.72*sz, d:0.2*sz, draw:(x,y)=>{ ctx.font = font; ctx.textBaseline = 'alphabetic'; ctx.fillText(s,x,y); } };
+      }
+      case 'grp': {
+        const parts = node.n.map(k=>mathLayout(k,sz));
+        let w = 0, a = 0.72*sz, d = 0.2*sz;
+        parts.forEach(p=>{ w += p.w; a = Math.max(a,p.a); d = Math.max(d,p.d); });
+        return { w, a, d, draw:(x,y)=>{ let cx = x; parts.forEach(p=>{ p.draw(cx,y); cx += p.w; }); } };
+      }
+      case 'script': {
+        const B = mathLayout(node.b, sz);
+        const ss = sz*0.7;
+        const S = node.sup ? mathLayout(node.sup, ss) : null;
+        const U = node.sub ? mathLayout(node.sub, ss) : null;
+        const supUp = Math.max(0.36*sz, B.a - 0.55*ss);
+        const subDown = Math.max(0.2*sz, B.d + 0.12*sz);
+        const extra = Math.max(S?S.w:0, U?U.w:0) + 1;
+        return {
+          w:B.w+extra,
+          a:Math.max(B.a, S ? supUp + S.a : 0),
+          d:Math.max(B.d, U ? subDown + U.d : 0),
+          draw:(x,y)=>{
+            B.draw(x,y);
+            if(S) S.draw(x+B.w+1, y-supUp);
+            if(U) U.draw(x+B.w+1, y+subDown);
+          }
+        };
+      }
+      case 'sqrt': {
+        const C = mathLayout(node.n, sz);
+        const I = node.idx ? mathLayout(node.idx, sz*0.5) : null;
+        const sw = 0.62*sz, pad = 0.14*sz;
+        const ix = I ? Math.max(0, I.w - 0.34*sz) : 0;
+        const topY = C.a + 0.16*sz;
+        return {
+          w:ix+sw+C.w+pad, a:topY+lw, d:C.d+0.04*sz,
+          draw:(x,y)=>{
+            const x0 = x+ix;
+            ctx.save();
+            ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.setLineDash([]);
+            ctx.strokeStyle = ctx.fillStyle;
+            ctx.beginPath();
+            ctx.moveTo(x0, y-0.3*C.a);
+            ctx.lineTo(x0+0.16*sw, y-0.38*C.a);
+            ctx.lineTo(x0+0.44*sw, y+C.d+0.04*sz);
+            ctx.lineTo(x0+sw, y-topY);
+            ctx.lineTo(x0+sw+C.w+pad, y-topY);
+            ctx.stroke();
+            ctx.restore();
+            if(I) I.draw(x, y-0.3*C.a-0.1*sz);
+            C.draw(x0+sw+pad*0.4, y);
+          }
+        };
+      }
+      case 'frac': {
+        const fs = sz*0.92;
+        const A = mathLayout(node.a, fs), B = mathLayout(node.b, fs);
+        const w = Math.max(A.w,B.w) + 0.3*sz;
+        const axis = 0.3*sz;
+        const numB = axis + 0.13*sz + A.d, denB = -axis + 0.13*sz + B.a;
+        return {
+          w, a:numB+A.a, d:denB+B.d,
+          draw:(x,y)=>{
+            A.draw(x+(w-A.w)/2, y-numB);
+            B.draw(x+(w-B.w)/2, y+denB);
+            ctx.save(); ctx.lineWidth = lw; ctx.strokeStyle = ctx.fillStyle; ctx.beginPath();
+            ctx.moveTo(x+0.05*sz, y-axis); ctx.lineTo(x+w-0.05*sz, y-axis); ctx.stroke(); ctx.restore();
+          }
+        };
+      }
+      case 'vec': {
+        const C = mathLayout(node.n, sz);
+        const up = C.a + 0.14*sz;
+        return {
+          w:C.w, a:up+0.16*sz, d:C.d,
+          draw:(x,y)=>{
+            C.draw(x,y);
+            const yy = y-up, x0 = x+0.04*sz, x1 = x+Math.max(C.w, 0.5*sz)-0.02*sz;
+            ctx.save(); ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = ctx.fillStyle; ctx.setLineDash([]);
+            ctx.beginPath(); ctx.moveTo(x0,yy); ctx.lineTo(x1,yy);
+            ctx.moveTo(x1-0.18*sz,yy-0.1*sz); ctx.lineTo(x1,yy); ctx.lineTo(x1-0.18*sz,yy+0.1*sz);
+            ctx.stroke(); ctx.restore();
+          }
+        };
+      }
+      case 'arc': {
+        const C = mathLayout(node.n, sz);
+        const up = C.a + 0.1*sz;
+        return {
+          w:C.w, a:up+0.24*sz, d:C.d,
+          draw:(x,y)=>{
+            C.draw(x,y);
+            ctx.save(); ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.strokeStyle = ctx.fillStyle; ctx.setLineDash([]);
+            ctx.beginPath();
+            const yy = y-up;
+            ctx.moveTo(x+0.03*sz, yy);
+            ctx.quadraticCurveTo(x+C.w/2, yy-0.42*sz, x+C.w-0.03*sz, yy);
+            ctx.stroke(); ctx.restore();
+          }
+        };
+      }
+      case 'overline': {
+        const C = mathLayout(node.n, sz);
+        const up = C.a + 0.1*sz;
+        return {
+          w:C.w, a:up+lw, d:C.d,
+          draw:(x,y)=>{
+            C.draw(x,y);
+            ctx.save(); ctx.lineWidth = lw; ctx.strokeStyle = ctx.fillStyle; ctx.beginPath();
+            ctx.moveTo(x, y-up); ctx.lineTo(x+C.w, y-up); ctx.stroke(); ctx.restore();
+          }
+        };
+      }
+      case 'angle': {
+        const w = 0.95*sz;
+        return {
+          w, a:0.6*sz, d:0.05*sz,
+          draw:(x,y)=>{
+            ctx.save(); ctx.lineWidth = lw*1.1; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = ctx.fillStyle; ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(x+0.9*sz, y); ctx.lineTo(x+0.06*sz, y); ctx.lineTo(x+0.84*sz, y-0.52*sz);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(x+0.06*sz, y, 0.34*sz, -0.62, 0);
+            ctx.lineWidth = lw*0.8; ctx.stroke();
+            ctx.restore();
+          }
+        };
+      }
+    }
+    return { w:0, a:0, d:0, draw:()=>{} };
+  }
+  function mathBox(src, px){
+    return mathLayout(parseMath(String(src||'')), px);
+  }
+
   function textFont(o){ return '600 '+textPixelSize(o)+'px "Manrope", sans-serif'; }
   // Screen-space bounding box of a text object, used both to draw its selection
   // outline and to hit-test it (text has no fixed shape like a polygon/circle, so
   // pickText below measures it the same way drawTextObj does, to stay in sync).
   function textScreenRect(o){
+    const s = worldToScreen(o.x,o.y);
+    if(o.math){
+      const b = mathBox(o.text, textPixelSize(o));
+      return { x0:s.x, y0:s.y-b.a, x1:s.x+Math.max(6,b.w), y1:s.y+b.d, sx:s.x, sy:s.y };
+    }
     ctx.save();
     ctx.font = textFont(o);
-    const s = worldToScreen(o.x,o.y);
     const w = Math.max(6, ctx.measureText(o.text||'').width);
     const h = textPixelSize(o);
     ctx.restore();
@@ -3365,6 +3615,40 @@
     selectedId = obj.id;
     updateHint();
     render();
+  }
+
+  function openFormulaDialog(initial, onSave){
+    const dialog=document.getElementById('formulaDialog'), input=document.getElementById('formulaInput');
+    const cv=document.getElementById('formulaPreview');
+    function preview(){
+      const dpr=window.devicePixelRatio||1, W=cv.clientWidth||500, H=cv.clientHeight||84;
+      cv.width=W*dpr; cv.height=H*dpr;
+      const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,W,H);
+      const src=input.value.replace(/\|/g,'');
+      if(!src.trim()) return;
+      const saved=ctx;
+      try{
+        // mathLayout draws on the module-level ctx, so swap it for the preview.
+        ctx=c; c.fillStyle='#fff'; c.strokeStyle='#fff'; c.lineWidth=1.6;
+        let sz=34, b=mathBox(src,sz);
+        if(b.w>W-20){ sz=Math.max(14,sz*(W-20)/b.w); b=mathBox(src,sz); }
+        b.draw((W-b.w)/2,(H+b.a-b.d)/2);
+      }catch(err){}
+      ctx=saved;
+    }
+    dialog._preview=preview; dialog._input=input;
+    input.value=initial||'';
+    dialog.onclose=()=>{ if(dialog.returnValue==='save'){ const v=input.value.replace(/\|/g,''); if(v.trim()!=='' || true) onSave(v); } canvas.focus(); };
+    dialog.returnValue='cancel'; dialog.showModal(); input.focus(); preview();
+  }
+  function placeFormulaAtCenter(src){
+    if(src.trim()==='') return;
+    saveHistory();
+    const w = boardWrap.clientWidth, h = boardWrap.clientHeight;
+    const wc = screenToWorld(w/2, h/2);
+    const obj = { id:uid(), type:'text', math:true, x:wc.x, y:wc.y, text:src, tint:'white', fontSize:24/view.scale };
+    objects.push(obj);
+    setTool('move'); selectedId=obj.id; updateHint(); render();
   }
 
   function handleTwoPointTool(sx,sy, type){
@@ -4617,6 +4901,10 @@
     const TEXT_MEASURE_REF_SCALE = 100; // arbitrary px-per-world-unit, used only for measuring
     const worldSize = (typeof o.fontSize==='number') ? o.fontSize : DEFAULT_TEXT_FONT_WORLD;
     const px = Math.max(6, worldSize*TEXT_MEASURE_REF_SCALE);
+    if(o.math){
+      const b = mathBox(o.text, px);
+      return { w: Math.max(6,b.w)/TEXT_MEASURE_REF_SCALE, h:(b.a+b.d)/TEXT_MEASURE_REF_SCALE };
+    }
     ctx.save();
     ctx.font = '600 '+px+'px "Manrope", sans-serif';
     const wPx = Math.max(6, ctx.measureText(o.text||'').width);
@@ -5136,7 +5424,8 @@
     ctx.font = textFont(o);
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = isHot ? pal.hot : (o.tint ? tintColor(pal,o.tint) : pal.primary);
-    ctx.fillText(o.text||'', s.x, s.y);
+    if(o.math){ mathBox(o.text, textPixelSize(o)).draw(s.x, s.y); }
+    else ctx.fillText(o.text||'', s.x, s.y);
     if(isHot){
       const r = textScreenRect(o);
       ctx.strokeStyle = pal.hot;
@@ -5306,6 +5595,7 @@
 
     updateColorPanel();
     updateEditButtons();
+    updateRevealBar();
   }
 
   function getSelectedTintable(){
@@ -5685,7 +5975,7 @@
       }
       let run = [];
       const flush = ()=>{
-        if(run.length>=2) out.push({ id:uid(), tint:s.tint, width:s.width, points:run });
+        if(run.length>=2){ const ns={ id:uid(), tint:s.tint, width:s.width, points:run }; if(s.step!=null) ns.step=s.step; out.push(ns); }
         run = [];
       };
       for(const p of pts){
@@ -5782,6 +6072,87 @@
     selectedId = null;
     hintText.textContent = '✓ Маркираното е изтрито (Ctrl+Z връща).';
     render();
+  }
+
+  /* ================= постепенно показване ================= */
+  // Всеки обект/бележка може да има число „step“. „Скритите“ стъпки ползват същото
+  // свойство hidden като окото в панела — така няма втори механизъм за рисуване.
+  function stepItems(){ return objects.concat(inkStrokes).filter(o=>o.step!=null); }
+  function stepList(){ return Array.from(new Set(stepItems().map(o=>o.step))).sort((a,b)=>a-b); }
+  function revealState(){
+    const items = stepItems(), L = stepList();
+    let k = 0;
+    for(const st of L){ if(items.some(o=>o.step===st && o.hidden)) break; k++; }
+    return { k, n:L.length, L, items };
+  }
+  function assignStep(mode){
+    const base = currentSelectionSet();
+    if(!base.size){ hintText.textContent = 'Първо избери обекти (един или с „Маркирай област“), после ги прибави към стъпка.'; return; }
+    const set = withAncestors(base);
+    const L = stepList();
+    const target = mode==='last' && L.length ? L[L.length-1] : (L.length ? L[L.length-1]+1 : 1);
+    saveHistory();
+    let n = 0;
+    for(const o of objects.concat(inkStrokes)){
+      if(!set.has(o.id)) continue;
+      if(o.step==null || o.step>target){ o.step = target; n++; }
+    }
+    hintText.textContent = '✓ '+n+' обекта са в стъпка '+(L.indexOf(target)+1 || 1)+'. Когато всичко е готово, избери „Започни показването“.';
+    multiSel.clear(); selectedId = null; render();
+  }
+  function revealStart(){
+    const items = stepItems();
+    if(!items.length){ hintText.textContent = 'Още няма стъпки — избери обекти и ги прибави към „нова стъпка“.'; return; }
+    saveHistory();
+    items.forEach(o=>{ o.hidden = true; });
+    multiSel.clear(); selectedId = null;
+    hintText.textContent = 'Всичко по стъпките е скрито. Натискай „Напред“ (или Интервал), за да показваш.';
+    render();
+  }
+  function revealNext(){
+    const st = revealState();
+    const hid = st.items.filter(o=>o.hidden);
+    if(!hid.length) return;
+    const m = Math.min(...hid.map(o=>o.step));
+    saveHistory();
+    st.items.forEach(o=>{ if(o.step===m) delete o.hidden; });
+    render();
+  }
+  function revealPrev(){
+    const st = revealState();
+    const vis = st.items.filter(o=>!o.hidden);
+    if(!vis.length) return;
+    const m = Math.max(...vis.map(o=>o.step));
+    saveHistory();
+    st.items.forEach(o=>{ if(o.step===m) o.hidden = true; });
+    multiSel.clear(); selectedId = null;
+    render();
+  }
+  function revealAll(){
+    const items = stepItems();
+    if(!items.some(o=>o.hidden)) return;
+    saveHistory();
+    items.forEach(o=>{ delete o.hidden; });
+    render();
+  }
+  function revealClear(){
+    const items = stepItems();
+    if(!items.length) return;
+    saveHistory();
+    items.forEach(o=>{ delete o.step; delete o.hidden; });
+    hintText.textContent = '✓ Стъпките са премахнати, всичко е видимо.';
+    render();
+  }
+  function updateRevealBar(){
+    const bar = document.getElementById('revealBar');
+    if(!bar) return;
+    const st = revealState();
+    bar.hidden = st.n===0;
+    if(st.n===0) return;
+    document.getElementById('revCount').textContent = 'Стъпка '+st.k+' от '+st.n;
+    document.getElementById('revPrevBtn').disabled = !st.items.some(o=>!o.hidden);
+    document.getElementById('revNextBtn').disabled = !st.items.some(o=>o.hidden);
+    document.getElementById('revAllBtn').disabled = !st.items.some(o=>o.hidden);
   }
   function updateEditButtons(){
     const bar = document.getElementById('selBar');
@@ -6473,6 +6844,14 @@
     if(tid){
       const o = getObj(tid);
       if(!o) return;
+      if(o.math){
+        openFormulaDialog(o.text||'', next=>{
+          saveHistory();
+          if(next.trim()===''){ deleteAnyById(tid); } else o.text=next;
+          render();
+        });
+        return;
+      }
       openTextEditor(o.text||'', next=>{
       if(next.trim()===''){
         saveHistory();
@@ -6779,6 +7158,7 @@
   setupToolMenu('fileMenuBtn', 'fileSubmenu');
   document.getElementById('selCopyBtn').addEventListener('click', ()=>{ copySelection(); });
   document.getElementById('selDupBtn').addEventListener('click', ()=>{ duplicateSelection(); });
+  document.getElementById('selStepBtn').addEventListener('click', ()=>{ assignStep('new'); });
   document.getElementById('selDeleteBtn').addEventListener('click', ()=>{ deleteMultiSelection(); });
   document.getElementById('selCancelBtn').addEventListener('click', ()=>{ multiSel.clear(); updateHint(); render(); });
   document.getElementById('funcBtn').addEventListener('click', ()=>{ addFunctionGraph(); });
@@ -6801,13 +7181,37 @@
   // outside-click behaviour (its items carry data-symbol, not data-tool, so the
   // generic [data-tool] wiring inside setupToolMenu simply finds nothing to bind
   // there) — placing a symbol is a one-shot action, not a persistent tool mode.
+  setupToolMenu('revealMenuBtn', 'revealSubmenu');
+  document.querySelectorAll('#revealSubmenu .submenu-item').forEach(item=>{
+    item.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      document.getElementById('revealSubmenu').hidden = true;
+      document.getElementById('revealMenuBtn').setAttribute('aria-expanded','false');
+      const a = item.dataset.rev;
+      if(a==='new'||a==='last') assignStep(a);
+      else if(a==='start') revealStart();
+      else if(a==='all') revealAll();
+      else if(a==='clear') revealClear();
+    });
+  });
+  document.getElementById('revNextBtn').addEventListener('click', revealNext);
+  document.getElementById('revPrevBtn').addEventListener('click', revealPrev);
+  document.getElementById('revAllBtn').addEventListener('click', revealAll);
+  document.getElementById('revResetBtn').addEventListener('click', revealStart);
+  document.addEventListener('keydown', (e)=>{
+    if(e.code!=='Space' || e.target.closest && e.target.closest('input,textarea,button,dialog,select')) return;
+    if(document.getElementById('revealBar').hidden) return;
+    if(!revealState().items.some(o=>o.hidden)) return;
+    e.preventDefault(); revealNext();
+  });
   setupToolMenu('symbolsMenuBtn', 'symbolsSubmenu');
   document.querySelectorAll('#symbolsSubmenu .symbol-item').forEach(item=>{
     item.addEventListener('click', (e)=>{
       e.stopPropagation();
-      placeSymbolAtCenter(item.dataset.symbol);
       document.getElementById('symbolsSubmenu').hidden = true;
       document.getElementById('symbolsMenuBtn').setAttribute('aria-expanded','false');
+      if(item.dataset.formula!==undefined){ openFormulaDialog(item.dataset.formula, src=>placeFormulaAtCenter(src)); return; }
+      placeSymbolAtCenter(item.dataset.symbol);
     });
   });
 
@@ -7394,7 +7798,7 @@
       }
     }
     let seenAlready = null;
-    try{ seenAlready = localStorage.getItem('geoboard-welcome-seen-v2'); }catch(err){}
+    try{ seenAlready = localStorage.getItem('geoboard-welcome-seen-v3'); }catch(err){}
     const dontShowCb = document.getElementById('welcomeDontShowAgain');
     if(dontShowCb) dontShowCb.checked = !!seenAlready;
     welcomeReturnFocus = document.activeElement;
@@ -7412,8 +7816,8 @@
     // comes back next time the app starts.
     const dontShowCb = document.getElementById('welcomeDontShowAgain');
     try{
-      if(dontShowCb && dontShowCb.checked) localStorage.setItem('geoboard-welcome-seen-v2', '1');
-      else localStorage.removeItem('geoboard-welcome-seen-v2');
+      if(dontShowCb && dontShowCb.checked) localStorage.setItem('geoboard-welcome-seen-v3', '1');
+      else localStorage.removeItem('geoboard-welcome-seen-v3');
     }catch(err){}
     if(welcomeReturnFocus && typeof welcomeReturnFocus.focus === 'function'){
       welcomeReturnFocus.focus({ preventScroll:true });
@@ -7430,7 +7834,7 @@
 
   function initWelcome(){
     let seen = null;
-    try{ seen = localStorage.getItem('geoboard-welcome-seen-v2'); }catch(err){}
+    try{ seen = localStorage.getItem('geoboard-welcome-seen-v3'); }catch(err){}
     if(!seen) openWelcome();
   }
 
@@ -7786,6 +8190,33 @@
   document.body.appendChild(textDialog);
   textDialog.querySelector('form').addEventListener('keydown',e=>{
     if(e.key==='Enter'){e.preventDefault();textDialog.close('save');}
+  });
+
+  const formulaDialog=document.createElement('dialog');
+  formulaDialog.id='formulaDialog';
+  const FM_KEYS=[['x²','^{|}'],['x₁','_{|}'],['√','\\sqrt{|}'],['ⁿ√','\\root{3}{|}'],['a/b','\\frac{|}{|}'],['→','\\vec{|}'],['⌒','\\arc{|}'],['‾','\\overline{|}'],['∠','\\angle '],['°','°'],['′','′'],['″','″'],
+    ['π','π'],['α','α'],['β','β'],['γ','γ'],['φ','φ'],['±','±'],['·','·'],['×','×'],['÷','÷'],['≤','≤'],['≥','≥'],['≠','≠'],['≈','≈'],['∞','∞'],['⊥','⊥'],['∥','∥'],['△','△'],['∈','∈'],['∪','∪'],['∩','∩'],['⇒','⇒'],['⇔','⇔'],['(',' ('],[')',') ']];
+  formulaDialog.innerHTML='<form method="dialog"><label for="formulaInput"><b>Формула</b></label><div class="fm-keys">'+
+    FM_KEYS.map(k=>'<button type="button" data-ins="'+k[1].replace(/"/g,'&quot;')+'">'+k[0]+'</button>').join('')+
+    '</div><input id="formulaInput" type="text" maxlength="500" autocomplete="off" spellcheck="false"><canvas id="formulaPreview"></canvas>'+
+    '<div class="fm-help">Пример: <code>\\sqrt{x^{2}+1}</code>, <code>\\root{3}{8}=2</code>, <code>\\vec{AB}</code>, <code>\\arc{AB}</code>, <code>\\angle ABC=60°</code>, <code>a^{2}+b^{2}=c^{2}</code></div>'+
+    '<button value="cancel">Отказ</button> <button value="save">Постави формулата</button></form>';
+  document.body.appendChild(formulaDialog);
+  formulaDialog.querySelector('form').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();formulaDialog.close('save');}
+  });
+  formulaDialog.addEventListener('input',()=>formulaDialog._preview&&formulaDialog._preview());
+  formulaDialog.querySelectorAll('[data-ins]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const inp=document.getElementById('formulaInput');
+      const t=btn.dataset.ins, st=inp.selectionStart, en=inp.selectionEnd;
+      const sel=inp.value.slice(st,en);
+      let ins=t.replace('|',sel); // selected text goes into the first slot
+      const caretRel = sel? ins.length : (t.indexOf('|')>=0? t.indexOf('|') : t.length);
+      inp.value=inp.value.slice(0,st)+ins+inp.value.slice(en);
+      inp.focus(); inp.setSelectionRange(st+caretRel, st+caretRel);
+      formulaDialog._preview();
+    });
   });
 
   const radiusDialog=document.createElement('dialog');
