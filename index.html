@@ -292,6 +292,7 @@
 
   /* Symbol picker: a compact grid of glyphs instead of the usual one-per-row text
      menu (a vertical list of single characters would waste most of its width). */
+  .submenu-title{ font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; opacity:.6; padding:6px 10px 2px; grid-column:1 / -1; }
   .symbol-submenu{
     display:grid;
     grid-template-columns:repeat(4, 1fr);
@@ -318,6 +319,21 @@
   }
   .sel-bar button:hover{ filter:brightness(1.08); }
   .sel-bar button.danger{ background:rgba(var(--ink-danger-rgb),0.2); color:#b3261e; }
+  #faceBar{ bottom:64px; }
+  #faceSwatches{ display:inline-flex; gap:6px; padding:0 4px; }
+  #faceSwatches button{ width:24px; height:24px; border-radius:50%; border:2px solid transparent; cursor:pointer; box-shadow:0 0 0 1px rgba(0,0,0,.3); padding:0; }
+  #faceSwatches button.active{ border-color:#fff; box-shadow:0 0 0 2px #0a6c6c; }
+  .collab-chip{ font:inherit; font-size:12px; font-weight:800; padding:5px 10px; border-radius:999px; border:1px solid rgba(0,0,0,.2); background:#bdf0c8; color:#0b5a21; cursor:pointer; }
+  .collab-chip[hidden]{ display:none !important; }
+  body.collab-readonly #board{ pointer-events:none; }
+  body.collab-readonly .toolbar{ opacity:.45; pointer-events:none; }
+  #collabDialog{max-width:94vw;width:560px;border:1px solid #739797;border-radius:12px;padding:16px;}
+  #collabDialog::backdrop{background:#0007;}
+  #collabDialog textarea{display:block;box-sizing:border-box;width:100%;height:76px;font:12px monospace;margin:4px 0 8px;padding:6px;resize:vertical;}
+  #collabDialog button{margin:2px 4px 2px 0;}
+  #collabDialog .cb-step{font-weight:700;margin-top:8px;}
+  #collabDialog .cb-note{font-size:12px;color:#456;margin:4px 0;}
+  #collabDialog .cb-status{margin:8px 0;padding:6px 10px;border-radius:8px;background:#eef4f4;font-weight:700;}
   #revealBar{ bottom:64px; }
   #revealBar .reveal-count{ font-size:13px; font-weight:800; color:var(--ink-primary); padding:0 8px; white-space:nowrap; }
   #revealBar button.primary{ background:rgba(var(--accent-rgb),0.55); }
@@ -1250,6 +1266,7 @@
           <span class="tool-label">Точки</span>
         </button>
         <div class="tool-submenu" id="pointSubmenu" role="menu" aria-label="Вид точка" hidden>
+          <div class="submenu-title">Точки</div>
           <button type="button" class="submenu-item" data-tool="point" role="menuitem">Точка</button>
           <button type="button" class="submenu-item" data-tool="pointon" role="menuitem">Точка върху обект</button>
           <button type="button" class="submenu-item" data-tool="intersect" role="menuitem">Пресечна точка</button>
@@ -1268,15 +1285,19 @@
           <span class="tool-label">Отсечка/Права</span>
         </button>
         <div class="tool-submenu" id="lineSubmenu" role="menu" aria-label="Вид отсечка, права или вектор" hidden>
+          <div class="submenu-title">Отсечки и прави</div>
           <button type="button" class="submenu-item" data-tool="segment" role="menuitem">Отсечка</button>
           <button type="button" class="submenu-item" data-tool="segmentLength" role="menuitem">Отсечка с дадена дължина</button>
           <button type="button" class="submenu-item" data-tool="line" role="menuitem">Права</button>
           <button type="button" class="submenu-item" data-tool="ray" role="menuitem">Лъч</button>
+          <div class="submenu-title">Вектори</div>
           <button type="button" class="submenu-item" data-tool="vector" role="menuitem">Вектор</button>
           <button type="button" class="submenu-item" data-tool="vectorEqual" role="menuitem">Равен вектор (същата посока и дължина)</button>
           <button type="button" class="submenu-item" data-tool="vectorOpposite" role="menuitem">Противоположен вектор (обратна посока, същата дължина)</button>
           <button type="button" class="submenu-item" data-tool="vectorSame" role="menuitem">Еднопосочен вектор (същата посока)</button>
           <button type="button" class="submenu-item" data-tool="vectorOppDir" role="menuitem">Противопосочен вектор (обратна посока)</button>
+          <div class="submenu-title">Числова права</div>
+          <button type="button" class="submenu-item" data-tool="numline" role="menuitem">Числова права (две точки)</button>
         </div>
       </div>
 
@@ -1290,8 +1311,11 @@
           <span class="tool-label">Окръжност</span>
         </button>
         <div class="tool-submenu" id="circleSubmenu" role="menu" aria-label="Вид окръжност" hidden>
+          <div class="submenu-title">Окръжности</div>
           <button type="button" class="submenu-item" data-tool="circle" role="menuitem">Окръжност (център + точка)</button>
           <button type="button" class="submenu-item" data-tool="circleRadius" role="menuitem">Окръжност с център и радиус</button>
+          <div class="submenu-title">Дъга</div>
+          <button type="button" class="submenu-item" data-tool="arc" role="menuitem">Дъга (център, начало, край)</button>
         </div>
       </div>
 
@@ -1347,14 +1371,19 @@
           <span class="tool-label">3D тела</span>
         </button>
         <div class="tool-submenu" id="solidSubmenu" role="menu" aria-label="3D геометрични тела" hidden>
+          <div class="submenu-title">Многостени</div>
           <button type="button" class="submenu-item" data-tool="solid_cube" role="menuitem">Куб</button>
           <button type="button" class="submenu-item" data-tool="solid_cuboid" role="menuitem">Правоъгълен паралелепипед</button>
           <button type="button" class="submenu-item" data-tool="solid_prism" role="menuitem">Триъгълна призма</button>
+          <button type="button" class="submenu-item" data-tool="solid_prism4" role="menuitem">Четириъгълна призма</button>
           <button type="button" class="submenu-item" data-tool="solid_pyramid" role="menuitem">Четириъгълна пирамида</button>
           <button type="button" class="submenu-item" data-tool="solid_tetra" role="menuitem">Триъгълна пирамида</button>
+          <div class="submenu-title">Ротационни тела</div>
           <button type="button" class="submenu-item" data-tool="solid_cylinder" role="menuitem">Цилиндър</button>
           <button type="button" class="submenu-item" data-tool="solid_cone" role="menuitem">Конус</button>
           <button type="button" class="submenu-item" data-tool="solid_sphere" role="menuitem">Сфера</button>
+          <div class="submenu-title">Работа със стени</div>
+          <button type="button" class="submenu-item" data-tool="solid_face" role="menuitem" title="Кликни върху стена на многостен — оцветява се и може да се изнесе настрани в истински размер">✂ Стена настрани</button>
         </div>
       </div>
 
@@ -1649,6 +1678,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="10" y1="19" x2="14" y2="19"/></svg>
         <span id="installBtnLabel">Инсталирай</span>
       </button>
+      <button class="util-btn" id="collabBtn" title="Онлайн урок: свържи дъската с дъската на ученик (без външен сървър)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5"/><path d="M14.5 14.3c.8-.3 1.6-.4 2.5-.3 2 .2 3.6 1.7 4 4.2"/></svg>
+        Урок с ученик
+      </button>
       <button class="util-btn" id="showAllBtn" title="Покажи всички скрити обекти и бележки">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
         Покажи скритите
@@ -1734,6 +1767,7 @@
         <span class="theme-swatch" id="themeSwatch"></span>
         <span id="themeToggleLabel">Светла тема</span>
       </button>
+      <button type="button" id="collabChip" class="collab-chip" hidden title="Връзка с ученик — натисни за подробности">● Свързано</button>
       <div class="counts" id="countsText">0 обекта</div>
     </header>
     <div class="board-wrap" id="boardWrap">
@@ -1746,6 +1780,11 @@
         <button type="button" id="selStepBtn" title="Маркираното ще се показва постепенно — като нова стъпка">+ Стъпка</button>
         <button type="button" id="selDeleteBtn" class="danger">Изтрий</button>
         <button type="button" id="selCancelBtn" title="Откажи маркирането" aria-label="Откажи маркирането">✕</button>
+      </div>
+      <div class="sel-bar" id="faceBar" hidden role="toolbar" aria-label="Стена настрани">
+        <span class="sel-count">Цвят на стената:</span>
+        <span id="faceSwatches"></span>
+        <label class="sel-count" style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="faceExtract" checked> Изнеси настрани</label>
       </div>
       <div class="sel-bar" id="revealBar" hidden role="toolbar" aria-label="Постепенно показване">
         <button type="button" id="revPrevBtn" title="Скрий последно показаното">◀ Назад</button>
@@ -1786,11 +1825,15 @@
     </div>
     <div class="welcome-body">
       <section class="welcome-section welcome-video" id="welcomeVideoBox">
-        <h3>Клипче: всичко, което може дъската (около 2 минути)</h3>
+        <h3>Клипче: всичко, което може дъската (около 3 минути)</h3>
         <video id="welcomeVideo" controls preload="none" playsinline poster="video/poster.jpg" aria-label="Кратък филм с възможностите на Геометричната дъска">
           <source src="video/geometrichna-daska-demo.mp4" type="video/mp4">
         </video>
-        <p class="welcome-video-note">Показани са чертане на фигури, 3D тела, графика на функция, формули, постепенно показване, писане на ръка, фонове и режим „В час“.</p>
+        <p class="welcome-video-note">Показани са чертане на фигури, 3D тела със „Стена настрани“, дъга и числова права, графика на функция, формули, постепенно показване, писане на ръка, фонове, режим „В час“ и урок с ученик.</p>
+      </section>
+      <section class="welcome-section">
+        <h3>Нови: Стена настрани и урок с ученик</h3>
+        <p>В „3D тела“ има „✂ Стена настрани“: кликваш стена на куб, призма или пирамида — тя се оцветява, а копие в истински размер се изнася настрани с действителните ъгли. Нови са още „Дъга“ (в „Окръжност“), „Числова права“ (в „Отсечка/Права“) и „Четириъгълна призма“; менютата са разделени със заглавия. Бутонът „Урок с ученик“ (в „Файл“) свързва твоята дъска с дъската на ученика чрез код, който си разменяте в чата — и двамата чертаете на едно и също място.</p>
       </section>
       <section class="welcome-section">
         <h3>Нови: Формули като в учебник</h3>
@@ -1814,7 +1857,7 @@
       </section>
       <section class="welcome-section">
         <h3>Нови: Фонове и долна лента</h3>
-        <p>Менюто „Изглед“ събира мрежата, вида на фона (квадрати, точки, милиметрова хартия, тетрадка), осите, прилепването и листа А4. Менюто „Файл“ събира запазване, отваряне, изображение, PNG, печат/PDF и инсталиране. Инструментите са в лента най-долу — плъзни я встрани, за да видиш всички групи; менютата се отварят нагоре.</p>
+        <p>Менюто „Изглед“ събира мрежата, вида на фона (квадрати, точки, милиметрова хартия, тетрадка), осите, прилепването и листа А4. Листът А4 се вижда ясно — бял лист със сянка върху сива маса, с мрежа само върху листа. Менюто „Файл“ събира запазване, отваряне, изображение, PNG, печат/PDF и инсталиране. Инструментите са в лента най-долу — плъзни я встрани, за да видиш всички групи; менютата се отварят нагоре.</p>
       </section>
       <section class="welcome-section">
         <h3>Чертане</h3>
@@ -1890,10 +1933,10 @@
     ['triangleMenuBtn', tool => tool.indexOf('tri_')===0],
     ['quadMenuBtn', tool => tool.indexOf('quad_')===0],
     ['pointMenuBtn', tool => ['point','pointon','intersect','midpoint'].includes(tool)],
-    ['lineMenuBtn', tool => ['segment','segmentLength','line','ray','vector','vectorEqual','vectorOpposite','vectorSame','vectorOppDir'].includes(tool)],
+    ['lineMenuBtn', tool => ['segment','segmentLength','line','ray','vector','vectorEqual','vectorOpposite','vectorSame','vectorOppDir','numline'].includes(tool)],
     ['angleMenuBtn', tool => tool==='angle' || tool==='angleFixed'],
     ['linesMenuBtn', tool => ['perpendicular','parallel','bisector','tangent','bisectorPerp'].includes(tool)],
-    ['circleMenuBtn', tool => ['circle','circleRadius'].includes(tool)],
+    ['circleMenuBtn', tool => ['circle','circleRadius','arc'].includes(tool)],
     ['cevianMenuBtn', tool => ['altitude','median','bisectorSeg'].includes(tool)],
     ['circlesMenuBtn', tool => ['incircle','circumcircle'].includes(tool)],
     ['solidMenuBtn', tool => tool.indexOf('solid_')===0]
@@ -1993,6 +2036,7 @@
 
   let objects = [];
   let idCounter = 1;
+  let collabParity = null; // четно/нечетно номериране на обектите при онлайн урок
   let history = [];
   let redoStack = [];
 
@@ -2155,7 +2199,7 @@
   function screenToWorld(x,y){ return { x: (x-view.offsetX)/view.scale, y: (view.offsetY-y)/view.scale }; }
 
   /* ================= object model ================= */
-  function uid(){ return idCounter++; }
+  function uid(){ if(collabParity!==null && (idCounter%2)!==collabParity) idCounter++; return idCounter++; }
 
   function nextLabel(){
     const used = new Set(objects.filter(o=>o.type==='point').map(o=>o.label));
@@ -3390,6 +3434,8 @@
       || pickLineLike(sx,sy, LINE_TYPES)
       || pickVector(sx,sy)
       || pickCircle(sx,sy)
+      || pickArc(sx,sy)
+      || pickNumline(sx,sy)
       || pickSolid3d(sx,sy)
       || pickFunction(sx,sy)
       || pickPolygon(sx,sy)
@@ -3470,6 +3516,10 @@
     solid_tetra: ['3D триъгълна пирамида: избери или постави първата точка.', 'Избери или постави втора точка — определя основата.'],
     solid_cylinder: ['3D цилиндър: избери или постави центъра на долната основа.', 'Избери или постави точка от основата — определя радиуса.'],
     solid_cone: ['3D конус: избери или постави центъра на основата.', 'Избери или постави точка от основата — определя радиуса.'],
+    arc: ['Дъга: избери или постави центъра на окръжността.', 'Избери или постави началото на дъгата (определя радиуса).', 'Избери или постави края — дъгата се чертае обратно на часовниковата стрелка от началото към края.'],
+    numline: ['Числова права: избери или постави лявото начало.', 'Избери или постави дясното ѝ крайче (правата е хоризонтална).'],
+    solid_prism4: ['3D четириъгълна призма: избери или постави първата точка.', 'Избери или постави втора точка — определя основата.'],
+    solid_face: 'Стена настрани: кликни върху стена на многостена (куб, призма, пирамида…) — оцветява се и копие в истински размер, с действителните ъгли, се изнася настрани. Клик върху същата стена я оцветява/изчиства.',
     solid_sphere: ['3D сфера: избери или постави центъра.', 'Избери или постави точка от сферата — определя радиуса.']
   });
 
@@ -3522,6 +3572,7 @@
       if(btn) btn.classList.toggle('active', matches(tool));
     });
     document.getElementById('penOptions').classList.toggle('show', tool==='pen' || tool==='smartpen');
+    const fb = document.getElementById('faceBar'); if(fb) fb.hidden = tool!=='solid_face';
     canvas.style.cursor = tool==='move' ? 'default' : (tool==='eraser' ? 'none' : 'crosshair');
     render();
   }
@@ -5045,18 +5096,17 @@
     const x0 = p0.x, y0 = p0.y, rw = p1.x-p0.x, rh = p1.y-p0.y;
     ctx.save();
     ctx.strokeStyle = pal.axisText;
-    ctx.globalAlpha = 0.85;
-    ctx.lineWidth = 2;
-    ctx.setLineDash([7,5]);
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 1.2;
     ctx.strokeRect(x0, y0, rw, rh);
-    ctx.setLineDash([]);
     ctx.globalAlpha = 0.85;
     ctx.font = '600 12px "Manrope", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
     ctx.fillStyle = pal.axisText;
     const orientationName = pageOrientation==='landscape' ? 'хоризонтален' : 'вертикален';
-    ctx.fillText('A4 лист — '+orientationName+' (при печат)', x0+4, y0-4>12 ? y0-4 : y0+14);
+    if(y0-4>12){ ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.95; ctx.fillText('A4 лист — '+orientationName+' (при печат)', x0+4, y0-6); }
+    else ctx.fillText('A4 лист — '+orientationName+' (при печат)', x0+4, y0+14);
     const startY = y0 + (pageTitle.trim() ? rh*0.1 : 26);
     ctx.fillStyle = pal.board;
     ctx.fillRect(x0+8, startY, Math.min(240,rw-16), 23);
@@ -5097,6 +5147,7 @@
     ctx.closePath();
     ctx.fillStyle = isHot ? pal.polyFillHot : pal.polyFill;
     ctx.fill();
+    if(o.fillTint){ ctx.save(); ctx.globalAlpha = 0.42; ctx.fillStyle = tintColor(pal, o.fillTint); ctx.fill(); ctx.restore(); }
     const baseWidthP = o.strokeWidth || 2;
     ctx.lineWidth = isHot ? baseWidthP+0.4 : baseWidthP;
     ctx.strokeStyle = isHot ? pal.hot : (o.tint ? tintColor(pal, o.tint) : pal.primary);
@@ -5283,6 +5334,11 @@
         const c=getPointXY(o.parents[0]), rp=getPointXY(o.parents[1]);
         const r=dist(c,rp);
         drawMeasurementLabel({x:c.x, y:c.y+r}, 'r='+formatMeasure(r), pal, pal.blue);
+      } else if(o.type==='arc'){
+        if(!measureTypes.angle) continue;
+        const g = arcGeom(o);
+        const mid = g.a0 + g.d/2;
+        drawMeasurementLabel({x:g.C.x+g.r*Math.cos(mid)*1.0, y:g.C.y+g.r*Math.sin(mid)*1.0}, '⌒ '+formatMeasure(g.d*180/Math.PI)+'°', pal, pal.blue, -14);
       } else if(o.type==='polygon' && o.parents.length>=3){
         if(!measureTypes.area) continue;
         const pts=o.parents.map(getPointXY);
@@ -5509,14 +5565,37 @@
       ctx.fillRect(0,0,w,h);
     }
 
+    // „Лист“: когато е включен листът А4, дъската изглежда като бял лист върху сива
+    // маса — сянка около листа, а мрежата и осите се виждат само върху него.
+    const paperLook = pageGuideEnabled && !printMode && !transparentBg && !(opts && opts.hidePageGuide);
+    let paperRect = null;
+    if(paperLook){
+      const r = computeLivePageWorldRect();
+      const a = worldToScreen(r.minX, r.maxY), b = worldToScreen(r.maxX, r.minY);
+      paperRect = { x:a.x, y:a.y, w:b.x-a.x, h:b.y-a.y };
+      ctx.save();
+      ctx.fillStyle = 'rgba(52,68,84,0.34)';
+      ctx.fillRect(0,0,w,h);
+      ctx.shadowColor = 'rgba(0,0,0,0.42)';
+      ctx.shadowBlur = 16; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 4;
+      ctx.fillStyle = pal.board;
+      ctx.fillRect(paperRect.x, paperRect.y, paperRect.w, paperRect.h);
+      ctx.restore();
+      ctx.save();
+      ctx.beginPath(); ctx.rect(paperRect.x, paperRect.y, paperRect.w, paperRect.h); ctx.clip();
+    }
     if(gridEnabled && !printMode) drawGridLines(w,h,pal);
     if(axesEnabled) drawAxesAndTicks(w,h,pal);
     if(axesEnabled && axisNamesEnabled) drawAxisNames(w,h,pal);
+    if(paperLook) ctx.restore();
     if(pageGuideEnabled && !(opts && opts.hidePageGuide)) drawPageBoundaryGuide(w,h,pal);
 
     for(const o of objects){ if(o.type==='image' && !o.hidden) drawImageObj(o, isHotId(o.id), pal); }
+    for(const o of objects){ if(o.type==='solidBody' && !o.hidden) drawSolidBody(o, pal); }
     for(const o of objects){ if(o.type==='polygon' && !o.hidden) drawPolygonObj(o, isHotId(o.id), pal); }
     for(const o of objects){ if(o.type==='circle' && !o.hidden) drawCircleObj(o, isHotId(o.id), pal); }
+    for(const o of objects){ if(o.type==='arc' && !o.hidden) drawArcObj(o, isHotId(o.id), pal); }
+    for(const o of objects){ if(o.type==='numline' && !o.hidden) drawNumlineObj(o, isHotId(o.id), pal); }
     for(const o of objects){
       if(LINE_TYPES.includes(o.type) && !o.hidden){
         drawLineLikeObj(o, isHotId(o.id), pal);
@@ -5599,7 +5678,8 @@
       ctx.restore();
     }
 
-    let countMsg = objects.length===1 ? '1 обект' : objects.length+' обекта';
+    const shownCount = objects.filter(o=>o.type!=='solidBody').length;
+    let countMsg = shownCount===1 ? '1 обект' : shownCount+' обекта';
     if(inkStrokes.length>0) countMsg += ' · '+inkStrokes.length+(inkStrokes.length===1?' бележка':' бележки');
     countsText.textContent = countMsg;
 
@@ -5697,23 +5777,39 @@
     solid_cube: {
       verts:[[0,0],[1,0],[1,1],[0,1],[.45,.35],[1.45,.35],[1.45,1.35],[.45,1.35]],
       edges:[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]],
-      hidden:['4-5','4-7','0-4'], name:'куб' },
+      hidden:['4-5','4-7','0-4'], name:'куб',
+      k:[.45,.35], z:[0,0,0,0,1,1,1,1],
+      faces:[[0,1,2,3],[4,5,6,7],[0,1,5,4],[3,2,6,7],[0,3,7,4],[1,2,6,5]] },
     solid_cuboid: {
       verts:[[0,0],[1,0],[1,.6],[0,.6],[.55,.4],[1.55,.4],[1.55,1],[.55,1]],
       edges:[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]],
-      hidden:['4-5','4-7','0-4'], name:'правоъгълен паралелепипед' },
+      hidden:['4-5','4-7','0-4'], name:'правоъгълен паралелепипед',
+      k:[.55,.4], z:[0,0,0,0,1,1,1,1],
+      faces:[[0,1,2,3],[4,5,6,7],[0,1,5,4],[3,2,6,7],[0,3,7,4],[1,2,6,5]] },
     solid_prism: {
       verts:[[0,0],[1,0],[.4,.85],[.5,.35],[1.5,.35],[.9,1.2]],
       edges:[[0,1],[1,2],[2,0],[3,4],[4,5],[5,3],[0,3],[1,4],[2,5]],
-      hidden:['3-4','3-5','0-3'], name:'триъгълна призма' },
+      hidden:['3-4','3-5','0-3'], name:'триъгълна призма',
+      k:[.5,.35], z:[0,0,0,1,1,1],
+      faces:[[0,1,2],[3,4,5],[0,1,4,3],[1,2,5,4],[2,0,3,5]] },
+    solid_prism4: {
+      verts:[[0,0],[1,0],[.85,.75],[.1,.65],[.5,.35],[1.5,.35],[1.35,1.1],[.6,1]],
+      edges:[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]],
+      hidden:['4-5','4-7','0-4'], name:'четириъгълна призма',
+      k:[.5,.35], z:[0,0,0,0,1,1,1,1],
+      faces:[[0,1,2,3],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]] },
     solid_pyramid: {
       verts:[[0,0],[1,0],[1.45,.35],[.45,.35],[.725,1.15]],
       edges:[[0,1],[1,2],[2,3],[3,0],[4,0],[4,1],[4,2],[4,3]],
-      hidden:['3-0','2-3','3-4'], name:'четириъгълна пирамида' },
+      hidden:['3-0','2-3','3-4'], name:'четириъгълна пирамида',
+      k:[.45,.35], z:[0,0,1,1,.5],
+      faces:[[0,1,2,3],[0,1,4],[1,2,4],[2,3,4],[3,0,4]] },
     solid_tetra: {
-      verts:[[0,0],[1,0],[1.4,.4],[.5,1.1]],
+      verts:[[0,0],[1,0],[.8897,.3031],[.6299,1.001]],
       edges:[[0,1],[1,2],[2,0],[3,0],[3,1],[3,2]],
-      hidden:['2-0'], name:'триъгълна пирамида' }
+      hidden:['2-0'], name:'триъгълна пирамида',
+      k:[.45,.35], z:[0,0,.866,.2887],
+      faces:[[0,1,2],[0,1,3],[1,2,3],[2,0,3]] }
   };
   const ROUND_SOLIDS = { solid_cylinder:'cylinder', solid_cone:'cone', solid_sphere:'sphere' };
   const ROUND_NAMES = { cylinder:'цилиндър', cone:'конус', sphere:'сфера' };
@@ -5773,6 +5869,7 @@
         if(hid.has([i,j].sort().join('-'))) seg.dash = 'dashed';
         objects.push(seg);
       });
+      objects.push({ id:uid(), type:'solidBody', spec:toolName, parents:ids.slice(), fills:{} });
       hintText.textContent = '✓ Построен: '+spec.name+'. Мести A или B, за да го местиш, въртиш или мащабираш.';
     }
     commitArmedHistory();
@@ -6163,6 +6260,383 @@
     document.getElementById('revPrevBtn').disabled = !st.items.some(o=>!o.hidden);
     document.getElementById('revNextBtn').disabled = !st.items.some(o=>o.hidden);
     document.getElementById('revAllBtn').disabled = !st.items.some(o=>o.hidden);
+  }
+
+  /* ================= стени на многостени: оцветяване и изнасяне настрани ================= */
+  let faceTint = 'rose';
+  function solid3dCoords(body){
+    const spec = SOLID_SPECS[body.spec];
+    if(!spec) return null;
+    return spec.verts.map((v,i)=>{ const z=spec.z[i]; return [v[0]-z*spec.k[0], v[1]-z*spec.k[1], z]; });
+  }
+  const v3sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+  const v3dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  const v3cross=(a,b)=>[a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+  const v3norm=a=>{ const l=Math.hypot(a[0],a[1],a[2])||1; return [a[0]/l,a[1]/l,a[2]/l]; };
+  // Стените с ориентиран навън обход и дали се виждат (спрямо наклонената проекция).
+  function solidFaces(body){
+    const spec = SOLID_SPECS[body.spec], P = solid3dCoords(body);
+    if(!spec || !P) return [];
+    const cen = [0,0,0];
+    P.forEach(p=>{ cen[0]+=p[0]/P.length; cen[1]+=p[1]/P.length; cen[2]+=p[2]/P.length; });
+    const r = [-spec.k[0], -spec.k[1], 1];
+    return spec.faces.map((f0,idx)=>{
+      let f = f0.slice();
+      let n = v3cross(v3sub(P[f[1]],P[f[0]]), v3sub(P[f[2]],P[f[0]]));
+      const fc=[0,0,0]; f.forEach(i=>{ fc[0]+=P[i][0]/f.length; fc[1]+=P[i][1]/f.length; fc[2]+=P[i][2]/f.length; });
+      if(v3dot(n, v3sub(fc,cen))<0){ f.reverse(); n = [-n[0],-n[1],-n[2]]; }
+      n = v3norm(n);
+      return { idx, verts:f, n, visible: v3dot(n,r) < -1e-9 };
+    });
+  }
+  function drawSolidBody(o, pal){
+    if(!o.fills) return;
+    for(const face of solidFaces(o)){
+      const tint = o.fills[face.idx];
+      if(!tint || !face.visible) continue;
+      const pts = face.verts.map(i=>{ const q=getPointXY(o.parents[i]); return worldToScreen(q.x,q.y); });
+      ctx.save();
+      ctx.beginPath(); pts.forEach((q,i)=>i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)); ctx.closePath();
+      ctx.globalAlpha = 0.42; ctx.fillStyle = tintColor(pal, tint); ctx.fill();
+      ctx.restore();
+    }
+  }
+  function pointInPoly(px,py,pts){
+    let inside=false;
+    for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+      if(((pts[i].y>py)!==(pts[j].y>py)) && (px < (pts[j].x-pts[i].x)*(py-pts[i].y)/(pts[j].y-pts[i].y)+pts[i].x)) inside=!inside;
+    }
+    return inside;
+  }
+  function pickSolidFace(sx,sy){
+    for(let k=objects.length-1;k>=0;k--){
+      const o = objects[k];
+      if(o.type!=='solidBody' || o.hidden) continue;
+      for(const face of solidFaces(o)){
+        if(!face.visible) continue;
+        const pts = face.verts.map(i=>{ const q=getPointXY(o.parents[i]); return worldToScreen(q.x,q.y); });
+        if(pointInPoly(sx,sy,pts)) return { body:o, face };
+      }
+    }
+    return null;
+  }
+  function extractFaceCopy(body, face){
+    const P = solid3dCoords(body);
+    const A = getPointXY(body.parents[0]), B = getPointXY(body.parents[1]);
+    const unit = dist(A,B);
+    if(unit<1e-9) return null;
+    const verts = face.verts;
+    const p0 = P[verts[0]];
+    const e1 = v3norm(v3sub(P[verts[1]], p0));
+    const e2 = v3cross(face.n, e1);
+    const local = verts.map(i=>{ const d=v3sub(P[i],p0); return { x:v3dot(d,e1), y:v3dot(d,e2) }; });
+    let minX=Infinity, maxX=-Infinity, minY=Infinity;
+    body.parents.forEach(id=>{ const q=getPointXY(id); if(q.x>maxX) maxX=q.x; if(q.x<minX) minX=q.x; if(q.y<minY) minY=q.y; });
+    const lx0 = Math.min(...local.map(l=>l.x)), ly0 = Math.min(...local.map(l=>l.y));
+    const nCopies = Object.keys(body.extracted||{}).length;
+    const SC = 1.5; // малко уголемено, за да се четат ъглите
+    const ox = maxX + unit*0.8 + (nCopies%3)*unit*2.6;
+    const oy = minY + Math.floor(nCopies/3)*unit*2.6;
+    const ids = local.map((l,i)=>{
+      const id = uid();
+      const src = getObj(body.parents[verts[i]]);
+      objects.push({ id, type:'point', sub:'free', x:ox+(l.x-lx0)*unit*SC, y:oy+(l.y-ly0)*unit*SC, label: src ? src.label : nextLabel() });
+      return id;
+    });
+    const polyId = uid();
+    objects.push({ id:polyId, type:'polygon', parents:ids, fillTint:faceTint, faceOf:body.id });
+    ids.forEach((id,i)=>{
+      objects.push({ id:uid(), type:'angle', parents:[ids[(i+ids.length-1)%ids.length], id, ids[(i+1)%ids.length]] });
+    });
+    return polyId;
+  }
+  function handleSolidFaceClick(sx,sy){
+    const hit = pickSolidFace(sx,sy);
+    if(!hit){
+      hintText.textContent = 'Кликни вътре в стена на многостен (куб, призма, пирамида…), построен с менюто „3D тела“.';
+      return;
+    }
+    const { body, face } = hit;
+    saveHistory();
+    body.fills = body.fills || {};
+    body.extracted = body.extracted || {};
+    const existing = body.extracted[face.idx] ? getObj(body.extracted[face.idx]) : null;
+    if(body.fills[face.idx]===faceTint && !existing){
+      delete body.fills[face.idx];
+      hintText.textContent = 'Стената е изчистена. Кликни пак, за да я оцветиш.';
+    } else {
+      body.fills[face.idx] = faceTint;
+      if(existing){
+        existing.fillTint = faceTint;
+        hintText.textContent = '✓ Стената е преоцветена (копието настрани също).';
+      } else if(document.getElementById('faceExtract').checked){
+        const pid = extractFaceCopy(body, face);
+        if(pid!==null){
+          body.extracted[face.idx] = pid;
+          measureTypes.angle = true;
+          const cbA = document.getElementById('measShowAngle'); if(cbA) cbA.checked = true;
+          updateMeasureToggleUI();
+          hintText.textContent = '✓ Стената е изнесена настрани в истински размер — до върховете са действителните ъгли. Мести я с „Избери“.';
+        }
+      } else {
+        hintText.textContent = '✓ Стената е оцветена.';
+      }
+    }
+    render();
+  }
+
+  /* ================= онлайн урок: връзка учител – ученик (WebRTC, без сървър) =================
+     Двете страници се свързват директно. Кодовете (покана/отговор) се разменят през чата
+     (Teams, Viber, Meet…). Дъската се синхронизира целият лист на ~300 ms: последната
+     промяна печели. Номерата на новите обекти са четни при учителя и нечетни при ученика,
+     за да не се сблъскват. Снимките не се предават. */
+  let collabRole = null, collabPC = null, collabDC = null, collabActive = false;
+  let collabLastSig = '', collabPointerActive = false, collabPendingMsg = null;
+  let collabAllowDraw = true, collabChunks = {}, collabReadOnly = false;
+  const b64u = {
+    enc(bytes){ let s=''; bytes.forEach(b=>s+=String.fromCharCode(b)); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); },
+    dec(str){ str=str.replace(/-/g,'+').replace(/_/g,'/'); while(str.length%4) str+='='; const bin=atob(str); const a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return a; }
+  };
+  async function collabPack(desc){
+    const json = JSON.stringify({ t:desc.type, s:desc.sdp });
+    const bytes = new TextEncoder().encode(json);
+    if(window.CompressionStream){
+      const cs = new CompressionStream('deflate-raw'); const w = cs.writable.getWriter(); w.write(bytes); w.close();
+      return 'Z'+b64u.enc(new Uint8Array(await new Response(cs.readable).arrayBuffer()));
+    }
+    return 'R'+b64u.enc(bytes);
+  }
+  async function collabUnpack(code){
+    code = (code||'').replace(/\s+/g,'');
+    const kind = code[0], data = b64u.dec(code.slice(1));
+    let bytes = data;
+    if(kind==='Z'){
+      const ds = new DecompressionStream('deflate-raw'); const w = ds.writable.getWriter(); w.write(data); w.close();
+      bytes = new Uint8Array(await new Response(ds.readable).arrayBuffer());
+    } else if(kind!=='R') throw new Error('Невалиден код');
+    const o = JSON.parse(new TextDecoder().decode(bytes));
+    return { type:o.t, sdp:o.s };
+  }
+  function collabSetStatus(t){ const el = document.getElementById('collabStatus'); if(el) el.textContent = t; }
+  function collabUpdateChip(){
+    const chip = document.getElementById('collabChip');
+    chip.hidden = !collabActive;
+    chip.textContent = collabActive ? (collabRole==='teacher' ? '● Свързан ученик' : '● Свързан с учителя') : '';
+    document.body.classList.toggle('collab-readonly', collabActive && collabRole==='student' && !collabAllowDraw);
+  }
+  function collabNewPC(){
+    collabCleanup(true);
+    const pc = new RTCPeerConnection({ iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}] });
+    pc.onconnectionstatechange = ()=>{
+      if(pc!==collabPC) return;
+      if(pc.connectionState==='failed' || pc.connectionState==='closed' || pc.connectionState==='disconnected'){
+        if(collabActive){ collabCleanup(); collabSetStatus('Връзката е прекъсната.'); }
+        else if(pc.connectionState==='failed') collabSetStatus('Не успя да се свърже (мрежата може да блокира директни връзки).');
+      }
+    };
+    collabPC = pc;
+    return pc;
+  }
+  function collabIceDone(pc){
+    return new Promise(res=>{
+      if(pc.iceGatheringState==='complete') return res();
+      const t = setTimeout(res, 4500);
+      pc.addEventListener('icegatheringstatechange', ()=>{ if(pc.iceGatheringState==='complete'){ clearTimeout(t); res(); } });
+    });
+  }
+  function collabWire(dc){
+    collabDC = dc;
+    dc.onopen = ()=>{
+      collabActive = true;
+      collabParity = collabRole==='teacher' ? 0 : 1;
+      collabLastSig = '';
+      collabUpdateChip();
+      collabSetStatus('✓ Свързано! Дъските са синхронизирани.');
+      if(collabRole==='teacher'){ collabSend({ t:'perm', draw:collabAllowDraw }); collabSendState(true); }
+    };
+    dc.onclose = ()=>{ if(collabActive){ collabCleanup(); collabSetStatus('Връзката е прекъсната.'); } };
+    dc.onmessage = (e)=>{
+      let m; try{ m = JSON.parse(e.data); }catch(err){ return; }
+      if(m.t==='chunk'){
+        const c = collabChunks[m.id] || (collabChunks[m.id] = { n:m.n, parts:[] });
+        c.parts[m.i] = m.d;
+        if(c.parts.filter(x=>x!==undefined).length===c.n){ delete collabChunks[m.id]; try{ collabHandle(JSON.parse(c.parts.join(''))); }catch(err){} }
+        return;
+      }
+      collabHandle(m);
+    };
+  }
+  function collabSend(obj){
+    if(!collabDC || collabDC.readyState!=='open') return;
+    const str = JSON.stringify(obj);
+    if(str.length<=14000){ collabDC.send(str); return; }
+    const id = Date.now()+'-'+Math.random().toString(36).slice(2,7), n = Math.ceil(str.length/12000);
+    for(let i=0;i<n;i++) collabDC.send(JSON.stringify({ t:'chunk', id, i, n, d:str.slice(i*12000,(i+1)*12000) }));
+  }
+  function collabStateObj(){
+    return { objects: serializeObjects(objects).filter(o=>o.type!=='image'), ink: inkStrokes };
+  }
+  function collabSendState(force){
+    const st = collabStateObj();
+    const sig = JSON.stringify(st);
+    if(!force && sig===collabLastSig) return;
+    collabLastSig = sig;
+    collabSend({ t:'state', page:currentPageIndex, idc:idCounter, st });
+  }
+  function collabApply(m){
+    if(m.page!==currentPageIndex) return;
+    const imgs = objects.filter(o=>o.type==='image');
+    objects = JSON.parse(JSON.stringify(m.st.objects)).concat(imgs);
+    inkStrokes = JSON.parse(JSON.stringify(m.st.ink||[]));
+    idCounter = Math.max(idCounter, m.idc||0);
+    selectedId = null; multiSel.clear(); pending = []; pendingBase = null;
+    hydrateImages(objects);
+    collabLastSig = JSON.stringify(collabStateObj());
+    render();
+  }
+  function collabHandle(m){
+    if(m.t==='perm'){ collabAllowDraw = !!m.draw; collabUpdateChip(); return; }
+    if(m.t==='state'){
+      if(collabPointerActive){ collabPendingMsg = m; return; }
+      collabApply(m);
+    }
+  }
+  function collabCleanup(silent){
+    collabActive = false; collabParity = null; collabPendingMsg = null; collabChunks = {};
+    try{ if(collabDC) collabDC.close(); }catch(err){}
+    try{ if(collabPC) collabPC.close(); }catch(err){}
+    collabDC = null; collabPC = null;
+    if(!silent) collabUpdateChip();
+    else { document.getElementById('collabChip').hidden = true; document.body.classList.remove('collab-readonly'); }
+  }
+  setInterval(()=>{
+    if(!collabActive || collabPointerActive) return;
+    if(collabRole==='student' && !collabAllowDraw) return;
+    collabSendState(false);
+  }, 300);
+  canvas.addEventListener('pointerdown', ()=>{ collabPointerActive = true; }, true);
+  const collabPointerEnd = ()=>{
+    if(!collabPointerActive) return;
+    collabPointerActive = false;
+    if(collabPendingMsg){ const m = collabPendingMsg; collabPendingMsg = null; collabApply(m); }
+  };
+  window.addEventListener('pointerup', collabPointerEnd, true);
+  window.addEventListener('pointercancel', collabPointerEnd, true);
+
+  /* ================= дъга от окръжност и числова права ================= */
+  function arcGeom(o){
+    const C = getPointXY(o.parents[0]), S = getPointXY(o.parents[1]), E = getPointXY(o.parents[2]);
+    const r = dist(C,S);
+    const a0 = Math.atan2(S.y-C.y, S.x-C.x), a1 = Math.atan2(E.y-C.y, E.x-C.x);
+    let d = a1 - a0; while(d<=1e-9) d += Math.PI*2; while(d>Math.PI*2+1e-9) d -= Math.PI*2;
+    return { C, r, a0, d };
+  }
+  function arcScreenPts(o){
+    const g = arcGeom(o);
+    const n = Math.max(12, Math.round(g.d/(Math.PI*2)*90));
+    const pts = [];
+    for(let i=0;i<=n;i++){
+      const a = g.a0 + g.d*i/n;
+      pts.push(worldToScreen(g.C.x+g.r*Math.cos(a), g.C.y+g.r*Math.sin(a)));
+    }
+    return pts;
+  }
+  function drawArcObj(o, isHot, pal){
+    const g = arcGeom(o); if(g.r<1e-6) return;
+    const pts = arcScreenPts(o);
+    ctx.beginPath(); pts.forEach((q,i)=>i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y));
+    const w = o.strokeWidth || 2;
+    ctx.lineWidth = isHot ? w+0.6 : w;
+    ctx.strokeStyle = isHot ? pal.hot : (o.tint ? tintColor(pal,o.tint) : pal.blue);
+    ctx.setLineDash(o.dash ? (DASH_PATTERNS[o.dash]||[]) : []);
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  function pickArc(sx,sy){
+    let best=null, bestD=9;
+    for(const o of objects){
+      if(o.type!=='arc' || o.hidden) continue;
+      const pts = arcScreenPts(o);
+      for(let i=1;i<pts.length;i++){
+        const d = distToSeg(sx,sy,pts[i-1].x,pts[i-1].y,pts[i].x,pts[i].y);
+        if(d<bestD){ bestD=d; best=o.id; }
+      }
+    }
+    return best;
+  }
+  function handleArcClick(sx,sy){
+    armHistory();
+    const before = objects.length;
+    const pid = getOrCreatePointAt(sx,sy);
+    if(pending.includes(pid)){
+      discardArmedHistory();
+      hintText.textContent = 'Тази точка вече е избрана — избери друга.';
+      render(); return;
+    }
+    const changed = objects.length!==before;
+    pending.push(pid);
+    if(changed) commitArmedHistory(); else discardArmedHistory();
+    if(pending.length<3){ updateHint(); render(); return; }
+    saveHistory();
+    objects.push({ id:uid(), type:'arc', parents:pending.slice() });
+    resetPending();
+    hintText.textContent = '✓ Построена е дъга. С „Измервания → Ъгли“ се показва големината ѝ.';
+    render();
+  }
+  function numlineGeom(o){
+    const A = getPointXY(o.parents[0]), B = getPointXY(o.parents[1]);
+    return { y:A.y, x0:Math.min(A.x,B.x), x1:Math.max(A.x,B.x) };
+  }
+  function drawNumlineObj(o, isHot, pal){
+    const g = numlineGeom(o);
+    if(g.x1-g.x0 < 1e-6) return;
+    const a = worldToScreen(g.x0,g.y), b = worldToScreen(g.x1,g.y);
+    const col = isHot ? pal.hot : (o.tint ? tintColor(pal,o.tint) : pal.primary);
+    ctx.save();
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = isHot ? 2.8 : 2.2; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x+6,b.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(b.x+12,b.y); ctx.lineTo(b.x+3,b.y-5); ctx.lineTo(b.x+3,b.y+5); ctx.closePath(); ctx.fill();
+    ctx.font = '600 13px "Manrope", sans-serif'; ctx.textAlign='center'; ctx.textBaseline='top';
+    const step = view.scale<22 ? 2 : 1;
+    for(let x=Math.ceil(g.x0-1e-9); x<=g.x1+1e-9; x++){
+      if(x%step) continue;
+      const q = worldToScreen(x,g.y);
+      ctx.beginPath(); ctx.moveTo(q.x,q.y-5); ctx.lineTo(q.x,q.y+5); ctx.stroke();
+      ctx.fillText(String(x), q.x, q.y+8);
+    }
+    ctx.restore();
+  }
+  function pickNumline(sx,sy){
+    let best=null, bestD=9;
+    for(const o of objects){
+      if(o.type!=='numline' || o.hidden) continue;
+      const g = numlineGeom(o);
+      const a = worldToScreen(g.x0,g.y), b = worldToScreen(g.x1,g.y);
+      const d = distToSeg(sx,sy,a.x,a.y,b.x,b.y);
+      if(d<bestD){ bestD=d; best=o.id; }
+    }
+    return best;
+  }
+  function handleNumlineClick(sx,sy){
+    armHistory();
+    const before = objects.length;
+    const pid = getOrCreatePointAt(sx,sy);
+    if(pending.length===1 && pid===pending[0]){
+      discardArmedHistory();
+      hintText.textContent = 'Двата края не могат да съвпадат — избери друга точка.';
+      render(); return;
+    }
+    const changed = objects.length!==before;
+    pending.push(pid);
+    if(changed) commitArmedHistory(); else discardArmedHistory();
+    if(pending.length<2){ updateHint(); render(); return; }
+    saveHistory();
+    // втората точка се нивелира по първата — правата е хоризонтална
+    const a = getObj(pending[0]), b = getObj(pending[1]);
+    if(b && b.sub==='free' && a){ const A=getPointXY(a.id); b.y = A.y; }
+    objects.push({ id:uid(), type:'numline', parents:pending.slice() });
+    resetPending();
+    hintText.textContent = '✓ Числова права. Мести краищата ѝ, за да я удължиш или смениш началото.';
+    render();
   }
   function updateEditButtons(){
     const bar = document.getElementById('selBar');
@@ -6626,6 +7100,9 @@
     if(currentTool==='regularPolygon'){ handleRegularPolygonClick(sx,sy); return; }
     if(currentTool==='quad_cyclic'){ handleCyclicQuadClick(sx,sy); return; }
     if(currentTool==='quad_circumscribed'){ handleTangentQuadClick(sx,sy); return; }
+    if(currentTool==='solid_face'){ handleSolidFaceClick(sx,sy); return; }
+    if(currentTool==='arc'){ handleArcClick(sx,sy); return; }
+    if(currentTool==='numline'){ handleNumlineClick(sx,sy); return; }
     if(SOLID_SPECS[currentTool] || ROUND_SOLIDS[currentTool]){ handleSolidClick(sx,sy); return; }
     if(SHAPE_SPECS[currentTool]){ handleShapeClick(sx,sy); return; }
     if(currentTool==='delete'){ handleDeleteClick(sx,sy); return; }
@@ -7204,6 +7681,16 @@
       else if(a==='clear') revealClear();
     });
   });
+  (function(){
+    const cols = { rose:'#ec6f9c', red:'#e5484d', orange:'#f5a524', yellow:'#f2d12c', green:'#3fb950', blue:'#3b82f6' };
+    const wrap = document.getElementById('faceSwatches');
+    Object.keys(cols).forEach(t=>{
+      const b = document.createElement('button'); b.type='button'; b.style.background = cols[t]; b.dataset.tint = t; b.title = 'Цвят';
+      if(t===faceTint) b.classList.add('active');
+      b.addEventListener('click', ()=>{ faceTint = t; wrap.querySelectorAll('button').forEach(x=>x.classList.toggle('active', x===b)); });
+      wrap.appendChild(b);
+    });
+  })();
   document.getElementById('revNextBtn').addEventListener('click', revealNext);
   document.getElementById('revPrevBtn').addEventListener('click', revealPrev);
   document.getElementById('revAllBtn').addEventListener('click', revealAll);
@@ -7589,6 +8076,7 @@
       if(!target) return;
       saveHistory();
       target.tint = btn.dataset.tint;
+      if(target.fillTint) target.fillTint = btn.dataset.tint;
       render();
     });
   });
@@ -8202,6 +8690,67 @@
   textDialog.querySelector('form').addEventListener('keydown',e=>{
     if(e.key==='Enter'){e.preventDefault();textDialog.close('save');}
   });
+
+  const collabDialog=document.createElement('dialog');
+  collabDialog.id='collabDialog';
+  collabDialog.innerHTML='<form method="dialog"><h3 style="margin:0 0 6px">Онлайн урок: учител и ученик</h3>'+
+    '<p class="cb-note">Двете дъски се свързват директно (без сървър). Кодовете се разменят по чата — Teams, Viber, Meet. Учителят и ученикът чертаят на една и съща дъска; новата промяна замества старата. Снимките не се предават. На много строги училищни мрежи връзката може да не успее — тогава използвайте „Споделяне на екрана“.</p>'+
+    '<div><label><input type="radio" name="cbRole" value="teacher" checked> Аз съм учител</label> &nbsp; <label><input type="radio" name="cbRole" value="student"> Аз съм ученик</label></div>'+
+    '<div id="cbTeacher"><div class="cb-step">1. Създай покана и я изпрати на ученика</div>'+
+    '<button type="button" id="cbMakeOffer">Създай покана</button><button type="button" id="cbCopyOffer">Копирай</button>'+
+    '<textarea id="cbOffer" readonly placeholder="Тук ще се появи кодът на поканата…"></textarea>'+
+    '<div class="cb-step">2. Постави отговора на ученика</div>'+
+    '<textarea id="cbAnswerIn" placeholder="Постави тук кода, който ученикът ти изпрати…"></textarea>'+
+    '<button type="button" id="cbConnect">Свържи</button> <label><input type="checkbox" id="cbAllowDraw" checked> Ученикът може да чертае</label></div>'+
+    '<div id="cbStudent" hidden><div class="cb-step">1. Постави поканата от учителя</div>'+
+    '<textarea id="cbOfferIn" placeholder="Постави тук кода от учителя…"></textarea>'+
+    '<button type="button" id="cbMakeAnswer">Създай отговор</button>'+
+    '<div class="cb-step">2. Изпрати този отговор на учителя</div>'+
+    '<button type="button" id="cbCopyAnswer">Копирай</button><textarea id="cbAnswerOut" readonly placeholder="Тук ще се появи отговорът…"></textarea>'+
+    '<div class="cb-note">Дъската ти ще се замени с дъската на учителя.</div></div>'+
+    '<div class="cb-status" id="collabStatus">Не е свързано.</div>'+
+    '<button value="close">Затвори</button> <button type="button" id="cbDisconnect">Прекъсни връзката</button></form>';
+  document.body.appendChild(collabDialog);
+  (function(){
+    const q = id=>document.getElementById(id);
+    collabDialog.querySelectorAll('input[name="cbRole"]').forEach(r=>r.addEventListener('change',()=>{
+      q('cbTeacher').hidden = r.value!=='teacher' || !r.checked; q('cbStudent').hidden = r.value!=='student' || !r.checked;
+    }));
+    const copy = async (id)=>{ const t=q(id); t.select(); try{ await navigator.clipboard.writeText(t.value); collabSetStatus('Кодът е копиран.'); }catch(e){ document.execCommand && document.execCommand('copy'); } };
+    q('cbCopyOffer').onclick = ()=>copy('cbOffer');
+    q('cbCopyAnswer').onclick = ()=>copy('cbAnswerOut');
+    q('cbMakeOffer').onclick = async ()=>{
+      try{
+        collabRole = 'teacher'; collabSetStatus('Създавам покана… (до няколко секунди)');
+        const pc = collabNewPC(); collabWire(pc.createDataChannel('geo'));
+        await pc.setLocalDescription(await pc.createOffer()); await collabIceDone(pc);
+        q('cbOffer').value = await collabPack(pc.localDescription);
+        collabSetStatus('Изпрати кода на ученика, после постави неговия отговор в т. 2.');
+      }catch(e){ collabSetStatus('Грешка: '+e.message); }
+    };
+    q('cbConnect').onclick = async ()=>{
+      try{
+        if(!collabPC) throw new Error('първо създай покана');
+        await collabPC.setRemoteDescription(await collabUnpack(q('cbAnswerIn').value));
+        collabAllowDraw = q('cbAllowDraw').checked;
+        collabSetStatus('Свързвам…');
+      }catch(e){ collabSetStatus('Грешка: '+e.message); }
+    };
+    q('cbAllowDraw').onchange = ()=>{ collabAllowDraw = q('cbAllowDraw').checked; if(collabActive) collabSend({ t:'perm', draw:collabAllowDraw }); };
+    q('cbMakeAnswer').onclick = async ()=>{
+      try{
+        collabRole = 'student'; collabSetStatus('Създавам отговор…');
+        const pc = collabNewPC(); pc.ondatachannel = e=>collabWire(e.channel);
+        await pc.setRemoteDescription(await collabUnpack(q('cbOfferIn').value));
+        await pc.setLocalDescription(await pc.createAnswer()); await collabIceDone(pc);
+        q('cbAnswerOut').value = await collabPack(pc.localDescription);
+        collabSetStatus('Изпрати отговора на учителя. Когато той те свърже, връзката се установява сама.');
+      }catch(e){ collabSetStatus('Грешка: '+e.message); }
+    };
+    q('cbDisconnect').onclick = ()=>{ collabCleanup(); collabRole=null; collabSetStatus('Не е свързано.'); };
+    q('collabBtn').addEventListener('click', ()=>{ collabDialog.showModal(); });
+    q('collabChip').addEventListener('click', ()=>{ collabDialog.showModal(); });
+  })();
 
   const formulaDialog=document.createElement('dialog');
   formulaDialog.id='formulaDialog';
